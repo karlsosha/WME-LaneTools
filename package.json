@@ -1,0 +1,29 @@
+{
+  "name": "wme-road-shield-assistant",
+  "devDependencies": {
+    "@types/jquery": "^3.5.32",
+    "@types/ol": "^7.0.0",
+    "@types/tampermonkey": "^5.0.4",
+    "@types/underscore": "^1.13.0",
+    "greasemonkey": "^1.0.3",
+    "prettier": "^3.4.2",
+    "typescript": "^5.7.2",
+    "underscore": "^1.13.7",
+    "wme-sdk": "https://web-assets.waze.com/wme_sdk_docs/beta/latest/wme-sdk-typings.tgz"
+  },
+  "version": "1.0.0",
+  "description": "",
+  "main": "WME-RSA.user.ts",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/karlsosha/WME-Road-Shield-Assistant.git"
+  },
+  "private": true,
+  "dependencies": {
+    "wme-road-shield-assistant": "file:"
+  }
+}

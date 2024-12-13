@@ -1,0 +1,21 @@
+{
+  "compileOnSave": true,
+  "compilerOptions": {
+    "target": "es2022",
+    "module": "ES2022",
+    "moduleResolution": "node10",
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "strict": true,
+    "skipLibCheck": true,
+    "allowJs": true,
+    "outDir": "./",
+    "types": [
+      "jquery",
+      "tampermonkey",
+      "wme-sdk"
+    ]
+  },
+  "exclude": ["node_modules", "releases"],
+  "include": ["./WME-RSA.user.ts", "./src/declarations.d.ts"]
+}
