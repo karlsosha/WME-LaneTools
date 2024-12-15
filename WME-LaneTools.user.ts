@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         WME LaneTools
 // @namespace    https://github.com/SkiDooGuy/WME-LaneTools
-// @version      2024.12.02.01
+// @version      99999999999
 // @description  Adds highlights and tools to WME to supplement the lanes feature
 // @author       SkiDooGuy, Click Saver by HBiede, Heuristics by kndcajun, assistance by jm6087
 // @updateURL    https://github.com/SkiDooGuy/WME-LaneTools/raw/master/WME-LaneTools.user.js
@@ -12,7 +12,8 @@
 // @match        https://beta.waze.com/*/editor*
 // @exclude      https://www.waze.com/user/editor*
 // @require      https://greasyfork.org/scripts/24851-wazewrap/code/WazeWrap.js
-// @grant        none
+// @grant        GM_xmlhttpRequest
+// @grant        unsafeWindow
 // @connect      raw.githubusercontent.com
 // @contributionURL https://github.com/WazeDev/Thank-The-Authors
 // ==/UserScript==
@@ -20,62 +21,128 @@
 /* global W */
 /* global WazeWrap */
 
-import { City, Node, Segment, State, Street, Turn, User, WmeSDK } from "wme-sdk";
+import { City, KeyboardShortcut, Node, Segment, State, Street, Turn, User, UserSession, WmeSDK } from "wme-sdk";
 import { Point, LineString } from "geojson";
 import _ from "underscore";
 import $ from "jquery";
 import WazeWrap from "https://greasyfork.org/scripts/24851-wazewrap/code/WazeWrap.js";
 
-window.SDK_INITIALIZED.then(ltInit);
+unsafeWindow.SDK_INITIALIZED.then(ltInit);
 
 function ltInit() {
-
-    interface SettingsInterface {
-        lastSaveAction: number,
-        ScriptEnabled: boolean,
-        UIEnable: boolean,
-        AutoOpenWidth: false,
-        AutoExpandLanes: false,
-        AutoLanesTab: false,
-        HighlightsEnable: true,
-        LabelsEnable: true,
-        NodesEnable: true,
-        ABColor: "#990033",
-        BAColor: "#0033cc",
-        LabelColor: "#FFAD08",
-        ErrorColor: "#F50E0E",
-        NodeColor: "#66ccff",
-        TIOColor: "#ff9900",
-        LIOColor: "#ff9900",
-        CS1Color: "#04E6F6",
-        CS2Color: "#8F47FA",
-        HeurColor: "#00aa00",
-        HeurFailColor: "#E804F6",
-        CopyEnable: false,
-        SelAllEnable: false,
-        serverSelect: false,
-        LIOEnable: true,
-        CSEnable: true,
-        AutoFocusLanes: true,
-        ReverseLanesIcon: false,
-        ClickSaveEnable: true,
-        ClickSaveStraight: false,
-        ClickSaveTurns: true,
-        enableScript: "",
-        enableHighlights: "",
-        enableUIEnhancements: "",
-        enableHeuristics: "",
-        LaneHeurNegHighlight: false,
-        LaneHeurPosHighlight: false,
-        LaneHeuristicsChecks: false,
-        highlightCSIcons: false,
-        highlightOverride: true,
-        AddTIO: false,
-        IconsEnable: true,
-        IconsRotate: true,
+    interface LayerDescriptor {
+        name: string;
     }
+    interface SettingsInterface {
+        lastSaveAction: number;
+        ScriptEnabled: boolean;
+        UIEnable: boolean;
+        AutoOpenWidth: boolean;
+        AutoExpandLanes: boolean;
+        AutoLanesTab: boolean;
+        HighlightsEnable: boolean;
+        LabelsEnable: boolean;
+        NodesEnable: boolean;
+        ABColor: string;
+        BAColor: string;
+        LabelColor: string;
+        ErrorColor: string;
+        NodeColor: string;
+        TIOColor: string;
+        LIOColor: string;
+        CS1Color: string;
+        CS2Color: string;
+        HeurColor: string;
+        HeurFailColor: string;
+        CopyEnable: boolean;
+        SelAllEnable: boolean;
+        serverSelect: boolean;
+        LIOEnable: boolean;
+        CSEnable: boolean;
+        AutoFocusLanes: boolean;
+        ReverseLanesIcon: boolean;
+        ClickSaveEnable: boolean;
+        ClickSaveStraight: boolean;
+        ClickSaveTurns: boolean;
+        enableScript: string;
+        enableHighlights: string;
+        enableUIEnhancements: string;
+        enableHeuristics: string;
+        LaneHeurNegHighlight: boolean;
+        LaneHeurPosHighlight: boolean;
+        LaneHeuristicsChecks: boolean;
+        highlightCSIcons: boolean;
+        highlightOverride: boolean;
+        AddTIO: boolean;
+        IconsEnable: boolean;
+        IconsRotate: boolean;
+        highlightsVisible: boolean;
+        ltGraphicsVisible: boolean;
+        ltNamesVisible: boolean;
+    };
 
-    if (!window.getWmeSdk) {
+    interface FeatureProperties {
+        styleName: string,
+        layerName: string,
+    };
+
+    interface FeatureDistance {
+        start: number | undefined,
+        boxheight: number | undefined,
+        boxincwidth: number | undefined,
+        iconbordermargin: number | undefined,
+        iconborderheight: number | undefined,
+        iconborderwidth: number | undefined,
+        graphicHeight: number | undefined,
+        graphicWidth: number | undefined
+    };
+
+    type Directions = Record<string, number>;
+    type RoadTypes = Record<string, number>;
+    type HeuristicsLevels = Record<string, number>;
+    const Direction: Directions = {
+        REVERSE: -1,
+        ANY: 0,
+        FORWARD: 1,
+    };
+    const LT_ROAD_TYPE: RoadTypes = {
+        // Streets
+        NARROW_STREET: 22,
+        STREET: 1,
+        PRIMARY_STREET: 2,
+        // Highways
+        RAMP: 4,
+        FREEWAY: 3,
+        MAJOR_HIGHWAY: 6,
+        MINOR_HIGHWAY: 7,
+        // Other drivable
+        DIRT_ROAD: 8,
+        FERRY: 14,
+        PRIVATE_ROAD: 17,
+        PARKING_LOT_ROAD: 20,
+        // Non-drivable
+        WALKING_TRAIL: 5,
+        PEDESTRIAN_BOARDWALK: 10,
+        STAIRWAY: 16,
+        RAILROAD: 18,
+        RUNWAY: 19,
+    };
+    const MIN_DISPLAY_LEVEL = 14;
+    const MIN_ZOOM_NON_FREEWAY = 17;
+    // const DisplayLevels = {
+    //     MIN_ZOOM_ALL: 14,
+    //     MIN_ZOOM_NONFREEWAY: 17,
+    // };
+
+    const HeuristicsCandidate: HeuristicsLevels = {
+        ERROR: -2,
+        FAIL: -1,
+        NONE: 0,
+        PASS: 1,
+    };
+    
+
+    if (!unsafeWindow.getWmeSdk) {
         throw new Error("SDK is not installed");
     }
     if (!WazeWrap.Ready) {
@@ -84,7 +151,7 @@ function ltInit() {
         }, 100);
         return;
     }
-    const sdk: WmeSDK = window.getWmeSdk({
+    const sdk: WmeSDK = unsafeWindow.getWmeSdk({
         scriptId: "wme-lane-tools",
         scriptName: "WME LaneTools",
     });
@@ -107,7 +174,65 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
     type TabInfo = Record<string, TabMenuItem>;
     const TAB_TRANSLATIONS: TabInfo = {
         // Default english values
-        'en': {
+        en: {
+            enabled: "Enabled",
+            disabled: "Disabled",
+            toggleShortcut: "Toggle Shortcut",
+            UIEnhance: "Tab UI Enhancements",
+            autoWidth: "Auto-open road width",
+            autoOpen: "Auto-open lanes tab",
+            autoExpand: "Auto-expand lane editor",
+            autoFocus: "Auto-focus lane input",
+            reOrient: "Re-orient lane icons",
+            enClick: "Enable ClickSaver",
+            clickStraight: "All straight lanes",
+            clickTurn: "Turn lanes",
+            mapHighlight: "Map Highlights",
+            laneLabel: "Lane labels",
+            nodeHigh: "Node highlights",
+            LAOHigh: "Lane angle overrides",
+            CSOHigh: "Continue straight overrides",
+            heuristics: "Lane heuristics candidates",
+            posHeur: "Positive heuristics candidate",
+            negHeur: "Negative heuristics candidate",
+            highColor: "Highlight Colors",
+            colTooltip: "Click to toggle color inputs",
+            selAllTooltip: "Click on turn name to toggle all lane associations",
+            fwdCol: "Fwd (A>B)",
+            revCol: "Rev (B>A)",
+            labelCol: "Labels",
+            errorCol: "Lane errors",
+            laneNodeCol: "Nodes with lanes",
+            nodeTIOCol: "Nodes with TIOs",
+            LAOCol: "Segs with TIOs",
+            viewCSCol: "View only CS",
+            hearCSCol: "View and hear CS",
+            heurPosCol: "Lane heuristics likely",
+            heurNegCol: "Lane heuristics - not qualified",
+            advTools: "Advanced Tools",
+            quickTog: "Quick toggle all lanes",
+            showRBS: "Use RBS heuristics",
+            delFwd: "Delete FWD Lanes",
+            delRev: "Delete Rev Lanes",
+            delOpp: "This segment is one-way but has lanes set in the opposite direction. Click here to delete them",
+            csIcons: "Highlight CS Icons",
+            highlightOverride: "Only highlight if segment layer active",
+            addTIO: "Include TIO in lanes tab",
+            labelTIO: "TIO",
+            defaultTIO: "Waze Selected",
+            noneTIO: "None",
+            tlTIO: "Turn Left",
+            trTIO: "Turn Right",
+            klTIO: "Keep Left",
+            krTIO: "Keep Right",
+            conTIO: "Continue",
+            elTIO: "Exit Left",
+            erTIO: "Exit Right",
+            uturnTIO: "U-Turn",
+            enIcons: "Display lane icons on map",
+            IconsRotate: "Rotate map icons with segment direction",
+        },
+        "en-us": {
             enabled: "Enabled",
             disabled: "Disabled",
             toggleShortcut: "Toggle Shortcut",
@@ -166,43 +291,6 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
             IconsRotate: "Rotate map icons with segment direction",
         },
     };
-    const Direction = {
-        REVERSE: -1,
-        ANY: 0,
-        FORWARD: 1,
-    };
-    const LT_ROAD_TYPE = {
-        // Streets
-        NARROW_STREET: 22,
-        STREET: 1,
-        PRIMARY_STREET: 2,
-        // Highways
-        RAMP: 4,
-        FREEWAY: 3,
-        MAJOR_HIGHWAY: 6,
-        MINOR_HIGHWAY: 7,
-        // Other drivable
-        DIRT_ROAD: 8,
-        FERRY: 14,
-        PRIVATE_ROAD: 17,
-        PARKING_LOT_ROAD: 20,
-        // Non-drivable
-        WALKING_TRAIL: 5,
-        PEDESTRIAN_BOARDWALK: 10,
-        STAIRWAY: 16,
-        RAILROAD: 18,
-        RUNWAY: 19,
-    };
-    const DisplayLevels = {
-        MIN_ZOOM_ALL: 14,
-        MIN_ZOOM_NONFREEWAY: 17,
-    };
-    const HeuristicsCandidate = {
-        ERROR: -2,
-        FAIL: -1,
-        NONE: 0,
-        PASS: 1,
-    };
 
     let MAX_LEN_HEUR; // Maximum length of segment where lane heuristics applied (Specified in Wiki).
     let MAX_PERP_DIF; // Updated 2020-09, based on experiments
@@ -211,15 +299,15 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
     let MAX_STRAIGHT_TO_CONSIDER; // Don't even consider straight angles inside of this tolerance
     let MAX_STRAIGHT_DIF; // IN TESTING;  updated 2020-09
     let lt_scanArea_recursive = 0;
-    let LtSettings: SettingsInterface = {};
-    let strings = {};
+    let LtSettings: SettingsInterface;
+    let strings: TabMenuItem;
     let _turnInfo = [];
     let _turnData = {};
-    let laneCount;
-    let LTHighlightLayer;
-    let LTNamesLayer;
-    let LTLaneGraphics;
-    let _pickleColor: number;
+    let laneCount: number = 0;
+    let LTHighlightLayer: LayerDescriptor = { name: "LT Highlights Layer" };
+    let LTNamesLayer: LayerDescriptor = { name: "LT Names Layer" };
+    let LTLaneGraphics: LayerDescriptor = { name: "LT Lane Graphics" };
+    let _pickleColor: number | undefined;
     let UpdateObj;
     let MultiAction;
     let SetTurn;
@@ -227,13 +315,31 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
     let isRBS = false;
     let allowCpyPst = false;
     let langLocality = "default";
+    let lt;
+    let LANG: string;
+    let seaPickle: UserSession | null;
+
+
+    function applyNamesStyle(properties: FeatureProperties): boolean {
+        return properties.layerName === LTNamesLayer.name;
+    };
+
+    let styleRules = {
+        namesStyle: {
+            predicate: applyNamesStyle,
+            style: {}
+        },
+    };
+
 
     console.log("LaneTools: initializing...");
 
     function laneToolsBootstrap(tries = 0) {
         console.log("Lane Tools: Initializing...");
         let locale = sdk.Settings.getLocale();
-        let LANG = locale.localeCode.toLowerCase();
+        LANG = locale.localeCode.toLowerCase();
+        if (!(LANG in TAB_TRANSLATIONS)) langLocality = "en-us";
+        else langLocality = LANG;
 
         initLaneTools();
 
@@ -242,7 +348,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
 
     function initLaneTools() {
         startScriptUpdateMonitor();
-        let seaPickle = sdk.State.getUserInfo();
+        seaPickle = sdk.State.getUserInfo();
         UpdateObj = require("Waze/Action/UpdateObject");
         MultiAction = require("Waze/Action/MultiAction");
         SetTurn = require("Waze/Model/Graph/Actions/SetTurn");
@@ -404,7 +510,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
                 </div>
                 <div class='lt-section-wrapper'>
                     <div class='lt-section-wrapper'>
-                        <span id='lt-color-title' data-original-title='${TRANSLATIONS[langLocality].colTooltip}'><span id='lt-trans-highCol'></span>:</span>
+                        <span id='lt-color-title' data-original-title='${TAB_TRANSLATIONS[langLocality].colTooltip}'><span id='lt-trans-highCol'></span>:</span>
                         <div id='lt-color-inputs' style='display:none;'>
                             <div class='lt-option-container color'>
                                 <input type=color class='lt-color-input' id='lt-ABColor' />
@@ -501,10 +607,15 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
         );
 
         _pickleColor = seaPickle?.rank;
-        let proceedReady = _pickleColor >= 0;
+        let proceedReady = _pickleColor && _pickleColor >= 0;
 
         if (proceedReady) {
-            WazeWrap.Interface.Tab("LT", $ltTab.html, setupOptions, "LT");
+            // WazeWrap.Interface.Tab("LT", $ltTab.html, setupOptions, "LT");
+            sdk.Sidebar.registerScriptTab().then((r) => {
+                r.tabLabel.innerHTML = "LT";
+                r.tabPane.innerHTML = $ltTab.html;
+                setupOptions();
+            });
             $(`<style type="text/css">${ltCss}</style>`).appendTo("head");
             $("#map").append($ltButtons.html());
             WazeWrap.Interface.ShowScriptUpdate(
@@ -599,7 +710,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
                 $(`#${checkboxId}`).prop("checked", checked);
             }
 
-            function setValue(inputId, color) {
+            function setValue(inputId: string, color: string) {
                 const inputElem = $(`#${inputId}`);
                 inputElem.attr("value", color);
                 inputElem.css("border", `2px solid ${color}`);
@@ -611,17 +722,46 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
         initLaneGuidanceClickSaver();
 
         // Layer for highlights
-        LTHighlightLayer = new OpenLayers.Layer.Vector("LTHighlightLayer", { uniqueName: "_LTHighlightLayer" });
-        W.map.addLayer(LTHighlightLayer);
-        LTHighlightLayer.setVisibility(true);
+        sdk.Map.addLayer({layerName: LTHighlightLayer.name, styleRules: Object.values(styleRules)});
+        sdk.LayerSwitcher.addLayerCheckbox(LTHighlightLayer);
+        sdk.Map.setLayerVisibility({
+            layerName: LTHighlightLayer.name,
+            visibility: LtSettings.highlightsVisible && LtSettings.HighlightsEnable,
+        });
+        // LTHighlightLayer = new OpenLayers.Layer.Vector("LTHighlightLayer", { uniqueName: "_LTHighlightLayer" });
+        // W.map.addLayer(LTHighlightLayer);
+        // LTHighlightLayer.setVisibility(true);
 
         // Layer for future use of lane association icons...
-        LTLaneGraphics = new OpenLayers.Layer.Vector("LTLaneGraphics", { uniqueName: "LTLaneGraphics" });
-        W.map.addLayer(LTLaneGraphics);
-        LTLaneGraphics.setVisibility(true);
+        // LTLaneGraphics = new OpenLayers.Layer.Vector("LTLaneGraphics", { uniqueName: "LTLaneGraphics" });
+        // W.map.addLayer(LTLaneGraphics);
+        // LTLaneGraphics.setVisibility(true);
+        sdk.Map.addLayer({layerName: LTLaneGraphics.name, styleRules: Object.values(styleRules)});
+        sdk.LayerSwitcher.addLayerCheckbox(LTLaneGraphics);
+        sdk.Map.setLayerVisibility({
+            layerName: LTLaneGraphics.name,
+            visibility: LtSettings.ltGraphicsVisible,
+        });
 
+        sdk.Events.on({
+            eventName: "wme-layer-checkbox-toggled",
+            eventHandler: (payload) => {
+                sdk.Map.setLayerVisibility({
+                    layerName: payload.name,
+                    visibility: payload.checked,
+                });
+                if (payload.name === LTLaneGraphics.name) {
+                    LtSettings.ltGraphicsVisible = payload.checked;
+                } else if (payload.name === LTHighlightLayer.name) {
+                    LtSettings.highlightsVisible = payload.checked;
+                }
+                if (payload.checked) scanArea();
+            },
+        });
+
+        sdk.Map.addLayer({layerName: LTNamesLayer.name, styleRules: Object.values(styleRules)});
         // Layer for lane text
-        const namesStyle = new OpenLayers.Style({
+        const namesStyle = {
             fontFamily: "Open Sans, Alef, helvetica, sans-serif, monospace",
             labelOutlineColor: "black",
             fontColor: "${labelColor}",
@@ -633,13 +773,39 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
             angle: "",
             labelAlign: "cm",
             "stroke-width": "0",
+        };
+        Object.assign(styleRules.namesStyle.style, namesStyle);
+        sdk.LayerSwitcher.addLayerCheckbox(LTNamesLayer);
+        sdk.Map.setLayerVisibility({
+            layerName: LTNamesLayer.name,
+            visibility: LtSettings.ltNamesVisible,
         });
-        LTNamesLayer = new OpenLayers.Layer.Vector("LTNamesLayer", {
-            uniqueName: "LTNamesLayer",
-            styleMap: new OpenLayers.StyleMap(namesStyle),
+
+        // LTNamesLayer = new OpenLayers.Layer.Vector("LTNamesLayer", {
+        //     uniqueName: "LTNamesLayer",
+        //     styleMap: new OpenLayers.StyleMap(namesStyle),
+        // });
+        // W.map.addLayer(LTNamesLayer);
+        // LTNamesLayer.setVisibility(true);
+
+        sdk.Events.on({ eventName: "wme-map-move-end", eventHandler: () => {
+            scanArea();
+            displayLaneGraphics();
+        } });
+        sdk.Events.on({
+            eventName: "wme-map-zoom-changed",
+            eventHandler: () => {
+                scanArea();
+                displayLaneGraphics();
+            }
         });
-        W.map.addLayer(LTNamesLayer);
-        LTNamesLayer.setVisibility(true);
+        sdk.Events.on({
+            eventName: "wme-selection-changed",
+            eventHandler: () => {
+                scanArea();
+                lanesTabSetup();
+            }
+        })
 
         // Add event listers
         // WazeWrap.Events.register("moveend", null, scanArea);
@@ -660,49 +826,77 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
 
         // Add keyboard shortcuts
         try {
-            new WazeWrap.Interface.Shortcut(
-                "enableHighlights",
-                "Toggle lane highlights",
-                "wmelt",
-                "Lane Tools",
-                LtSettings.enableHighlights,
-                toggleHighlights,
-                null
-            ).add();
-            new WazeWrap.Interface.Shortcut(
-                "enableUIEnhancements",
-                "Toggle UI enhancements",
-                "wmelt",
-                "Lane Tools",
-                LtSettings.enableUIEnhancements,
-                toggleUIEnhancements,
-                null
-            ).add();
-            new WazeWrap.Interface.Shortcut(
-                "enableHeuristics",
-                "Toggle heuristic highlights",
-                "wmelt",
-                "Lane Tools",
-                LtSettings.enableHeuristics,
-                toggleLaneHeuristicsChecks,
-                null
-            ).add();
-            new WazeWrap.Interface.Shortcut(
-                "enableScript",
-                "Toggle script",
-                "wmelt",
-                "Lane Tools",
-                LtSettings.enableScript,
-                toggleScript,
-                null
-            ).add();
+            const enableHighlightsShortcut: KeyboardShortcut = {
+                shortcutId: "enableHighlights",
+                description: "Toggle lane highlights",
+                callback: toggleHighlights,
+                shortcutKeys: ""
+            };
+            sdk.Shortcuts.createShortcut(enableHighlightsShortcut);
+            // new WazeWrap.Interface.Shortcut(
+            //     "enableHighlights",
+            //     "Toggle lane highlights",
+            //     "wmelt",
+            //     "Lane Tools",
+            //     LtSettings.enableHighlights,
+            //     toggleHighlights,
+            //     null
+            // ).add();
+            const enableUIEnhancementsShortcut: KeyboardShortcut = {
+                callback: toggleUIEnhancements,
+                shortcutId: "enableUIEnhancements",
+                description: "Toggle UI Enhancements",
+                shortcutKeys: ""
+            };
+            sdk.Shortcuts.createShortcut(enableUIEnhancementsShortcut);
+            // new WazeWrap.Interface.Shortcut(
+            //     "enableUIEnhancements",
+            //     "Toggle UI enhancements",
+            //     "wmelt",
+            //     "Lane Tools",
+            //     LtSettings.enableUIEnhancements,
+            //     toggleUIEnhancements,
+            //     null
+            // ).add();
+            const enableHeuristicsShortcut: KeyboardShortcut = {
+                callback: toggleLaneHeuristicsChecks,
+                shortcutId: "enableHeuristics",
+                description: "Toggle heuristic highlights",
+                shortcutKeys: ""
+            };
+            sdk.Shortcuts.createShortcut(enableHeuristicsShortcut);
+            // new WazeWrap.Interface.Shortcut(
+            //     "enableHeuristics",
+            //     "Toggle heuristic highlights",
+            //     "wmelt",
+            //     "Lane Tools",
+            //     LtSettings.enableHeuristics,
+            //     toggleLaneHeuristicsChecks,
+            //     null
+            // ).add();
+            const enableScriptShortcut: KeyboardShortcut = {
+                shortcutId: "enableScript",
+                description: "Toggle script",
+                callback: toggleScript,
+                shortcutKeys: ""
+            };
+            sdk.Shortcuts.createShortcut(enableScriptShortcut);
+            // new WazeWrap.Interface.Shortcut(
+            //     "enableScript",
+            //     "Toggle script",
+            //     "wmelt",
+            //     "Lane Tools",
+            //     LtSettings.enableScript,
+            //     toggleScript,
+            //     null
+            // ).add();
         } catch (e) {
             console.log(`LT: Error creating shortcuts. This feature will be disabled.`);
 
-            $("#lt-EnableShortcut").text(`${TRANSLATIONS.default.disabled}`);
-            $("#lt-HighlightShortcut").text(`${TRANSLATIONS.default.disabled}`);
-            $("#lt-UIEnhanceShortcut").text(`${TRANSLATIONS.default.disabled}`);
-            $("#lt-LaneHeurChecksShortcut").text(`${TRANSLATIONS.default.disabled}`);
+            $("#lt-EnableShortcut").text(`${TAB_TRANSLATIONS[langLocality].disabled}`);
+            $("#lt-HighlightShortcut").text(`${TAB_TRANSLATIONS[langLocality].disabled}`);
+            $("#lt-UIEnhanceShortcut").text(`${TAB_TRANSLATIONS[langLocality].disabled}`);
+            $("#lt-LaneHeurChecksShortcut").text(`${TAB_TRANSLATIONS[langLocality].disabled}`);
 
             shortcutsDisabled = true;
         }
@@ -717,16 +911,16 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
             updateShortcutLabels();
         }, 50);
         setHeuristics();
-        setTranslations();
+        setLocalisation();
 
-        if (_pickleColor > 0) {
+        if (_pickleColor && _pickleColor > 0) {
             let featureList = "LaneTools: The following special access features are enabled: ";
             $("#lt-adv-tools").css("display", "block");
             let quickTog = $("#lt-trans-quickTog");
             quickTog.attr("data-original-title", `${strings.selAllTooltip}`);
             quickTog.tooltip();
             _.each(RBSArray, (u) => {
-                if (u[0] === seaPickle.attributes.userName) {
+                if (seaPickle !== null && u[0] === seaPickle.userName) {
                     if (u[1] === "1") {
                         isRBS = true;
                     }
@@ -790,8 +984,8 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
             saveSettings();
         });
         $(".lt-color-input").on("change", function () {
-            let settingName = $(this)[0].id.substring(3);
-            LtSettings[settingName] = this.value;
+            let settingName: string = $(this)[0].id.substring(3);
+            LtSettings[settingName as keyof SettingsInterface] = this.value;
             saveSettings();
             $(`#lt-${settingName}`).css("border", `2px solid ${this.value}`);
             removeHighlights();
@@ -915,14 +1109,16 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
     }
 
     async function loadSettings() {
-        const localSettings = JSON.parse(localStorage.getItem("LT_Settings"));
+        let storedSettings = localStorage.getItem("LT_Settings");
+        if(storedSettings === null) storedSettings = "";
+        const localSettings: SettingsInterface = JSON.parse(storedSettings);
 
-        const serverSettings = await WazeWrap.Remote.RetrieveSettings("LT_Settings");
+        const serverSettings: SettingsInterface = await WazeWrap.Remote.RetrieveSettings("LT_Settings");
         if (!serverSettings) {
             console.error("LaneTools: Error communicating with WW settings server");
         }
 
-        const defaultSettings = {
+        const defaultSettings : SettingsInterface = {
             lastSaveAction: 0,
             ScriptEnabled: true,
             UIEnable: true,
@@ -965,6 +1161,9 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
             AddTIO: false,
             IconsEnable: true,
             IconsRotate: true,
+            highlightsVisible: false,
+            ltGraphicsVisible: false,
+            ltNamesVisible: false
         };
 
         LtSettings = $.extend({}, defaultSettings, localSettings);
@@ -976,9 +1175,9 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
         }
 
         // If there is no value set in any of the stored settings then use the default
-        Object.keys(defaultSettings).forEach((funcProp) => {
+        Object.keys(defaultSettings).forEach((funcProp: string) => {
             if (!LtSettings.hasOwnProperty(funcProp)) {
-                LtSettings[funcProp] = defaultSettings[funcProp];
+                LtSettings[funcProp] = defaultSettings[funcProp as keyof SettingsInterface];
             }
         });
     }
@@ -1074,31 +1273,11 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
         };
 
         // Grab keyboard shortcuts and store them for saving
-        for (const name in W.accelerators.Actions) {
-            const { shortcut, group } = W.accelerators.Actions[name];
-            if (group === "wmelt") {
-                let TempKeys = "";
-                if (shortcut) {
-                    if (shortcut.altKey === true) {
-                        TempKeys += "A";
-                    }
-                    if (shortcut.shiftKey === true) {
-                        TempKeys += "S";
-                    }
-                    if (shortcut.ctrlKey === true) {
-                        TempKeys += "C";
-                    }
-                    if (TempKeys !== "") {
-                        TempKeys += "+";
-                    }
-                    if (shortcut.keyCode) {
-                        TempKeys += shortcut.keyCode;
-                    }
-                } else {
-                    TempKeys = "-1";
-                }
-                localSettings[name] = TempKeys;
-            }
+        // for (const name in W.accelerators.Actions) {
+        //     const { shortcut, group } = W.accelerators.Actions[name];
+        //     if (group === "wmelt") {
+        for(let shortcut in sdk.Shortcuts.getAllShortcuts()) {
+            localSettings[shortcut.shortcutId] = shortcut.shortcutKeys;
         }
 
         // Required for the instant update of changes to the keyboard shortcuts on the UI
@@ -1145,8 +1324,8 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
                 .done(async (transArray) => {
                     if (transArray.values.length > 0) {
                         _.each(transArray.values, (t) => {
-                            if (!TRANSLATIONS[t[1]] && Number.parseInt(t[2], 10) === 1) {
-                                TRANSLATIONS[t[1]] = JSON.parse(t[0]);
+                            if (!TAB_TRANSLATIONS[t[1]] && Number.parseInt(t[2], 10) === 1) {
+                                TAB_TRANSLATIONS[t[1]] = JSON.parse(t[0]);
                             }
                         });
                     } else {
@@ -1210,20 +1389,20 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
         }
     }
 
-    function setTranslations() {
-        langLocality = I18n.currentLocale().toLowerCase();
-        if (TRANSLATIONS[langLocality]) {
-            strings = TRANSLATIONS[langLocality];
-        } else if (langLocality.includes("-") && TRANSLATIONS[langLocality.split("-")[0]]) {
-            strings = TRANSLATIONS[langLocality.split("-")[0]];
-        } else {
-            strings = TRANSLATIONS.default;
+    function setLocalisation() {
+        // langLocality = I18n.currentLocale().toLowerCase();
+        if (!(langLocality in TAB_TRANSLATIONS)) {
+            langLocality = "en";
         }
-
+        if (TAB_TRANSLATIONS[langLocality]) {
+            strings = TAB_TRANSLATIONS[langLocality];
+        } else if (langLocality.includes("-") && TAB_TRANSLATIONS[langLocality.split("-")[0]]) {
+            strings = TAB_TRANSLATIONS[langLocality.split("-")[0]];
+        }
         // If there is no value set in any of the translated strings then use the defaults
-        Object.keys(TRANSLATIONS.default).forEach((transString) => {
+        Object.keys(TAB_TRANSLATIONS[langLocality]).forEach((transString) => {
             if (!strings.hasOwnProperty(transString) || strings[transString] === "") {
-                strings[transString] = TRANSLATIONS.default[transString];
+                strings[transString] = TAB_TRANSLATIONS.default[transString];
             }
         });
 
@@ -1333,7 +1512,8 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
     }
 
     // Pulls the keyboard shortcuts from the script and returns a machine value
-    function getKeyboardShortcut(shortcut) {
+    function getKeyboardShortcut(shortcut: string | null) {
+        if (shortcut !== null) return;
         const keys = LtSettings[shortcut];
         let val = "";
 
@@ -1385,12 +1565,14 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
         }
     }
 
-    function getSegObj(id) {
-        return W.model.segments.getObjectById(id);
+    function getSegObj(id: number): Segment | null {
+        // return W.model.segments.getObjectById(id);
+        return sdk.DataModel.Segments.getById({ segmentId: id });
     }
 
-    function getNodeObj(id) {
-        return W.model.nodes.getObjectById(id);
+    function getNodeObj(id: number): Node | null {
+        // return W.model.nodes.getObjectById(id);
+        return sdk.DataModel.Nodes.getById({ nodeId: id });
     }
 
     function lanesTabSetup() {
@@ -1401,7 +1583,9 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
             return;
         }
 
-        const selSeg = W.selectionManager.getSelectedWMEFeatures();
+        // const selSeg = W.selectionManager.getSelectedWMEFeatures();
+        const selection = sdk.Editing.getSelection();
+        const selSeg = sdk.DataModel.Segments.getById({segmentId: selection?.ids[0]});
         let fwdDone = false;
         let revDone = false;
         let isRotated = false;
@@ -1409,13 +1593,15 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
 
         // Highlights junction node when hovering over left panel
         function hoverNodeTo() {
-            W.model.nodes.getObjectById(W.selectionManager.getSegmentSelection().segments[0].attributes.toNodeID)
-                .attributes.geometry;
+            // W.model.nodes.getObjectById(W.selectionManager.getSegmentSelection().segments[0].attributes.toNodeID)
+            //     .attributes.geometry;
             //        W.model.nodes.get(W.selectionManager.getSegmentSelection().segments[0].attributes.toNodeID).attributes.geometry
-            document.getElementById(
-                W.model.nodes.getObjectById(W.selectionManager.getSegmentSelection().segments[0].attributes.toNodeID)
-                    .attributes.geometry.id
-            );
+            const nodeB = sdk.DataModel.Nodes.getById({nodeId: selSeg?.toNodeId});
+            document.getElementById(nodeB?.id);
+            // document.getElementById(
+            //     W.model.nodes.getObjectById(W.selectionManager.getSegmentSelection().segments[0].attributes.toNodeID)
+            //         .attributes.geometry.id
+            // );
             //        document.getElementById(W.model.nodes.get(W.selectionManager.getSegmentSelection().segments[0].attributes.toNodeID).attributes.geometry.id)
             console.log("hovering to B");
         }
@@ -1453,7 +1639,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
             }
 
             // Add delete buttons and preselected lane number buttons to UI
-            if (_pickleColor >= 1 || editorInfo.editableCountryIDS.length > 0) {
+            if (_pickleColor && (_pickleColor >= 1 || editorInfo.editableCountryIDS.length > 0)) {
                 if (getId("li-del-opp-btn")) $("#li-del-opp-btn").remove();
 
                 let $fwdButton = $(
@@ -2005,18 +2191,21 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
     }
 
     // returns true if object is within window  bounds and above zoom threshold
-    function onScreen(obj, curZoomLevel) {
-        if (!obj.getOLGeometry() || !obj.attributes) {
+    function onScreen(obj: Segment, curZoomLevel: number) {
+        if (!obj.geometry) {
             return false;
         }
 
         // Either FREEWAY or Zoom >=4
         if (
-            curZoomLevel >= DisplayLevels.MIN_ZOOM_NONFREEWAY ||
-            (obj.type === "segment" && obj.attributes.roadType === LT_ROAD_TYPE.FREEWAY)
+            curZoomLevel >= MIN_ZOOM_NON_FREEWAY ||
+            (obj.roadType === LT_ROAD_TYPE.FREEWAY)
         ) {
-            var ext = W.map.getOLExtent();
-            return ext.intersectsBounds(obj.getOLGeometry().getBounds());
+            // var ext = W.map.getOLExtent();
+            var ext = sdk.Map.getMapExtent();
+            var segBBox = obj.geometry.bbox;
+
+            return segBBox && ext.intersectsBounds(segBBox);
         }
 
         return false;
@@ -2114,12 +2303,12 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
     }
 
     function removeHighlights() {
-        LTHighlightLayer.removeAllFeatures();
-        LTNamesLayer.removeAllFeatures();
+        sdk.Map.removeAllFeaturesFromLayer({layerName: LTHighlightLayer.name});
+        sdk.Map.removeAllFeaturesFromLayer({layerName: LTNamesLayer.name});
     }
 
     function removeLaneGraphics() {
-        LTLaneGraphics.removeAllFeatures();
+        sdk.Map.removeAllFeaturesFromLayer({layerName: LTLaneGraphics.name});
     }
 
     function applyName(geo, fwdLnsCount, revLnsCount) {
@@ -2335,7 +2524,8 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
         const isEnabled = getId("lt-ScriptEnabled").checked;
         const mapHighlights = getId("lt-HighlightsEnable").checked;
         const heurChecks = getId("lt-LaneHeuristicsChecks").checked;
-        const zoomLevel = W.map.getZoom() != null ? W.map.getZoom() : 16;
+        // const zoomLevel = W.map.getZoom() != null ? W.map.getZoom() : 16;
+        const zoomLevel = sdk.Map.getZoomLevel();
         const highOverride = getId("lt-highlightOverride").checked; // jm6087
         const layerCheck =
             W.layerSwitcherController.getTogglerState("ITEM_ROAD") ||
@@ -2344,14 +2534,14 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
         removeHighlights();
 
         // console.log(zoomLevel);
-        if (zoomLevel < DisplayLevels.MIN_ZOOM_ALL) {
+        if (zoomLevel < MIN_DISPLAY_LEVEL) {
             return;
         }
         // If segment layer is checked (true) or (segment layer is not checked (false) and highlight override is set to show only when segment layer on - not checked (false)
         if (layerCheck || (!layerCheck && !highOverride)) {
             //jm6087
             if (isEnabled && (mapHighlights || heurChecks)) {
-                scanSegments(W.model.segments.getObjectArray(), false);
+                scanSegments(sdk.DataModel.Segments.getAll(), false);
             }
 
             if (isEnabled) {
@@ -2366,13 +2556,13 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
 
     // Given two features, checks if they are segments, and their path qualifies for heuristics; then highlight
     function scanHeuristicsCandidates(features) {
-        let segs = [];
-        let count = 0;
-        _.each(features, (f) => {
-            if (f && f._wmeObject && f._wmeObject.type === "segment") {
-                count = segs.push(f._wmeObject);
-            }
-        });
+        let segs: Segment[] = sdk.DataModel.Segments.getAll();
+        let count = segs.length;
+        // _.each(features, (f) => {
+        //     if (f && f._wmeObject && f._wmeObject.type === "segment") {
+        //         count = segs.push(f._wmeObject);
+        //     }
+        // });
 
         scanSegments(segs, true);
         return count;
@@ -2386,7 +2576,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
         const mapHighlights = getId("lt-HighlightsEnable").checked;
         const applyLioHighlight = mapHighlights && getId("lt-LIOEnable").checked;
         const applyLabels = mapHighlights && getId("lt-LabelsEnable").checked;
-        const zoomLevel = W.map.getZoom() != null ? W.map.getZoom() : 16;
+        const zoomLevel = sdk.Map.getZoomLevel();
         const turnGraph = W.model.getTurnGraph();
 
         // console.log(zoomLevel);
@@ -3542,8 +3732,17 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
     }
 
     function getFeatDistance() {
-        var label_distance = {};
-        switch (W.map.getOLMap().getZoom()) {
+        var label_distance: FeatureDistance = {
+            start: undefined,
+            boxheight: undefined,
+            boxincwidth: undefined,
+            iconbordermargin: undefined,
+            iconborderheight: undefined,
+            iconborderwidth: undefined,
+            graphicHeight: undefined,
+            graphicWidth: undefined
+        };
+        switch (sdk.Map.getZoomLevel()) {
             case 22:
                 label_distance.start = 0.5;
                 label_distance.boxheight = 1.7;
@@ -3893,5 +4092,5 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
         // There are now 23 zoom levels where 22 is fully zoomed and currently 14 is where major road types load data and 16 loads the rest
     }
 
-    laneToolsBootstrap()
+    laneToolsBootstrap();
 }

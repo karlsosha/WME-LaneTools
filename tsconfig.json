@@ -17,5 +17,5 @@
     ]
   },
   "exclude": ["node_modules", "releases"],
-  "include": ["./WME-RSA.user.ts", "./src/declarations.d.ts"]
+  "include": ["./WME-LaneTools.user.ts", "./src/declarations.d.ts"]
 }
