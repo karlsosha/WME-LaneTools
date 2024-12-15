@@ -21,11 +21,13 @@
 /* global W */
 /* global WazeWrap */
 
-import { City, KeyboardShortcut, Node, Segment, State, Street, Turn, User, UserSession, WmeSDK } from "wme-sdk";
-import { Point, LineString } from "geojson";
-import _ from "underscore";
-import $ from "jquery";
-import WazeWrap from "https://greasyfork.org/scripts/24851-wazewrap/code/WazeWrap.js";
+// import { City, KeyboardShortcut, Node, Segment, State, Street, Turn, User, UserSession, LaneGuidanceMode, WmeSDK } from "wme-sdk";
+// import { Point, LineString } from "geojson";
+// import _ from "underscore";
+// import $ from "jquery";
+// import * as olSphere from "ol/sphere";
+// import WazeWrap from "https://greasyfork.org/scripts/24851-wazewrap/code/WazeWrap.js";
+
 
 unsafeWindow.SDK_INITIALIZED.then(ltInit);
 
@@ -174,7 +176,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
     type TabInfo = Record<string, TabMenuItem>;
     const TAB_TRANSLATIONS: TabInfo = {
         // Default english values
-        en: {
+        default: {
             enabled: "Enabled",
             disabled: "Disabled",
             toggleShortcut: "Toggle Shortcut",
@@ -292,12 +294,12 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
         },
     };
 
-    let MAX_LEN_HEUR; // Maximum length of segment where lane heuristics applied (Specified in Wiki).
-    let MAX_PERP_DIF; // Updated 2020-09, based on experiments
-    let MAX_PERP_DIF_ALT; // New 2020-09, based on experiments
-    let MAX_PERP_TO_CONSIDER; // Don't even consider perp angles outside of this tolerance
-    let MAX_STRAIGHT_TO_CONSIDER; // Don't even consider straight angles inside of this tolerance
-    let MAX_STRAIGHT_DIF; // IN TESTING;  updated 2020-09
+    let MAX_LEN_HEUR: number; // Maximum length of segment where lane heuristics applied (Specified in Wiki).
+    let MAX_PERP_DIF: number; // Updated 2020-09, based on experiments
+    let MAX_PERP_DIF_ALT: number; // New 2020-09, based on experiments
+    let MAX_PERP_TO_CONSIDER: number; // Don't even consider perp angles outside of this tolerance
+    let MAX_STRAIGHT_TO_CONSIDER: number; // Don't even consider straight angles inside of this tolerance
+    let MAX_STRAIGHT_DIF: number; // IN TESTING;  updated 2020-09
     let lt_scanArea_recursive = 0;
     let LtSettings: SettingsInterface;
     let strings: TabMenuItem;
@@ -1109,9 +1111,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
     }
 
     async function loadSettings() {
-        let storedSettings = localStorage.getItem("LT_Settings");
-        if(storedSettings === null) storedSettings = "";
-        const localSettings: SettingsInterface = JSON.parse(storedSettings);
+        const localSettings: SettingsInterface = JSON.parse(<string>localStorage.getItem("LT_Settings"));
 
         const serverSettings: SettingsInterface = await WazeWrap.Remote.RetrieveSettings("LT_Settings");
         if (!serverSettings) {
@@ -1227,7 +1227,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
             IconsRotate,
         } = LtSettings;
 
-        const localSettings = {
+        const localSettings: SettingsInterface = {
             lastSaveAction: Date.now(),
             ScriptEnabled,
             HighlightsEnable,
@@ -1270,6 +1270,9 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
             AddTIO,
             IconsEnable,
             IconsRotate,
+            highlightsVisible: false,
+            ltGraphicsVisible: false,
+            ltNamesVisible: false
         };
 
         // Grab keyboard shortcuts and store them for saving
@@ -1313,7 +1316,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
                 RBSArray.failed = true;
             }
         };
-        const translationsFailFunc = (jqXHR, textStatus, errorThrown) => {
+        const translationsFailFunc = (jqXHR, textStatus, errorThrown: string) => {
             console.error("LaneTools: Error loading trans:", errorThrown);
         };
 
@@ -1329,7 +1332,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
                             }
                         });
                     } else {
-                        translationsFailFunc();
+                        translationsFailFunc(null, null, "Failed to get any translations");
                     }
                 })
                 .fail(translationsFailFunc);
@@ -1400,7 +1403,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
             strings = TAB_TRANSLATIONS[langLocality.split("-")[0]];
         }
         // If there is no value set in any of the translated strings then use the defaults
-        Object.keys(TAB_TRANSLATIONS[langLocality]).forEach((transString) => {
+        Object.keys(strings).forEach((transString) => {
             if (!strings.hasOwnProperty(transString) || strings[transString] === "") {
                 strings[transString] = TAB_TRANSLATIONS.default[transString];
             }
@@ -1565,13 +1568,14 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
         }
     }
 
-    function getSegObj(id: number): Segment | null {
-        // return W.model.segments.getObjectById(id);
+    function getSegObj(id: number | null | undefined): Segment | null {
+        if(!id) return null;
         return sdk.DataModel.Segments.getById({ segmentId: id });
     }
 
-    function getNodeObj(id: number): Node | null {
+    function getNodeObj(id: number| null): Node | null {
         // return W.model.nodes.getObjectById(id);
+        if(id === null) return null;
         return sdk.DataModel.Nodes.getById({ nodeId: id });
     }
 
@@ -1607,13 +1611,15 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
         }
 
         function hoverNodeFrom() {
-            W.model.nodes.getObjectById(W.selectionManager.getSegmentSelection().segments[0].attributes.fromNodeID)
-                .attributes.geometry;
+            // W.model.nodes.getObjectById(W.selectionManager.getSegmentSelection().segments[0].attributes.fromNodeID)
+            //     .attributes.geometry;
+            const nodeA = sdk.DataModel.Nodes.getById({nodeId: selSeg?.fromNodeId});
+            document.getElementById(nodeA?.id);
             //        W.model.nodes.get(W.selectionManager.getSegmentSelection().segments[0].attributes.fromNodeID).attributes.geometry
-            document.getElementById(
-                W.model.nodes.getObjectById(W.selectionManager.getSegmentSelection().segments[0].attributes.fromNodeID)
-                    .attributes.geometry.id
-            );
+            // document.getElementById(
+            //     W.model.nodes.getObjectById(W.selectionManager.getSegmentSelection().segments[0].attributes.fromNodeID)
+            //         .attributes.geometry.id
+            // );
             //        document.getElementById(W.model.nodes.get(W.selectionManager.getSegmentSelection().segments[0].attributes.fromNodeID).attributes.geometry.id)
             console.log("hovering to A");
         }
@@ -2190,22 +2196,23 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
         return document.getElementById(ele);
     }
 
+    function isSegment(obj:any): obj is Segment {
+        return obj && "roadType" in obj;
+    }
     // returns true if object is within window  bounds and above zoom threshold
-    function onScreen(obj: Segment, curZoomLevel: number) {
+    function onScreen(obj: Segment | Node, curZoomLevel: number) {
         if (!obj.geometry) {
             return false;
         }
 
         // Either FREEWAY or Zoom >=4
-        if (
-            curZoomLevel >= MIN_ZOOM_NON_FREEWAY ||
-            (obj.roadType === LT_ROAD_TYPE.FREEWAY)
+        if (curZoomLevel >= MIN_ZOOM_NON_FREEWAY ||
+            (isSegment(obj) && obj.roadType === LT_ROAD_TYPE.FREEWAY)
         ) {
             // var ext = W.map.getOLExtent();
             var ext = sdk.Map.getMapExtent();
-            var segBBox = obj.geometry.bbox;
 
-            return segBBox && ext.intersectsBounds(segBBox);
+            return true;
         }
 
         return false;
@@ -2583,12 +2590,12 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
 
         _.each(segments, (s) => {
             if (onScreen(s, zoomLevel)) {
-                const sAtts = s.getAttributes();
+                // const sAtts = s.getAttributes();
                 let tryRedo = false;
                 let segLength = lt_segment_length(s);
 
                 // FORWARD
-                tryRedo = tryRedo || scanSegment_Inner(s, sAtts, Direction.FORWARD, segLength, tryRedo);
+                tryRedo = tryRedo || scanSegment_Inner(s, Direction.FORWARD, segLength, tryRedo);
 
                 // If errors encountered, scan again. (Usually this is an issue with first loading of DOM after zoom or long pan)
                 if (tryRedo && lt_scanArea_recursive > 0) {
@@ -2599,7 +2606,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
                     return;
                 }
 
-                tryRedo = tryRedo || scanSegment_Inner(s, sAtts, Direction.REVERSE, segLength, tryRedo);
+                tryRedo = tryRedo || scanSegment_Inner(s, Direction.REVERSE, segLength, tryRedo);
 
                 // If errors encountered, scan again. (Usually this is an issue with first loading of DOM after zoom or long pan)
                 if (tryRedo && lt_scanArea_recursive > 0) {
@@ -2611,18 +2618,18 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
             }
         });
 
-        function scanSegment_Inner(seg, sAtts, direction, segLength, tryRedo) {
-            const fwdLaneCount = sAtts.fwdLaneCount;
-            const revLaneCount = sAtts.revLaneCount;
+        function scanSegment_Inner(seg: Segment, direction: number, segLength: number, tryRedo: boolean) {
+            const fwdLaneCount = seg.toLanesInfo?.numberOfLanes;
+            const revLaneCount = seg.fromLanesInfo?.numberOfLanes;
 
-            let node = getNodeObj(sAtts.toNodeID);
-            let oppNode = getNodeObj(sAtts.fromNodeID);
-            let laneCount = fwdLaneCount;
-            let oppLaneCount = revLaneCount;
+            let node: Node | null = getNodeObj(seg.toNodeId);
+            let oppNode: Node | null = getNodeObj(seg.fromNodeId);
+            let laneCount: number | null | undefined = fwdLaneCount;
+            let oppLaneCount: number | null | undefined = revLaneCount;
 
             if (direction !== Direction.FORWARD) {
-                node = getNodeObj(sAtts.fromNodeID);
-                oppNode = getNodeObj(sAtts.toNodeID);
+                node = getNodeObj(seg.fromNodeId);
+                oppNode = getNodeObj(seg.toNodeId);
                 laneCount = revLaneCount;
                 oppLaneCount = fwdLaneCount;
             }
@@ -2641,10 +2648,10 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
             };
 
             // CHECK LANES & HEURISTICS
-            if (onScreen(node, zoomLevel)) {
-                const nodeSegs = node.getSegmentIds();
+            if (node !== null && onScreen(node, zoomLevel)) {
+                const nodeSegs = node.connectedSegmentIds;
 
-                if (laneCount > 0) {
+                if (laneCount && laneCount > 0) {
                     let config = checkLanesConfiguration(seg, node, nodeSegs, laneCount);
                     tlns = config[0];
                     tio = config[1];
@@ -2689,7 +2696,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
                 ) {
                     heur = heurCand;
                 }
-                if (laneCount > 0 || heur !== null || badLn) {
+                if (laneCount && (laneCount > 0 || heur !== null || badLn)) {
                     highlightSegment(
                         seg.getOLGeometry(),
                         direction,
@@ -2764,19 +2771,18 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
         }
     }
 
-    function checkLanesConfiguration(s, node, segs, numLanes) {
+    function checkLanesConfiguration(s: Segment, node: Node, segs: number[], numLanes: number) {
         let tlns = false;
         let tio = false;
         let badLn = false;
         let lio = false;
         let csMode = 0;
         let csStreet = null;
-        let turnLanes = [];
-        const turnGraph = W.model.getTurnGraph();
-        const pturns = turnGraph.getAllPathTurns();
-        const zoomLevel = W.map.getZoom() != null ? W.map.getZoom() : 16;
+        // const turnGraph = W.model.getTurnGraph();
+        // const pturns = turnGraph.getAllPathTurns();
+        const zoomLevel = sdk.Map.getZoomLevel();
 
-        function addTurns(fromLns, toLns) {
+        function addTurns(fromLns: number, toLns: number) {
             for (let k = fromLns; k < toLns + 1; k++) {
                 let newValue = true;
                 for (let j = 0; j < turnLanes.length; j++) {
@@ -2792,32 +2798,40 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
 
         for (let i = 0; i < segs.length; i++) {
             const seg2 = getSegObj(segs[i]);
-            const turnData = turnGraph.getTurnThroughNode(node, s, seg2).getTurnData();
-            if (turnData.state === 1) {
-                // Check for turn instruction override
-                if (turnData.hasInstructionOpcode()) {
-                    tio = true;
-                }
-                // Check for lanes
-                if (turnData.hasLanes()) {
-                    tlns = true;
-                    // Check for lane angle override
-                    if (turnData.getLaneData().hasOverrideAngle()) {
-                        lio = true;
+            let turnsThrough: Turn[] = sdk.DataModel.Turns.getTurnsThroughNode({nodeId: node.id});
+            for(let idx = 0 ; idx < turnsThrough.length ; ++idx) {
+                let t: Turn = turnsThrough[idx];
+                if(t.isUTurn || (t.fromSegmentId !== s.id && t.toSegmentId !== segs[i])) continue;
+                // const turnData = turnGraph.getTurnThroughNode(node, s, seg2).getTurnData();
+                if (t.isAllowed) {
+                    // Check for turn instruction override
+                    if (t.instructionOpCode !== null) {
+                        tio = true;
                     }
-                    // Check for Continue Straight override
-                    // 1 is for view only, 2 is for view and hear
-                    if (turnData.getLaneData().getGuidanceMode() === 1) {
-                        csMode = 1;
-                        csStreet = W.model.streets.getObjectById(seg2.attributes.primaryStreetID).name;
-                    } else if (turnData.getLaneData().getGuidanceMode() === 2) {
-                        csMode = 2;
-                        csStreet = W.model.streets.getObjectById(seg2.attributes.primaryStreetID).name;
-                    }
+                    // Check for lanes
+                    if (t.lanes !== null) {
+                        tlns = true;
+                        // Check for lane angle override
+                        if (t.lanes.angleOverride !== null) {
+                            lio = true;
+                        }
+                        // Check for Continue Straight override
+                        // 1 is for view only, 2 is for view and hear
+                        let primaryStreetId: number | null | undefined = seg2?.primaryStreetId;
+                        if(primaryStreetId && primaryStreetId !== null) {
+                            if (t.lanes.guidanceMode === "display") {
+                                csMode = 1;
+                                csStreet = sdk.DataModel.Streets.getById({streetId: primaryStreetId})?.name;
+                            } else if (t.lanes.guidanceMode === "display-and-voice") {
+                                csMode = 2;
+                                csStreet = sdk.DataModel.Streets.getById({streetId: primaryStreetId})?.name
+                            }
+                        }
 
-                    const fromLns = turnData.lanes.fromLaneIndex;
-                    const toLns = turnData.lanes.toLaneIndex;
-                    addTurns(fromLns, toLns);
+                        const fromLns = t.lanes.fromLaneIndex;
+                        const toLns = t.lanes.toLaneIndex;
+                        addTurns(fromLns, toLns);
+                    }
                 }
             }
         }
@@ -2832,12 +2846,13 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
             }
         }
         // check turns in JBs
-        const jb = W.model.bigJunctions.getObjectArray();
+        // const jb = W.model.bigJunctions.getObjectArray();
+        const jb = sdk.DataModel.BigJunctions.getAll();
         for (let j = 0; j < jb.length; j++) {
             const jb1 = jb[j];
-            const jpturns = jb1.getAllPossibleTurns(W.model);
+            const jpturns = jb1.segmentIds;
             for (let t = 0; t < jpturns.length; t++) {
-                if (jpturns[t].fromVertex.segmentID == s.attributes.id) {
+                if (jpturns[t] == s.id) {
                     const tdat = jpturns[t].turnData.lanes;
                     if (tdat) {
                         addTurns(tdat.fromLaneIndex, tdat.toLaneIndex);
@@ -3438,14 +3453,16 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
     }
 
     // Segment Length - borrowed from JAI
-    function lt_segment_length(segment) {
-        let len = segment.getOLGeometry().getGeodesicLength(W.map.olMap.projection);
+    function lt_segment_length(segment: Segment) {
+        // let len = segment.geometry.getGeodesicLength(W.map.olMap.projection);
+        // let len = olSphere.getLength(segment.geometry);
+        let len = 0;
         //    let len = segment.geometry.getGeodesicLength(W.map.olMap.projection);
-        lt_log(`segment: ${segment.attributes.id} computed len: ${len} attrs len: ${segment.attributes.length}`, 3);
+        lt_log(`segment: ${segment.id} computed len: ${len} `, 3);
         return len;
     }
 
-    function lt_log(lt_log_msg, lt_log_level = 1) {
+    function lt_log(lt_log_msg: string, lt_log_level = 1) {
         // ##NO_FF_START##
         // Firefox addons should not use console.(log|error|debug), so these lines
         // are removed by the FF addon packaging script.
