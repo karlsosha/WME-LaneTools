@@ -20,17 +20,26 @@
 // ==/UserScript==
 /* global W */
 /* global WazeWrap */
-// import { City, KeyboardShortcut, Node, Segment, State, Street, Turn, User, UserSession, LaneGuidanceMode, WmeSDK } from "wme-sdk";
-// import { Point, LineString } from "geojson";
+// import {
+//     City,
+//     KeyboardShortcut,
+//     Node,
+//     Segment,
+//     State,
+//     Street,
+//     Turn,
+//     User,
+//     UserSession,
+//     LaneGuidanceMode,
+//     WmeSDK,
+// } from "wme-sdk";
+// import { Point, LineString, Position } from "geojson";
 // import _ from "underscore";
 // import $ from "jquery";
 // import * as olSphere from "ol/sphere";
 // import WazeWrap from "https://greasyfork.org/scripts/24851-wazewrap/code/WazeWrap.js";
 unsafeWindow.SDK_INITIALIZED.then(ltInit);
 function ltInit() {
-    ;
-    ;
-    ;
     const Direction = {
         REVERSE: -1,
         ANY: 0,
@@ -242,11 +251,10 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
     function applyNamesStyle(properties) {
         return properties.layerName === LTNamesLayer.name;
     }
-    ;
     let styleRules = {
         namesStyle: {
             predicate: applyNamesStyle,
-            style: {}
+            style: {},
         },
     };
     console.log("LaneTools: initializing...");
@@ -672,23 +680,26 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
         // });
         // W.map.addLayer(LTNamesLayer);
         // LTNamesLayer.setVisibility(true);
-        sdk.Events.on({ eventName: "wme-map-move-end", eventHandler: () => {
+        sdk.Events.on({
+            eventName: "wme-map-move-end",
+            eventHandler: () => {
                 scanArea();
                 displayLaneGraphics();
-            } });
+            },
+        });
         sdk.Events.on({
             eventName: "wme-map-zoom-changed",
             eventHandler: () => {
                 scanArea();
                 displayLaneGraphics();
-            }
+            },
         });
         sdk.Events.on({
             eventName: "wme-selection-changed",
             eventHandler: () => {
                 scanArea();
                 lanesTabSetup();
-            }
+            },
         });
         // Add event listers
         // WazeWrap.Events.register("moveend", null, scanArea);
@@ -712,7 +723,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
                 shortcutId: "enableHighlights",
                 description: "Toggle lane highlights",
                 callback: toggleHighlights,
-                shortcutKeys: ""
+                shortcutKeys: "",
             };
             sdk.Shortcuts.createShortcut(enableHighlightsShortcut);
             // new WazeWrap.Interface.Shortcut(
@@ -728,7 +739,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
                 callback: toggleUIEnhancements,
                 shortcutId: "enableUIEnhancements",
                 description: "Toggle UI Enhancements",
-                shortcutKeys: ""
+                shortcutKeys: "",
             };
             sdk.Shortcuts.createShortcut(enableUIEnhancementsShortcut);
             // new WazeWrap.Interface.Shortcut(
@@ -744,7 +755,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
                 callback: toggleLaneHeuristicsChecks,
                 shortcutId: "enableHeuristics",
                 description: "Toggle heuristic highlights",
-                shortcutKeys: ""
+                shortcutKeys: "",
             };
             sdk.Shortcuts.createShortcut(enableHeuristicsShortcut);
             // new WazeWrap.Interface.Shortcut(
@@ -760,7 +771,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
                 shortcutId: "enableScript",
                 description: "Toggle script",
                 callback: toggleScript,
-                shortcutKeys: ""
+                shortcutKeys: "",
             };
             sdk.Shortcuts.createShortcut(enableScriptShortcut);
             // new WazeWrap.Interface.Shortcut(
@@ -1044,7 +1055,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
             IconsRotate: true,
             highlightsVisible: false,
             ltGraphicsVisible: false,
-            ltNamesVisible: false
+            ltNamesVisible: false,
         };
         LtSettings = $.extend({}, defaultSettings, localSettings);
         if (serverSettings && serverSettings.lastSaveAction > LtSettings.lastSaveAction) {
@@ -1108,7 +1119,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
             IconsRotate,
             highlightsVisible: false,
             ltGraphicsVisible: false,
-            ltNamesVisible: false
+            ltNamesVisible: false,
         };
         // Grab keyboard shortcuts and store them for saving
         // for (const name in W.accelerators.Actions) {
@@ -1916,8 +1927,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
             return false;
         }
         // Either FREEWAY or Zoom >=4
-        if (curZoomLevel >= MIN_ZOOM_NON_FREEWAY ||
-            (isSegment(obj) && obj.roadType === LT_ROAD_TYPE.FREEWAY)) {
+        if (curZoomLevel >= MIN_ZOOM_NON_FREEWAY || (isSegment(obj) && obj.roadType === LT_ROAD_TYPE.FREEWAY)) {
             // var ext = W.map.getOLExtent();
             var ext = sdk.Map.getMapExtent();
             return true;
@@ -1947,22 +1957,24 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
     }
     // borrowed from JAI
     function lt_get_first_point(segment) {
-        return segment.getOLGeometry().components[0];
+        if (segment === null)
+            return null;
+        return segment.geometry.coordinates[0];
         //    return segment.geometry.components[0];
     }
     // borrowed from JAI
     function lt_get_last_point(segment) {
-        return segment.getOLGeometry().components[segment.getOLGeometry().components.length - 1];
+        return segment?.geometry.coordinates.at(-1);
         //    return segment.geometry.components[segment.geometry.components.length - 1];
     }
     // borrowed from JAI
     function lt_get_second_point(segment) {
-        return segment.getOLGeometry().components[1];
+        return segment?.geometry.coordinates[1];
         //    return segment.geometry.components[1];
     }
     // borrowed from JAI
     function lt_get_next_to_last_point(segment) {
-        return segment.getOLGeometry().components[segment.getOLGeometry().components.length - 2];
+        return segment?.geometry.coordinates.at(-2);
         //    return segment.geometry.components[segment.geometry.components.length - 2];
     }
     function delLanes(dir) {
@@ -2026,23 +2038,23 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
             HIGHLIGHT: 10,
             OVER_HIGHLIGHT: 20,
         };
-        const geo = objGeo.clone();
+        // const geo = objGeo.clone();
         const applyCSHighlight = getId("lt-CSEnable").checked;
         // Need to rework this to account for segment length, cause of geo adjustment and such
-        if (geo.components.length > 2) {
-            let geoLength = geo.components.length;
+        if (objGeo.length > 2) {
+            let geoLength = objGeo.length;
             let geoMiddle = geoLength / 2;
             let fwdPoint = geoLength % 2 ? Math.ceil(geoMiddle) - 1 : Math.ceil(geoMiddle);
             let revPoint = geoLength % 2 ? Math.floor(geoMiddle) + 1 : Math.floor(geoMiddle);
             if (direction === Direction.FORWARD) {
-                let newString = buildGeoComponentString(geo, fwdPoint, geoLength);
+                let newString = buildGeoComponentString(objGeo, fwdPoint, geoLength);
                 if (applyDash) {
                     createVector(newString, `${LtSettings.ABColor}`, VectorStyle.DASH_THIN);
                 } // draw dashed line
                 drawHighlight(newString, applyLioHighlight, isBad, heur, heurOverHighlight); // draw highlight
             }
             else if (direction === Direction.REVERSE) {
-                let newString = buildGeoComponentString(geo, 0, revPoint);
+                let newString = buildGeoComponentString(objGeo, 0, revPoint);
                 if (applyDash) {
                     createVector(newString, `${LtSettings.BAColor}`, VectorStyle.DASH_THIN);
                 }
@@ -2051,27 +2063,63 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
             // Add the label only on the forward pass, or reverse if there are no forward lanes
             if (applyLabels && (Direction.FORWARD || fwdLnsCount === 0)) {
                 if (geoLength % 2) {
-                    applyName(geo.components[fwdPoint], fwdLnsCount, revLnsCount);
+                    applyName(objGeo[fwdPoint], fwdLnsCount, revLnsCount);
                 }
                 else {
-                    let p0 = geo.components[revPoint - 1];
-                    let p1 = geo.components[fwdPoint];
+                    let p0 = objGeo[revPoint - 1];
+                    let p1 = objGeo[fwdPoint];
                     //                let newPoint = new OpenLayers.getOLGeometry().Point((p0.x + p1.x) / 2, (p0.y + p1.y) / 2);
-                    let newPoint = new OpenLayers.Geometry.Point((p0.x + p1.x) / 2, (p0.y + p1.y) / 2);
+                    // let newPoint = new OpenLayers.Geometry.Point((p0.x + p1.x) / 2, (p0.y + p1.y) / 2);
+                    var newPoint = {
+                        id: "pointNode_" + (p0[0] + p1[0]) / 2 + " " + (p0[1] + p1[1]) / 2,
+                        geometry: {
+                            coordinates: [(p0[0] + p1[0]) / 2, (p0[1] + p1[1]) / 2],
+                            type: "Point",
+                        },
+                        type: "Feature",
+                        properties: { styleName: "styleNode" },
+                    };
                     applyName(newPoint, fwdLnsCount, revLnsCount);
                 }
             }
         }
         else {
-            let p0 = geo.components[0];
-            let p1 = geo.components[1];
+            let p0 = objGeo[0];
+            let p1 = objGeo[1];
             //        let point1 = new OpenLayers.getOLGeometry().Point((p0.x + p1.x) / 2, (p0.y + p1.y) / 2);
-            let point1 = new OpenLayers.Geometry.Point((p0.x + p1.x) / 2, (p0.y + p1.y) / 2);
+            // let point1 = new OpenLayers.Geometry.Point((p0.x + p1.x) / 2, (p0.y + p1.y) / 2);
+            var point1 = {
+                id: "pointNode_" + (p0[0] + p1[0]) / 2 + " " + (p0[1] + p1[1]) / 2,
+                geometry: {
+                    coordinates: [(p0[0] + p1[0]) / 2, (p0[1] + p1[1]) / 2],
+                    type: "Point",
+                },
+                type: "Feature",
+                properties: { styleName: "styleNode" },
+            };
             if (direction === Direction.FORWARD) {
                 //            let point2 = new OpenLayers.getOLGeometry().Point(geo.components[1].clone().x, geo.components[1].clone().y);
                 //            let newString = new OpenLayers.getOLGeometry().LineString([point1, point2], {});
-                let point2 = new OpenLayers.Geometry.Point(geo.components[1].clone().x, geo.components[1].clone().y);
-                let newString = new OpenLayers.Geometry.LineString([point1, point2], {});
+                // let point2 = new OpenLayers.Geometry.Point(geo.components[1].clone().x, geo.components[1].clone().y);
+                let point2 = {
+                    id: "pointNode_" + objGeo[1][0] + " " + objGeo[1][1],
+                    geometry: {
+                        coordinates: [objGeo[1][0], objGeo[1][1]],
+                        type: "Point",
+                    },
+                    type: "Feature",
+                    properties: { styleName: "styleNode" },
+                };
+                // let newString = new OpenLayers.Geometry.LineString([point1, point2], {});
+                let newString = {
+                    id: "line_" + point1.toString(),
+                    geometry: {
+                        type: "LineString",
+                        coordinates: [point1, point2],
+                    },
+                    type: "Feature",
+                    properties: { styleName: "styleNode" },
+                };
                 if (applyDash) {
                     createVector(newString, `${LtSettings.ABColor}`, VectorStyle.DASH_THIN);
                 }
@@ -2080,8 +2128,27 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
             else if (direction === Direction.REVERSE) {
                 //            let point2 = new OpenLayers.getOLGeometry().Point(geo.components[0].clone().x, geo.components[0].clone().y);
                 //            let newString = new OpenLayers.getOLGeometry().LineString([point1, point2], {});
-                let point2 = new OpenLayers.Geometry.Point(geo.components[0].clone().x, geo.components[0].clone().y);
-                let newString = new OpenLayers.Geometry.LineString([point1, point2], {});
+                // let point2 = new OpenLayers.Geometry.Point(geo.components[0].clone().x, geo.components[0].clone().y);
+                // let newString = new OpenLayers.Geometry.LineString([point1, point2], {});
+                let point2 = {
+                    id: "pointNode_" + objGeo[0][0] + " " + objGeo[0][0],
+                    geometry: {
+                        coordinates: [objGeo[0][0], objGeo[0][1]],
+                        type: "Point",
+                    },
+                    type: "Feature",
+                    properties: { styleName: "styleNode" },
+                };
+                // let newString = new OpenLayers.Geometry.LineString([point1, point2], {});
+                let newString = {
+                    id: "line_" + point1.toString(),
+                    geometry: {
+                        type: "LineString",
+                        coordinates: [point1, point2],
+                    },
+                    type: "Feature",
+                    properties: { styleName: "styleNode" },
+                };
                 if (applyDash) {
                     createVector(newString, `${LtSettings.BAColor}`, VectorStyle.DASH_THIN);
                 }
@@ -2121,8 +2188,9 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
             }
         }
         function createVector(geoCom, lineColor, style) {
-            let newVector = new OpenLayers.Feature.Vector(geoCom, {}, {});
-            LTHighlightLayer.addFeatures([newVector]);
+            // let newVector = new OpenLayers.Feature.Vector(geoCom, {}, {});
+            // LTHighlightLayer.addFeatures([newVector]);
+            sdk.Map.addFeatureToLayer({ feature: geoCom, layerName: LTHighlightLayer.name });
             const line = document.getElementById(geoCom.id);
             if (line) {
                 line.setAttribute("stroke", `${lineColor}`);
@@ -2147,12 +2215,22 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
                 }
             }
         }
-        LTHighlightLayer.setZIndex(2880);
+        // LTHighlightLayer.setZIndex(2880);
     }
     function highlightNode(objGeo, color, overSized = false) {
-        const geo = objGeo.clone();
-        const highlight = new OpenLayers.Feature.Vector(geo, {});
-        LTHighlightLayer.addFeatures([highlight]);
+        // const geo = objGeo.clone();
+        // const highlight = new OpenLayers.Feature.Vector(geo, {});
+        let newString = {
+            id: "line_" + objGeo.toString(),
+            geometry: {
+                type: "LineString",
+                coordinates: [objGeo],
+            },
+            type: "Feature",
+            properties: { styleName: "styleNode" },
+        };
+        // LTHighlightLayer.addFeatures([highlight]);
+        sdk.Map.addFeatureToLayer({ feature: newString, layerName: LTHighlightLayer.name });
         const node = document.getElementById(geo.id);
         if (node) {
             node.setAttribute("fill", color);
@@ -2292,11 +2370,11 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
                 const nodeSegs = node.connectedSegmentIds;
                 if (laneCount && laneCount > 0) {
                     let config = checkLanesConfiguration(seg, node, nodeSegs, laneCount);
-                    tlns = config[0];
-                    tio = config[1];
-                    lio = config[2];
-                    badLn = config[3];
-                    csMode = config[4];
+                    tlns = config.tlns;
+                    tio = config.tio;
+                    lio = config.lio;
+                    badLn = config.badLn;
+                    csMode = config.csMode;
                     tryRedo = badLn || tryRedo;
                 }
                 // 1/1/21: Only check for heuristics on segments <50m. IMPORTANT because now we're checking segments regardless of lanes
@@ -2324,7 +2402,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
                     heur = heurCand;
                 }
                 if (laneCount && (laneCount > 0 || heur !== null || badLn)) {
-                    highlightSegment(seg.getOLGeometry(), direction, mapHighlights, applyLabels, fwdLaneCount, revLaneCount, lio && applyLioHighlight, csMode, badLn, heur, false);
+                    highlightSegment(seg.geometry.coordinates, direction, mapHighlights, applyLabels, fwdLaneCount, revLaneCount, lio && applyLioHighlight, csMode, badLn, heur, false);
                     //                highlightSegment(seg.geometry, direction, mapHighlights, applyLabels, fwdLaneCount, revLaneCount, lio && applyLioHighlight, csMode, badLn, heur, false);
                 }
                 // Nodes highlights
@@ -2362,16 +2440,24 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
         }
     }
     function checkLanesConfiguration(s, node, segs, numLanes) {
-        let tlns = false;
-        let tio = false;
-        let badLn = false;
-        let lio = false;
-        let csMode = 0;
-        let csStreet = null;
+        let laneConfiguration = {
+            tlns: false,
+            tio: false,
+            badLn: false,
+            lio: false,
+            csMode: 0,
+            csStreet: null,
+        };
+        let turnLanes = [];
         // const turnGraph = W.model.getTurnGraph();
         // const pturns = turnGraph.getAllPathTurns();
+        const pturns = sdk.DataModel.Turns.getTurnsFromSegment({ segmentId: s.id });
         const zoomLevel = sdk.Map.getZoomLevel();
         function addTurns(fromLns, toLns) {
+            if (!toLns)
+                return;
+            if (!fromLns)
+                fromLns = 0;
             for (let k = fromLns; k < toLns + 1; k++) {
                 let newValue = true;
                 for (let j = 0; j < turnLanes.length; j++) {
@@ -2395,26 +2481,30 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
                 if (t.isAllowed) {
                     // Check for turn instruction override
                     if (t.instructionOpCode !== null) {
-                        tio = true;
+                        laneConfiguration.tio = true;
                     }
                     // Check for lanes
                     if (t.lanes !== null) {
-                        tlns = true;
+                        laneConfiguration.tlns = true;
                         // Check for lane angle override
                         if (t.lanes.angleOverride !== null) {
-                            lio = true;
+                            laneConfiguration.lio = true;
                         }
                         // Check for Continue Straight override
                         // 1 is for view only, 2 is for view and hear
                         let primaryStreetId = seg2?.primaryStreetId;
                         if (primaryStreetId && primaryStreetId !== null) {
                             if (t.lanes.guidanceMode === "display") {
-                                csMode = 1;
-                                csStreet = sdk.DataModel.Streets.getById({ streetId: primaryStreetId })?.name;
+                                laneConfiguration.csMode = 1;
+                                laneConfiguration.csStreet = sdk.DataModel.Streets.getById({
+                                    streetId: primaryStreetId,
+                                })?.name;
                             }
                             else if (t.lanes.guidanceMode === "display-and-voice") {
-                                csMode = 2;
-                                csStreet = sdk.DataModel.Streets.getById({ streetId: primaryStreetId })?.name;
+                                laneConfiguration.csMode = 2;
+                                laneConfiguration.csStreet = sdk.DataModel.Streets.getById({
+                                    streetId: primaryStreetId,
+                                })?.name;
                             }
                         }
                         const fromLns = t.lanes.fromLaneIndex;
@@ -2426,12 +2516,10 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
         }
         // check paths
         for (let i = 0; i < pturns.length; i++) {
-            if (pturns[i].fromVertex.segmentID == s.attributes.id) {
-                if (pturns[i].turnData.hasLanes()) {
-                    const fromLns = pturns[i].turnData.lanes.fromLaneIndex;
-                    const toLns = pturns[i].turnData.lanes.toLaneIndex;
-                    addTurns(fromLns, toLns);
-                }
+            if (pturns[i].lanes !== null) {
+                const fromLns = pturns[i].lanes?.fromLaneIndex;
+                const toLns = pturns[i].lanes?.toLaneIndex;
+                addTurns(fromLns, toLns);
             }
         }
         // check turns in JBs
@@ -2442,7 +2530,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
             const jpturns = jb1.segmentIds;
             for (let t = 0; t < jpturns.length; t++) {
                 if (jpturns[t] == s.id) {
-                    const tdat = jpturns[t].turnData.lanes;
+                    const tdat = jpturns[t].lanes;
                     if (tdat) {
                         addTurns(tdat.fromLaneIndex, tdat.toLaneIndex);
                     }
@@ -2452,13 +2540,13 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
         turnLanes.sort();
         for (let z = 0; z < turnLanes.length; z++) {
             if (turnLanes[z] !== z) {
-                badLn = true;
+                laneConfiguration.badLn = true;
             }
         }
         if (turnLanes.length < numLanes && onScreen(node, zoomLevel)) {
-            badLn = true;
+            laneConfiguration.badLn = true;
         }
-        return [tlns, tio, lio, badLn, csMode, csStreet];
+        return laneConfiguration;
     }
     function setTurns(direction) {
         if (!getId("lt-ClickSaveEnable").checked) {
@@ -2648,9 +2736,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
     11. We must have an incoming segment supplemenatary to outgoing segment 1.  (alt-incoming)
     12. That alt-incoming segment must be within perpendicular tolerance to BOTH the median segment and the incoming segment.
     */
-        if (segCandidate == null ||
-            curNodeExit == null ||
-            nodeExitSegIds == null ||
+        if (nodeExitSegIds == null ||
             curNodeEntry == null ||
             laneCount == null ||
             turnGraph == null ||
@@ -2675,19 +2761,22 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
             return 0;
         }
         // Get current segment heading at the node
-        const segId = segCandidate.attributes.id;
-        let segEndAzm = lt_getMathAzimuth_to_node(curNodeExit.attributes.id, segCandidate);
-        let segBeginAzm = lt_getMathAzimuth_from_node(curNodeEntry.attributes.id, segCandidate);
+        const segId = segCandidate.id;
+        let segEndAzm = lt_getMathAzimuth_to_node(curNodeExit.id, segCandidate);
+        let segBeginAzm = lt_getMathAzimuth_from_node(curNodeEntry.id, segCandidate);
         let out1TargetAngle = -90.0; // For right-hand side of the road countries  (right-turn)
         let out2TargetAngle = 90.0; // (left-turn)
-        if (W.model.isLeftHand) {
+        let street = sdk.DataModel.Streets.getById({ streetId: segCandidate.primaryStreetId });
+        let city = sdk.DataModel.Cities.getById({ cityId: street?.cityId });
+        let segmentCountry = sdk.DataModel.Countries.getById({ countryId: city?.countryId });
+        if (segmentCountry?.isLeftHandTraffic) {
             out1TargetAngle = 90.0; // left turn
             out2TargetAngle = -90.0; // right turn
         }
         lt_log("==================================================================================", 2);
-        lt_log(`Checking heuristics candidate: seg ${segId} node ${curNodeExit.attributes.id} azm ${segEndAzm} nodeExitSegIds:${nodeExitSegIds.length}`, 2);
+        lt_log(`Checking heuristics candidate: seg ${segId} node ${curNodeExit.id} azm ${segEndAzm} nodeExitSegIds:${nodeExitSegIds.length}`, 2);
         // Find the incoming segment, and validate angle to cursegment
-        let nodeEntrySegIds = curNodeEntry.getSegmentIds();
+        let nodeEntrySegIds = curNodeEntry.connectedSegmentIds;
         for (let ii = 0; ii < nodeEntrySegIds.length; ii++) {
             let thisTimeFail = 0;
             if (nodeEntrySegIds[ii] === segId) {
@@ -2695,10 +2784,10 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
             } // ignore same segment as our original
             const is = getSegObj(nodeEntrySegIds[ii]);
             // Check turn from this seg to candidate seg
-            if (!lt_is_turn_allowed(is, curNodeEntry, segCandidate)) {
+            if (is !== null && !lt_is_turn_allowed(is, curNodeEntry, segCandidate)) {
                 continue;
             }
-            let ia = lt_getMathAzimuth_to_node(curNodeEntry.attributes.id, is); // absolute math azimuth
+            let ia = lt_getMathAzimuth_to_node(curNodeEntry.id, is); // absolute math azimuth
             let ita = lt_turn_angle(ia, segBeginAzm); // turn angle
             lt_log(`Turn angle from inseg ${nodeEntrySegIds[ii]}: ${ita}(${ia},${segBeginAzm})`, 3);
             if (Math.abs(ita) > MAX_STRAIGHT_DIF) {
@@ -2709,9 +2798,22 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
                 lt_log(`   Not eligible as inseg: ${ita}`, 2);
                 thisTimeFail = HeuristicsCandidate.FAIL;
             }
-            const turnThrough = turnGraph.getTurnThroughNode(curNodeEntry, is, segCandidate);
-            const turnData = turnThrough.getTurnData();
-            if (turnData.state !== 1 || !turnData.hasLanes()) {
+            // const turnsThrough = turnGraph.getTurnThroughNode(curNodeEntry, is, segCandidate);
+            // const turnData = turnsThrough.getTurnData();
+            // const turnsThrough = sdk.DataModel.Turns.getTurnsThroughNode({ nodeId: curNodeEntry.id });
+            // let turnData = turnsThrough[tidx];
+            function getMatchingTurn(node, from, to) {
+                let turns = sdk.DataModel.Turns.getTurnsThroughNode({ nodeId: node.id });
+                if (from !== null) {
+                    for (let idx = 0; idx < turns.length; ++idx) {
+                        if (turns[idx].fromSegmentId === from.id && turns[idx].toSegmentId === to.id)
+                            return turns[idx];
+                    }
+                }
+                return null;
+            }
+            let turnData = getMatchingTurn(curNodeEntry, is, segCandidate);
+            if (turnData === null || !turnData.lanes) {
                 lt_log(`Straight turn has no lanes:${nodeEntrySegIds[ii]} to ${segId}`, 3);
                 continue; // No lanes? Don't even think about it. (Not a candidate)
             }
@@ -2725,7 +2827,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
             // Only one segment allowed  // TBD ???    For now, don't allow more than one.
             if (inSeg !== null && thisTimeFail >= inSegIsHeurFail) {
                 if (inSegIsHeurFail === 0 && thisTimeFail === 0) {
-                    lt_log(`Error: >1 qualifying entry segment for ${segCandidate.attributes.id}: ${inSeg.attributes.id},${is.attributes.id}`, 2);
+                    lt_log(`Error: >1 qualifying entry segment for ${segCandidate.id}: ${inSeg.id},${is.id}`, 2);
                     lt_log("==================================================================================", 2);
                     return 0; // just stop here
                 }
@@ -2736,14 +2838,14 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
             inNumLanesThrough = nl;
             inSegIsHeurFail = thisTimeFail;
             inSegRef.inSeg = inSeg;
-            inSegRef.inSegDir = turnThrough.fromVertex.direction === "fwd" ? Direction.FORWARD : Direction.REVERSE;
+            inSegRef.inSegDir = inSeg?.toNodeId === curNodeEntry.id ? Direction.FORWARD : Direction.REVERSE;
         }
         if (inSeg == null) {
             lt_log("== No inseg found ==================================================================", 2);
             return 0; // otherwise wait for later
         }
         else {
-            lt_log(`Found inseg candidate: ${inSeg.attributes.id} ${inSegIsHeurFail === 0 ? "" : "(failed)"}`, 2);
+            lt_log(`Found inseg candidate: ${inSeg.id} ${inSegIsHeurFail === 0 ? "" : "(failed)"}`, 2);
         }
         // #3(a) Determine the outgoing segment 2 (the 2nd turn) and validate turn angle
         for (let ii = 0; ii < nodeExitSegIds.length; ii++) {
@@ -2756,7 +2858,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
             if (!lt_is_turn_allowed(segCandidate, curNodeExit, os)) {
                 continue;
             }
-            let oa = lt_getMathAzimuth_from_node(curNodeExit.attributes.id, os); // absolute math azimuth
+            let oa = lt_getMathAzimuth_from_node(curNodeExit.id, os); // absolute math azimuth
             let ota = lt_turn_angle(segEndAzm, oa); // turn angle
             lt_log(`Turn angle to outseg2 ${nodeExitSegIds[ii]}: ${ota}(${segEndAzm},${oa})`, 2);
             // Just to be sure, we can't do Heuristics if there's a chance to turn right (RH)
@@ -2776,7 +2878,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
             // Only one segment allowed  // TBD ???    For now, don't allow more than one.
             if (outSeg2 !== null && thisTimeFail >= outSeg2IsHeurFail) {
                 if (outSeg2IsHeurFail === 0 && thisTimeFail === 0) {
-                    lt_log(`Error: >1 qualifying exit2 segment for ${segCandidate.attributes.id}: ${outSeg2.attributes.id},${os.attributes.id}`, 2);
+                    lt_log(`Error: >1 qualifying exit2 segment for ${segCandidate.id}: ${outSeg2.id},${os.id}`, 2);
                     lt_log("==================================================================================", 2);
                     return 0; // just stop here
                 }
@@ -2790,23 +2892,23 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
             return 0;
         }
         else {
-            lt_log(`Found outseg2 candidate: ${outSeg2.attributes.id} ${outSeg2IsHeurFail === 0 ? "" : "(failed)"}`, 2);
+            lt_log(`Found outseg2 candidate: ${outSeg2.id} ${outSeg2IsHeurFail === 0 ? "" : "(failed)"}`, 2);
         }
         // #11 & 12: The Segment 1 that matters is the incoming (parallel to outgoing seg2)
         for (let ii = 0; ii < nodeEntrySegIds.length; ii++) {
-            if (nodeEntrySegIds[ii] === segId || nodeEntrySegIds[ii] === inSeg.attributes.id) {
+            if (nodeEntrySegIds[ii] === segId || nodeEntrySegIds[ii] === inSeg.id) {
                 // ignore same segment as our original
                 continue;
             }
             const ai1 = getSegObj(nodeEntrySegIds[ii]);
             let thisTimeFail = 0;
             // Ensure the segment is one-way TOWARD the node (incoming direction)
-            if ((ai1.attributes.fwdDirection && ai1.attributes.toNodeID !== curNodeEntry.attributes.id) ||
-                (ai1.attributes.revDirection && ai1.attributes.fromNodeID !== curNodeEntry.attributes.id)) {
+            if ((ai1?.isAtoB && ai1.toNodeId !== curNodeEntry.id) ||
+                (ai1?.isBtoA && ai1.fromNodeId !== curNodeEntry.id)) {
                 continue;
             }
             // Check turn from this seg to our segment
-            let ia = lt_getMathAzimuth_to_node(curNodeEntry.attributes.id, ai1); // absolute math azimuth
+            let ia = lt_getMathAzimuth_to_node(curNodeEntry.id, ai1); // absolute math azimuth
             // 12. Check angle from inseg to this seg (se)
             //  Since we already have azm of this seg TOWARD the node, just check the supplementary turn angle. Must also be within tolerance. (See Geometry proof :)
             let tta = lt_turn_angle(inAzm, ia);
@@ -2828,7 +2930,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
                 }
                 // If they both are good, then error
                 if (altInIsHeurFail === 0 && thisTimeFail === 0) {
-                    lt_log(`Error: >1 qualifying segment for ${segCandidate.attributes.id}: ${altIncomingSeg.attributes.id},${ai1.attributes.id}`, 2);
+                    lt_log(`Error: >1 qualifying segment for ${segCandidate.id}: ${altIncomingSeg.id},${ai1.id}`, 2);
                     lt_log("==================================================================================", 2);
                     return HeuristicsCandidate.FAIL;
                 }
@@ -2842,7 +2944,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
             return 0;
         }
         else {
-            lt_log(`Alt incoming-1 segment found: ${altIncomingSeg.attributes.id} ${altInIsHeurFail === 0 ? "" : "(failed)"}`, 2);
+            lt_log(`Alt incoming-1 segment found: ${altIncomingSeg.id} ${altInIsHeurFail === 0 ? "" : "(failed)"}`, 2);
         }
         // Have we found a failure candidate?
         if (inSegIsHeurFail < 0 || altInIsHeurFail < 0 || outSeg2IsHeurFail < 0) {
@@ -2858,7 +2960,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
             }
         }
         // We have a winner!!!
-        lt_log(`Found a heuristics candidate! ${segId} to ${outSeg2.attributes.id} at ${outTurnAngle2}`, 2);
+        lt_log(`Found a heuristics candidate! ${segId} to ${outSeg2.id} at ${outTurnAngle2}`, 2);
         return 1;
         ////////////////////////////////////////////// end of func /////////////////////////////////////////////////////////
         // get the absolute angle for a segment at an end point - borrowed from JAI
@@ -2867,7 +2969,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
                 return null;
             }
             let ja_dx, ja_dy;
-            if (segment.attributes.fromNodeID === nodeId) {
+            if (segment.fromNodeId === nodeId) {
                 ja_dx = lt_get_second_point(segment).x - lt_get_first_point(segment).x;
                 ja_dy = lt_get_second_point(segment).y - lt_get_first_point(segment).y;
             }
@@ -2877,16 +2979,18 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
             }
             let angle_rad = Math.atan2(ja_dy, ja_dx);
             let angle_deg = ((angle_rad * 180) / Math.PI) % 360;
-            lt_log(`Azm from node ${nodeId} / ${segment.attributes.id}: ${angle_deg}`, 3);
+            lt_log(`Azm from node ${nodeId} / ${segment.id}: ${angle_deg}`, 3);
             return angle_deg;
         }
         function lt_getMathAzimuth_to_node(nodeId, segment) {
             let fromAzm = lt_getMathAzimuth_from_node(nodeId, segment);
+            if (fromAzm === null)
+                return null;
             let toAzm = fromAzm + 180.0;
             if (toAzm >= 180.0) {
                 toAzm -= 360.0;
             }
-            lt_log(`Azm to node ${nodeId} / ${segment.attributes.id}: ${toAzm}`, 3);
+            lt_log(`Azm to node ${nodeId} / ${segment.id}: ${toAzm}`, 3);
             return toAzm;
         }
         /** Get absolute angle between 2 inputs.
@@ -2915,15 +3019,32 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
             return a;
         }
         function lt_is_turn_allowed(s_from, via_node, s_to) {
-            lt_log(`Allow from ${s_from.attributes.id} to ${s_to.attributes.id} via ${via_node.attributes.id}?
-            ${via_node.isTurnAllowedBySegDirections(s_from, s_to)} | ${s_from.isTurnAllowed(s_to, via_node)}`, 3);
+            let turnsThrough = sdk.DataModel.Turns.getTurnsThroughNode({ nodeId: via_node.id });
+            function isTurnAllowedBySegDirections(from, to) {
+                let result = {
+                    allowedBySegDirections: false,
+                    allowed: false,
+                };
+                if (from !== null && to !== null) {
+                    for (let tidx = 0; tidx < turnsThrough.length; ++tidx) {
+                        if (turnsThrough[tidx].fromSegmentId === from.id && turnsThrough[tidx].toSegmentId === to.id) {
+                            result.allowed = turnsThrough[tidx].isAllowed;
+                            result.allowedBySegDirections = true;
+                            break;
+                        }
+                    }
+                }
+                return result;
+            }
+            let permissions = isTurnAllowedBySegDirections(s_from, s_to);
+            lt_log(`Allow from ${s_from.id} to ${s_to !== null ? s_to.id : 0} via ${via_node.id}? ${permissions.allowedBySegDirections} | ${permissions.allowed}`, 3);
             // Is there a driving direction restriction?
-            if (!via_node.isTurnAllowedBySegDirections(s_from, s_to)) {
+            if (!permissions.allowedBySegDirections) {
                 lt_log("Driving direction restriction applies", 3);
                 return false;
             }
             // Is turn allowed by other means (e.g. turn restrictions)?
-            if (!s_from.isTurnAllowed(s_to, via_node)) {
+            if (!permissions.allowed) {
                 lt_log("Other restriction applies", 3);
                 return false;
             }
@@ -3223,7 +3344,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
             iconborderheight: undefined,
             iconborderwidth: undefined,
             graphicHeight: undefined,
-            graphicWidth: undefined
+            graphicWidth: undefined,
         };
         switch (sdk.Map.getZoomLevel()) {
             case 22:
