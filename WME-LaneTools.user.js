@@ -251,11 +251,21 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
     function applyNamesStyle(properties) {
         return properties.layerName === LTNamesLayer.name;
     }
+    function applyHighlightStyle(properties) {
+        return properties.layerName === LTHighlightLayer.name;
+    }
+    function applyNodeHightlightStyle(properties) {
+        return properties.styleName === "nodeStyle" && properties.layerName === LTHighlightLayer.name;
+    }
     let styleRules = {
         namesStyle: {
             predicate: applyNamesStyle,
             style: {},
         },
+        nodeHighlightStyle: {
+            predicate: applyNodeHightlightStyle,
+            style: {}
+        }
     };
     console.log("LaneTools: initializing...");
     function laneToolsBootstrap(tries = 0) {
@@ -655,20 +665,6 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
         });
         sdk.Map.addLayer({ layerName: LTNamesLayer.name, styleRules: Object.values(styleRules) });
         // Layer for lane text
-        const namesStyle = {
-            fontFamily: "Open Sans, Alef, helvetica, sans-serif, monospace",
-            labelOutlineColor: "black",
-            fontColor: "${labelColor}",
-            fontSize: "16",
-            labelXOffset: 15,
-            labelYOffset: -15,
-            labelOutlineWidth: "3",
-            label: "${labelText}",
-            angle: "",
-            labelAlign: "cm",
-            "stroke-width": "0",
-        };
-        Object.assign(styleRules.namesStyle.style, namesStyle);
         sdk.LayerSwitcher.addLayerCheckbox(LTNamesLayer);
         sdk.Map.setLayerVisibility({
             layerName: LTNamesLayer.name,
@@ -1940,13 +1936,13 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
             return null;
         }
         let ja_dx, ja_dy;
-        if (segment.attributes.fromNodeID === nodeId) {
-            ja_dx = lt_get_second_point(segment).x - lt_get_first_point(segment).x;
-            ja_dy = lt_get_second_point(segment).y - lt_get_first_point(segment).y;
+        if (segment.fromNodeId === nodeId) {
+            ja_dx = lt_get_second_point(segment)[0] - lt_get_first_point(segment)[0];
+            ja_dy = lt_get_second_point(segment)[1] - lt_get_first_point(segment)[1];
         }
         else {
-            ja_dx = lt_get_next_to_last_point(segment).x - lt_get_last_point(segment).x;
-            ja_dy = lt_get_next_to_last_point(segment).y - lt_get_last_point(segment).y;
+            ja_dx = lt_get_next_to_last_point(segment)[0] - lt_get_last_point(segment)[0];
+            ja_dy = lt_get_next_to_last_point(segment)[1] - lt_get_last_point(segment)[1];
         }
         let angle_rad = Math.atan2(ja_dy, ja_dx);
         let angle_deg = ((angle_rad * 180) / Math.PI) % 360;
@@ -2023,13 +2019,42 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
         sdk.Map.removeAllFeaturesFromLayer({ layerName: LTLaneGraphics.name });
     }
     function applyName(geo, fwdLnsCount, revLnsCount) {
-        let nameGeo = geo.clone();
+        if (!fwdLnsCount)
+            fwdLnsCount = 0;
+        if (!revLnsCount)
+            revLnsCount = 0;
         let laneNum = `${fwdLnsCount} / ${revLnsCount}`;
-        let lnLabel = new OpenLayers.Feature.Vector(nameGeo, {
-            labelText: laneNum,
+        const namesStyle = {
+            fontFamily: "Open Sans, Alef, helvetica, sans-serif, monospace",
             labelColor: LtSettings.LabelColor,
-        });
-        LTNamesLayer.addFeatures([lnLabel]);
+            labelText: laneNum,
+            labelOutlineColor: "black",
+            fontColor: LtSettings.LabelColor,
+            fontSize: "16",
+            labelXOffset: 15,
+            labelYOffset: -15,
+            labelOutlineWidth: "3",
+            label: laneNum,
+            angle: "",
+            labelAlign: "cm",
+            "stroke-width": "0",
+        };
+        Object.assign(styleRules.namesStyle.style, namesStyle);
+        let lnLabel = {
+            id: "point_" + geo.toString(),
+            geometry: {
+                type: "Point",
+                coordinates: geo,
+            },
+            type: "Feature",
+            properties: { styleName: "nameStyle", layerName: LTNamesLayer.name },
+        };
+        // let lnLabel = new OpenLayers.Feature.Vector(nameGeo, {
+        //     labelText: laneNum,
+        //     labelColor: LtSettings.LabelColor,
+        // });
+        // LTNamesLayer.addFeatures([lnLabel]);
+        sdk.Map.addFeatureToLayer({ feature: lnLabel, layerName: LTNamesLayer.name });
     }
     function highlightSegment(objGeo, direction, applyDash, applyLabels, fwdLnsCount, revLnsCount, applyLioHighlight, csMode, isBad, heur, heurOverHighlight) {
         const VectorStyle = {
@@ -2049,14 +2074,14 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
             if (direction === Direction.FORWARD) {
                 let newString = buildGeoComponentString(objGeo, fwdPoint, geoLength);
                 if (applyDash) {
-                    createVector(newString, `${LtSettings.ABColor}`, VectorStyle.DASH_THIN);
+                    createVector(newString, LtSettings.ABColor, VectorStyle.DASH_THIN);
                 } // draw dashed line
                 drawHighlight(newString, applyLioHighlight, isBad, heur, heurOverHighlight); // draw highlight
             }
             else if (direction === Direction.REVERSE) {
                 let newString = buildGeoComponentString(objGeo, 0, revPoint);
                 if (applyDash) {
-                    createVector(newString, `${LtSettings.BAColor}`, VectorStyle.DASH_THIN);
+                    createVector(newString, LtSettings.BAColor, VectorStyle.DASH_THIN);
                 }
                 drawHighlight(newString, applyLioHighlight, isBad, heur, heurOverHighlight);
             }
@@ -2068,17 +2093,18 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
                 else {
                     let p0 = objGeo[revPoint - 1];
                     let p1 = objGeo[fwdPoint];
+                    var newPoint = [(p0[0] + p1[0]) / 2, (p0[1] + p1[1]) / 2];
                     //                let newPoint = new OpenLayers.getOLGeometry().Point((p0.x + p1.x) / 2, (p0.y + p1.y) / 2);
                     // let newPoint = new OpenLayers.Geometry.Point((p0.x + p1.x) / 2, (p0.y + p1.y) / 2);
-                    var newPoint = {
-                        id: "pointNode_" + (p0[0] + p1[0]) / 2 + " " + (p0[1] + p1[1]) / 2,
-                        geometry: {
-                            coordinates: [(p0[0] + p1[0]) / 2, (p0[1] + p1[1]) / 2],
-                            type: "Point",
-                        },
-                        type: "Feature",
-                        properties: { styleName: "styleNode" },
-                    };
+                    // var newPoint = {
+                    //     id: "pointNode_" + (p0[0] + p1[0]) / 2 + " " + (p0[1] + p1[1]) / 2,
+                    //     geometry: {
+                    //         coordinates: [(p0[0] + p1[0]) / 2, (p0[1] + p1[1]) / 2],
+                    //         type: "Point",
+                    //     },
+                    //     type: "Feature",
+                    //     properties: { styleName: "styleNode", layerName: LTHighlightLayer.name },
+                    // };
                     applyName(newPoint, fwdLnsCount, revLnsCount);
                 }
             }
@@ -2088,10 +2114,11 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
             let p1 = objGeo[1];
             //        let point1 = new OpenLayers.getOLGeometry().Point((p0.x + p1.x) / 2, (p0.y + p1.y) / 2);
             // let point1 = new OpenLayers.Geometry.Point((p0.x + p1.x) / 2, (p0.y + p1.y) / 2);
+            var p1C = [(p0[0] + p1[0]) / 2, (p0[1] + p1[1]) / 2];
             var point1 = {
                 id: "pointNode_" + (p0[0] + p1[0]) / 2 + " " + (p0[1] + p1[1]) / 2,
                 geometry: {
-                    coordinates: [(p0[0] + p1[0]) / 2, (p0[1] + p1[1]) / 2],
+                    coordinates: p1C,
                     type: "Point",
                 },
                 type: "Feature",
@@ -2156,19 +2183,28 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
             }
             // Add the label only on the forward pass, or reverse if there are no forward lanes
             if (applyLabels && (Direction.FORWARD || fwdLnsCount === 0)) {
-                applyName(point1, fwdLnsCount, revLnsCount);
+                applyName(p1C, fwdLnsCount, revLnsCount);
             }
         }
         function buildGeoComponentString(geometry, from, to) {
             let components = [];
             for (let i = from; i < to; i++) {
-                components[i] = geometry.components[i].clone();
+                components[i] = geometry[i];
             }
-            return new OpenLayers.Geometry.LineString(components, {});
+            // return new OpenLayers.Geometry.LineString(components, {});
+            return {
+                id: "line_" + components.toString(),
+                geometry: {
+                    type: "LineString",
+                    coordinates: components,
+                },
+                type: "Feature",
+                properties: { styleName: "highlight" },
+            };
         }
         function drawHighlight(newString, lio, bad, heurNom, heurOverHighlight = false) {
             if (bad) {
-                createVector(newString.clone(), `${LtSettings.ErrorColor}`, VectorStyle.OVER_HIGHLIGHT);
+                createVector(newString, LtSettings.ErrorColor, VectorStyle.OVER_HIGHLIGHT);
                 return;
             }
             if (lio) {
@@ -2190,7 +2226,6 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
         function createVector(geoCom, lineColor, style) {
             // let newVector = new OpenLayers.Feature.Vector(geoCom, {}, {});
             // LTHighlightLayer.addFeatures([newVector]);
-            sdk.Map.addFeatureToLayer({ feature: geoCom, layerName: LTHighlightLayer.name });
             const line = document.getElementById(geoCom.id);
             if (line) {
                 line.setAttribute("stroke", `${lineColor}`);
@@ -2214,30 +2249,40 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
                     }
                 }
             }
+            sdk.Map.addFeatureToLayer({ feature: geoCom, layerName: LTHighlightLayer.name });
         }
         // LTHighlightLayer.setZIndex(2880);
     }
     function highlightNode(objGeo, color, overSized = false) {
         // const geo = objGeo.clone();
         // const highlight = new OpenLayers.Feature.Vector(geo, {});
+        if (!objGeo)
+            return;
         let newString = {
-            id: "line_" + objGeo.toString(),
+            id: "Node_" + objGeo.toString(),
             geometry: {
-                type: "LineString",
-                coordinates: [objGeo],
+                type: "Point",
+                coordinates: objGeo,
             },
             type: "Feature",
-            properties: { styleName: "styleNode" },
+            properties: { styleName: "styleNode", layerName: LTHighlightLayer.name },
         };
+        let nodeStyle = {
+            fill: color,
+            r: overSized ? 18 : 10,
+            "fill-opacity": 0.9,
+            "stroke-width": 0
+        };
+        Object.assign(styleRules.nodeHighlightStyle.style, nodeStyle);
         // LTHighlightLayer.addFeatures([highlight]);
         sdk.Map.addFeatureToLayer({ feature: newString, layerName: LTHighlightLayer.name });
-        const node = document.getElementById(geo.id);
-        if (node) {
-            node.setAttribute("fill", color);
-            node.setAttribute("r", overSized ? "18" : "10");
-            node.setAttribute("fill-opacity", "0.9");
-            node.setAttribute("stroke-width", "0");
-        }
+        // const node = document.getElementById(geo.id);
+        // if (node) {
+        //     node.setAttribute("fill", color);
+        //     node.setAttribute("r", overSized ? "18" : "10");
+        //     node.setAttribute("fill-opacity", "0.9");
+        //     node.setAttribute("stroke-width", "0");
+        // }
     }
     let lt_scanArea_timer = {
         start: function () {
@@ -2408,11 +2453,11 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
                 // Nodes highlights
                 if (mapHighlights && getId("lt-NodesEnable").checked) {
                     if (tlns) {
-                        highlightNode(node.getOLGeometry(), `${LtSettings.NodeColor}`);
+                        highlightNode(node?.geometry.coordinates, LtSettings.NodeColor);
                         //                    highlightNode(node.geometry, `${LtSettings.NodeColor}`);
                     }
                     if (tio) {
-                        highlightNode(node.getOLGeometry(), `${LtSettings.TIOColor}`);
+                        highlightNode(node?.geometry.coordinates, LtSettings.TIOColor);
                         //                    highlightNode(node.geometry, `${LtSettings.TIOColor}`);
                     }
                 }
@@ -2425,10 +2470,10 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
                         let nodeColor = heurCand === HeuristicsCandidate.PASS
                             ? `${LtSettings.NodeColor}`
                             : `${LtSettings.HeurFailColor}`;
-                        highlightSegment(seg.getOLGeometry(), direction, false, false, 0, 0, false, csMode, badLn, heurCand, true);
-                        highlightSegment(entrySeg.seg.getOLGeometry(), entrySeg.direction, false, false, 0, 0, false, 0, false, heurCand, true);
-                        highlightNode(node.getOLGeometry(), nodeColor, true);
-                        highlightNode(oppNode.getOLGeometry(), nodeColor, true);
+                        highlightSegment(seg.geometry.coordinates, direction, false, false, 0, 0, false, csMode, badLn, heurCand, true);
+                        highlightSegment(entrySeg, entrySeg.direction, false, false, 0, 0, false, 0, false, heurCand, true);
+                        highlightNode(node?.geometry.coordinates, nodeColor, true);
+                        highlightNode(oppNode?.geometry.coordinates, nodeColor, true);
                         //                    highlightSegment(seg.geometry, direction, false, false, 0, 0, false, csMode, badLn, heurCand, true);
                         //                    highlightSegment(entrySeg.seg.geometry, entrySeg.direction, false, false, 0, 0, false, 0, false, heurCand, true);
                         //                    highlightNode(node.geometry, nodeColor, true);
@@ -2722,7 +2767,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
         });
         // console.log('LaneTools: Click Saver Module loaded');
     }
-    function isHeuristicsCandidate(segCandidate, curNodeExit, nodeExitSegIds, curNodeEntry, laneCount, segLength, turnGraph, inSegRef) {
+    function isHeuristicsCandidate(segCandidate, curNodeExit, nodeExitSegIds, curNodeEntry, laneCount, segLength, inSegRef) {
         /* CRITERIA FOR HEURISTICS, as described on the wiki: https://wazeopedia.waze.com/wiki/USA/User:Nzahn1/Lanes#Mapping_lanes_on_divided_roadways
     1. Both left and right turns are possible at the intersection;
     2. The two portions of the divided roadway are essentially parallel to each other;
@@ -2739,7 +2784,6 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
         if (nodeExitSegIds == null ||
             curNodeEntry == null ||
             laneCount == null ||
-            turnGraph == null ||
             inSegRef == null) {
             lt_log("isHeuristicsCandidate received bad argument (null)", 1);
             return 0;
@@ -2970,12 +3014,12 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
             }
             let ja_dx, ja_dy;
             if (segment.fromNodeId === nodeId) {
-                ja_dx = lt_get_second_point(segment).x - lt_get_first_point(segment).x;
-                ja_dy = lt_get_second_point(segment).y - lt_get_first_point(segment).y;
+                ja_dx = lt_get_second_point(segment)[0] - lt_get_first_point(segment)[0];
+                ja_dy = lt_get_second_point(segment)[1] - lt_get_first_point(segment)[1];
             }
             else {
-                ja_dx = lt_get_next_to_last_point(segment).x - lt_get_last_point(segment).x;
-                ja_dy = lt_get_next_to_last_point(segment).y - lt_get_last_point(segment).y;
+                ja_dx = lt_get_next_to_last_point(segment)[0] - lt_get_last_point(segment)[0];
+                ja_dy = lt_get_next_to_last_point(segment)[1] - lt_get_last_point(segment)[1];
             }
             let angle_rad = Math.atan2(ja_dy, ja_dx);
             let angle_deg = ((angle_rad * 180) / Math.PI) % 360;
@@ -3088,7 +3132,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
         console.log(laneCount);
         const node = getNodeObj(nodeID);
         const conSegs = node.getSegmentIds();
-        const turnGraph = W.model.getTurnGraph();
+        // const turnGraph = W.model.getTurnGraph();
         let geoPoint1;
         if (side === "A") {
             geoPoint1 = segGeo[1];
@@ -3150,7 +3194,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
         let geoPoint1;
         const node = getNodeObj(nodeID);
         const conSegs = node.getSegmentIds();
-        const turnGraph = W.model.getTurnGraph();
+        // const turnGraph = W.model.getTurnGraph();
         let pasteData = {};
         let pasteInfo = [];
         if (side === "A") {
@@ -3271,64 +3315,64 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
         let temp = {};
         if (sign === 0) {
             temp = {
-                x: node.getOLGeometry().x + featDis.start * 2,
-                y: node.getOLGeometry().y + featDis.boxheight,
+                x: node.geometry.coordinates[0] + featDis.start * 2,
+                y: node.geometry.coordinates[1] + featDis.boxheight,
                 //                x: node.geometry.x + (featDis.start * 2),
                 //                y: node.geometry.y + (featDis.boxheight)
             };
         }
         else if (sign === 1) {
             temp = {
-                x: node.getOLGeometry().x + featDis.boxheight,
-                y: node.getOLGeometry().y + (featDis.boxincwidth * numIcons) / 1.8,
+                x: node.geometry.coordinates[0] + featDis.boxheight,
+                y: node.geometry.coordinates[1] + (featDis.boxincwidth * numIcons) / 1.8,
                 //                x: node.geometry.x + featDis.boxheight,
                 //                y: node.geometry.y + (featDis.boxincwidth * numIcons/1.8)
             };
         }
         else if (sign === 2) {
             temp = {
-                x: node.getOLGeometry().x - (featDis.start + featDis.boxincwidth * numIcons),
-                y: node.getOLGeometry().y + (featDis.start + featDis.boxheight),
+                x: node.geometry.coordinates[0] - (featDis.start + featDis.boxincwidth * numIcons),
+                y: node.geometry.coordinates[1] + (featDis.start + featDis.boxheight),
                 //                x: node.geometry.x - (featDis.start + (featDis.boxincwidth * numIcons)),
                 //                y: node.geometry.y + (featDis.start + featDis.boxheight)
             };
         }
         else if (sign === 3) {
             temp = {
-                x: node.getOLGeometry().x + (featDis.start + featDis.boxincwidth),
-                y: node.getOLGeometry().y - (featDis.start + featDis.boxheight),
+                x: node.geometry.coordinates[0] + (featDis.start + featDis.boxincwidth),
+                y: node.geometry.coordinates[1] - (featDis.start + featDis.boxheight),
                 //                x: node.geometry.x + (featDis.start + featDis.boxincwidth),
                 //                y: node.geometry.y - (featDis.start + featDis.boxheight)
             };
         }
         else if (sign === 4) {
             temp = {
-                x: node.getOLGeometry().x - (featDis.start + featDis.boxheight * 1.5),
-                y: node.getOLGeometry().y - (featDis.start + featDis.boxincwidth * numIcons * 1.5),
+                x: node.geometry.coordinates[0] - (featDis.start + featDis.boxheight * 1.5),
+                y: node.geometry.coordinates[1] - (featDis.start + featDis.boxincwidth * numIcons * 1.5),
                 //                x: node.geometry.x - (featDis.start + (featDis.boxheight * 1.5)),
                 //                y: node.geometry.y - (featDis.start + (featDis.boxincwidth * numIcons * 1.5))
             };
         }
         else if (sign === 5) {
             temp = {
-                x: node.getOLGeometry().x + (featDis.start + featDis.boxincwidth / 2),
-                y: node.getOLGeometry().y + featDis.start / 2,
+                x: node.geometry.coordinates[0] + (featDis.start + featDis.boxincwidth / 2),
+                y: node.geometry.coordinates[1] + featDis.start / 2,
                 //                x: node.geometry.x + (featDis.start + featDis.boxincwidth/2),
                 //                y: node.geometry.y + (featDis.start/2)
             };
         }
         else if (sign === 6) {
             temp = {
-                x: node.getOLGeometry().x - featDis.start,
-                y: node.getOLGeometry().y - featDis.start * ((featDis.boxincwidth * numIcons) / 2),
+                x: node.geometry.coordinates[0] - featDis.start,
+                y: node.geometry.coordinates[1] - featDis.start * ((featDis.boxincwidth * numIcons) / 2),
                 //                x: node.geometry.x - (featDis.start),
                 //                y: node.geometry.y - (featDis.start * (featDis.boxincwidth * numIcons/2))
             };
         }
         else if (sign === 7) {
             temp = {
-                x: node.getOLGeometry().x - featDis.start * ((featDis.boxincwidth * numIcons) / 2),
-                y: node.getOLGeometry().y - featDis.start,
+                x: node.geometry.coordinates[0] - featDis.start * ((featDis.boxincwidth * numIcons) / 2),
+                y: node.geometry.coordinates[1] - featDis.start,
                 //                x: node.geometry.x - (featDis.start * (featDis.boxincwidth * numIcons/2)),
                 //                y: node.geometry.y - (featDis.start)
             };
