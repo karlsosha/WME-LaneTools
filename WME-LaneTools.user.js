@@ -257,6 +257,9 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
     function applyNodeHightlightStyle(properties) {
         return properties.styleName === "nodeStyle" && properties.layerName === LTHighlightLayer.name;
     }
+    function applyVectorHightlightStyle(properties) {
+        return properties.styleName === "vectorStyle" && properties.layerName === LTHighlightLayer.name;
+    }
     let styleRules = {
         namesStyle: {
             predicate: applyNamesStyle,
@@ -264,6 +267,10 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
         },
         nodeHighlightStyle: {
             predicate: applyNodeHightlightStyle,
+            style: {}
+        },
+        vectorHighlightStyle: {
+            predicate: applyVectorHightlightStyle,
             style: {}
         }
     };
@@ -540,7 +547,11 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
             sdk.Sidebar.registerScriptTab().then((r) => {
                 r.tabLabel.innerHTML = "LT";
                 r.tabPane.innerHTML = $ltTab.html;
-                setupOptions();
+                setupOptions().then(() => {
+                    scanArea();
+                    lanesTabSetup();
+                    displayLaneGraphics();
+                });
             });
             $(`<style type="text/css">${ltCss}</style>`).appendTo("head");
             $("#map").append($ltButtons.html());
@@ -995,9 +1006,6 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
         $("#keyboard-dialog").on("hide", () => {
             checkShortcutsChanged();
         });
-        scanArea();
-        lanesTabSetup();
-        displayLaneGraphics();
         colorTitle.tooltip();
     }
     async function loadSettings() {
@@ -2115,40 +2123,43 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
             //        let point1 = new OpenLayers.getOLGeometry().Point((p0.x + p1.x) / 2, (p0.y + p1.y) / 2);
             // let point1 = new OpenLayers.Geometry.Point((p0.x + p1.x) / 2, (p0.y + p1.y) / 2);
             var p1C = [(p0[0] + p1[0]) / 2, (p0[1] + p1[1]) / 2];
-            var point1 = {
-                id: "pointNode_" + (p0[0] + p1[0]) / 2 + " " + (p0[1] + p1[1]) / 2,
-                geometry: {
-                    coordinates: p1C,
-                    type: "Point",
-                },
-                type: "Feature",
-                properties: { styleName: "styleNode" },
-            };
+            var pVector = [p1C];
+            // var point1 = {
+            //     id: "pointNode_" + (p0[0] + p1[0]) / 2 + " " + (p0[1] + p1[1]) / 2,
+            //     geometry: {
+            //         coordinates: p1C,
+            //         type: "Point",
+            //     },
+            //     type: "Feature",
+            //     properties: { styleName: "vectorStyle", layerName: LTHighlightLayer.name },
+            // };
             if (direction === Direction.FORWARD) {
                 //            let point2 = new OpenLayers.getOLGeometry().Point(geo.components[1].clone().x, geo.components[1].clone().y);
                 //            let newString = new OpenLayers.getOLGeometry().LineString([point1, point2], {});
                 // let point2 = new OpenLayers.Geometry.Point(geo.components[1].clone().x, geo.components[1].clone().y);
-                let point2 = {
-                    id: "pointNode_" + objGeo[1][0] + " " + objGeo[1][1],
-                    geometry: {
-                        coordinates: [objGeo[1][0], objGeo[1][1]],
-                        type: "Point",
-                    },
-                    type: "Feature",
-                    properties: { styleName: "styleNode" },
-                };
+                // let point2 = {
+                //     id: "pointNode_" + objGeo[1][0] + " " + objGeo[1][1],
+                //     geometry: {
+                //         coordinates: [objGeo[1][0], objGeo[1][1]],
+                //         type: "Point",
+                //     },
+                //     type: "Feature",
+                //     properties: { styleName: "vectorStyle", layerName: LTHighlightLayer.name },
+                // };
                 // let newString = new OpenLayers.Geometry.LineString([point1, point2], {});
+                let p2C = [objGeo[1][0], objGeo[1][1]];
+                pVector.push(p2C);
                 let newString = {
-                    id: "line_" + point1.toString(),
+                    id: "line_" + pVector.toString(),
                     geometry: {
                         type: "LineString",
-                        coordinates: [point1, point2],
+                        coordinates: pVector,
                     },
                     type: "Feature",
-                    properties: { styleName: "styleNode" },
+                    properties: { styleName: "vectorStyle", layerName: LTHighlightLayer.name },
                 };
                 if (applyDash) {
-                    createVector(newString, `${LtSettings.ABColor}`, VectorStyle.DASH_THIN);
+                    createVector(newString, LtSettings.ABColor, VectorStyle.DASH_THIN);
                 }
                 drawHighlight(newString, applyLioHighlight, isBad, heur, heurOverHighlight);
             }
@@ -2157,27 +2168,29 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
                 //            let newString = new OpenLayers.getOLGeometry().LineString([point1, point2], {});
                 // let point2 = new OpenLayers.Geometry.Point(geo.components[0].clone().x, geo.components[0].clone().y);
                 // let newString = new OpenLayers.Geometry.LineString([point1, point2], {});
-                let point2 = {
-                    id: "pointNode_" + objGeo[0][0] + " " + objGeo[0][0],
-                    geometry: {
-                        coordinates: [objGeo[0][0], objGeo[0][1]],
-                        type: "Point",
-                    },
-                    type: "Feature",
-                    properties: { styleName: "styleNode" },
-                };
+                // let point2 = {
+                //     id: "pointNode_" + objGeo[0][0] + " " + objGeo[0][0],
+                //     geometry: {
+                //         coordinates: [objGeo[0][0], objGeo[0][1]],
+                //         type: "Point",
+                //     },
+                //     type: "Feature",
+                //     properties: { styleName: "vectorStyle", layerName: LTHighlightLayer.name },
+                // };
                 // let newString = new OpenLayers.Geometry.LineString([point1, point2], {});
+                let p2C = [objGeo[0][0], objGeo[0][1]];
+                pVector.push(p2C);
                 let newString = {
-                    id: "line_" + point1.toString(),
+                    id: "line_" + pVector.toString(),
                     geometry: {
                         type: "LineString",
-                        coordinates: [point1, point2],
+                        coordinates: pVector,
                     },
                     type: "Feature",
-                    properties: { styleName: "styleNode" },
+                    properties: { styleName: "vectorStyle", layerName: LTHighlightLayer.name },
                 };
                 if (applyDash) {
-                    createVector(newString, `${LtSettings.BAColor}`, VectorStyle.DASH_THIN);
+                    createVector(newString, LtSettings.BAColor, VectorStyle.DASH_THIN);
                 }
                 drawHighlight(newString, applyLioHighlight, isBad, heur, heurOverHighlight);
             }
@@ -2199,7 +2212,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
                     coordinates: components,
                 },
                 type: "Feature",
-                properties: { styleName: "highlight" },
+                properties: { styleName: "vectorStyle", layerName: LTHighlightLayer.name },
             };
         }
         function drawHighlight(newString, lio, bad, heurNom, heurOverHighlight = false) {
@@ -2208,47 +2221,71 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
                 return;
             }
             if (lio) {
-                createVector(newString.clone(), `${LtSettings.LIOColor}`, VectorStyle.HIGHLIGHT);
+                createVector(newString.clone(), LtSettings.LIOColor, VectorStyle.HIGHLIGHT);
             }
             if (csMode === 1 && applyCSHighlight) {
-                createVector(newString.clone(), `${LtSettings.CS1Color}`, VectorStyle.HIGHLIGHT);
+                createVector(newString.clone(), LtSettings.CS1Color, VectorStyle.HIGHLIGHT);
             }
             if (csMode === 2 && applyCSHighlight) {
-                createVector(newString.clone(), `${LtSettings.CS2Color}`, VectorStyle.HIGHLIGHT);
+                createVector(newString.clone(), LtSettings.CS2Color, VectorStyle.HIGHLIGHT);
             }
             if (heurNom === HeuristicsCandidate.PASS) {
-                createVector(newString.clone(), `${LtSettings.HeurColor}`, heurOverHighlight ? VectorStyle.OVER_HIGHLIGHT : VectorStyle.HIGHLIGHT);
+                createVector(newString.clone(), LtSettings.HeurColor, heurOverHighlight ? VectorStyle.OVER_HIGHLIGHT : VectorStyle.HIGHLIGHT);
             }
             else if (heurNom === HeuristicsCandidate.FAIL) {
-                createVector(newString.clone(), `${LtSettings.HeurFailColor}`, heurOverHighlight ? VectorStyle.OVER_HIGHLIGHT : VectorStyle.HIGHLIGHT);
+                createVector(newString.clone(), LtSettings.HeurFailColor, heurOverHighlight ? VectorStyle.OVER_HIGHLIGHT : VectorStyle.HIGHLIGHT);
             }
         }
         function createVector(geoCom, lineColor, style) {
             // let newVector = new OpenLayers.Feature.Vector(geoCom, {}, {});
             // LTHighlightLayer.addFeatures([newVector]);
-            const line = document.getElementById(geoCom.id);
-            if (line) {
-                line.setAttribute("stroke", `${lineColor}`);
-                if (style === VectorStyle.HIGHLIGHT) {
-                    line.setAttribute("stroke-width", "15");
-                    line.setAttribute("stroke-opacity", ".6");
-                }
-                else if (style === VectorStyle.OVER_HIGHLIGHT) {
-                    line.setAttribute("stroke-width", "18");
-                    line.setAttribute("stroke-opacity", ".85");
-                }
-                else {
-                    line.setAttribute("stroke-opacity", "1");
-                    if (style === VectorStyle.DASH_THICK) {
-                        line.setAttribute("stroke-width", "8");
-                        line.setAttribute("stroke-dasharray", "8 10");
-                    }
-                    else if (style === VectorStyle.DASH_THIN) {
-                        line.setAttribute("stroke-width", "4");
-                        line.setAttribute("stroke-dasharray", "10 10");
-                    }
-                }
+            let stroke = lineColor;
+            let strokeOpacity = 1;
+            let strokeWidth = 15;
+            let strokeDashArray = [];
+            switch (style) {
+                case VectorStyle.DASH_THICK:
+                    strokeWidth = 8;
+                    strokeDashArray = [8, 10];
+                    break;
+                case VectorStyle.DASH_THIN:
+                    strokeWidth = 4;
+                    strokeDashArray = [10, 10];
+                    break;
+                case VectorStyle.HIGHLIGHT:
+                    strokeWidth = 15;
+                    strokeOpacity = .6;
+                case VectorStyle.OVER_HIGHLIGHT:
+                    strokeWidth = 18;
+                    strokeOpacity = 0.85;
+                default: break;
             }
+            Object.assign(styleRules.vectorHighlightStyle.style, {
+                stroke: lineColor,
+                "stroke-width": strokeWidth,
+                "stroke-opacity": strokeOpacity,
+                "stroke-dasharray": strokeDashArray.join(" ")
+            });
+            // const line = document.getElementById(geoCom.id);
+            // if (line) {
+            //     line.setAttribute("stroke", `${lineColor}`);
+            //     if (style === VectorStyle.HIGHLIGHT) {
+            //         line.setAttribute("stroke-width", "15");
+            //         line.setAttribute("stroke-opacity", ".6");
+            //     } else if (style === VectorStyle.OVER_HIGHLIGHT) {
+            //         line.setAttribute("stroke-width", "18");
+            //         line.setAttribute("stroke-opacity", ".85");
+            //     } else {
+            //         line.setAttribute("stroke-opacity", "1");
+            //         if (style === VectorStyle.DASH_THICK) {
+            //             line.setAttribute("stroke-width", "8");
+            //             line.setAttribute("stroke-dasharray", "8 10");
+            //         } else if (style === VectorStyle.DASH_THIN) {
+            //             line.setAttribute("stroke-width", "4");
+            //             line.setAttribute("stroke-dasharray", "10 10");
+            //         }
+            //     }
+            // }
             sdk.Map.addFeatureToLayer({ feature: geoCom, layerName: LTHighlightLayer.name });
         }
         // LTHighlightLayer.setZIndex(2880);
@@ -2359,7 +2396,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
         const applyLioHighlight = mapHighlights && getId("lt-LIOEnable").checked;
         const applyLabels = mapHighlights && getId("lt-LabelsEnable").checked;
         const zoomLevel = sdk.Map.getZoomLevel();
-        const turnGraph = W.model.getTurnGraph();
+        // const turnGraph = W.model.getTurnGraph();
         // console.log(zoomLevel);
         _.each(segments, (s) => {
             if (onScreen(s, zoomLevel)) {
@@ -2387,8 +2424,8 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
             }
         });
         function scanSegment_Inner(seg, direction, segLength, tryRedo) {
-            const fwdLaneCount = seg.toLanesInfo?.numberOfLanes;
-            const revLaneCount = seg.fromLanesInfo?.numberOfLanes;
+            const fwdLaneCount = seg.toLanesInfo?.numberOfLanes ? seg.toLanesInfo?.numberOfLanes : 0;
+            const revLaneCount = seg.fromLanesInfo?.numberOfLanes ? seg.toLanesInfo?.numberOfLanes : 0;
             let node = getNodeObj(seg.toNodeId);
             let oppNode = getNodeObj(seg.fromNodeId);
             let laneCount = fwdLaneCount;
@@ -2425,7 +2462,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
                 // 1/1/21: Only check for heuristics on segments <50m. IMPORTANT because now we're checking segments regardless of lanes
                 if (segLength <= MAX_LEN_HEUR) {
                     // Check Heuristics regardless of heurChecks, because we want to report Errors even if Heur highlights are off
-                    heurCand = isHeuristicsCandidate(seg, node, nodeSegs, oppNode, laneCount, segLength, turnGraph, entrySegRef);
+                    heurCand = isHeuristicsCandidate(seg, node, nodeSegs, oppNode, laneCount, segLength, entrySegRef);
                     if (heurCand === HeuristicsCandidate.ERROR) {
                         // fwdHeurCand = HeuristicsCandidate.NONE;
                         badLn = true;
@@ -3649,20 +3686,20 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
     }
     function displayLaneGraphics() {
         removeLaneGraphics();
-        const sel = W.selectionManager.getSelectedWMEFeatures();
+        const selection = sdk.Editing.getSelection();
         if (!getId("lt-ScriptEnabled").checked ||
             !getId("lt-IconsEnable").checked ||
-            sel.length !== 1 ||
-            sel[0]._wmeObject.type !== "segment")
+            selection?.objectType !== "segment" ||
+            selection.ids.length !== 1)
             return;
-        const seg = sel[0]._wmeObject;
-        const zoomLevel = W.map.getOLMap().getZoom();
+        const seg = sdk.DataModel.Segments.getById(selection.ids[0]);
+        const zoomLevel = sdk.Map.getZoomLevel();
         if (zoomLevel < 15 ||
             (seg.attributes.roadType !==
                 (LT_ROAD_TYPE.FREEWAY || LT_ROAD_TYPE.MAJOR_HIGHWAY || LT_ROAD_TYPE.MINOR_HIGHWAY) &&
                 zoomLevel < 16))
             return;
-        let fwdEle = seg.attributes.fwdLaneCount > 0
+        let fwdEle = seg?.fromLanesInfo?.numberOfLanes > 0
             ? getIcons($(".fwd-lanes")
                 .find(".lane-arrow")
                 .map(function () {
@@ -3670,7 +3707,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
             })
                 .get())
             : false;
-        let revEle = seg.attributes.revLaneCount > 0
+        let revEle = seg?.toLanesInfo?.numberOfLanes > 0
             ? getIcons($(".rev-lanes")
                 .find(".lane-arrow")
                 .map(function () {
@@ -3687,14 +3724,14 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
                 setTimeout(displayLaneGraphics, 200);
                 return;
             }
-            drawIcons(seg, W.model.nodes.getObjectById(seg.attributes.toNodeID), fwdImgs);
+            drawIcons(seg, sdk.DataModel.Nodes.getById(seg?.toNodeId), fwdImgs);
         }
         if (revEle) {
             if (Object.keys(revEle).length === 0) {
                 setTimeout(displayLaneGraphics, 200);
                 return;
             }
-            drawIcons(seg, W.model.nodes.getObjectById(seg.attributes.fromNodeID), revImgs);
+            drawIcons(seg, sdk.DataModel.Nodes.getById(seg?.fromNodeId), revImgs);
         }
         // There are now 23 zoom levels where 22 is fully zoomed and currently 14 is where major road types load data and 16 loads the rest
     }
