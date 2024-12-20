@@ -1,4 +1,3 @@
-"use strict";
 // ==UserScript==
 // @name         WME LaneTools
 // @namespace    https://github.com/SkiDooGuy/WME-LaneTools
@@ -18,13 +17,9 @@
 // @connect      raw.githubusercontent.com
 // @contributionURL https://github.com/WazeDev/Thank-The-Authors
 // ==/UserScript==
-/* global W */
-/* global WazeWrap */
-// import { KeyboardShortcut, Node, Segment, Turn, UserSession, WmeSDK } from "wme-sdk";
-// import { Point, LineString, Position } from "geojson";
-// import _ from "underscore";
-// import $ from "jquery";
-// import WazeWrap from "https://greasyfork.org/scripts/24851-wazewrap/code/WazeWrap.js";
+import _ from "underscore";
+import $ from "jquery";
+import WazeWrap from "https://greasyfork.org/scripts/24851-wazewrap/code/WazeWrap.js";
 unsafeWindow.SDK_INITIALIZED.then(ltInit);
 function ltInit() {
     const Direction = {
@@ -218,7 +213,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
     let lt_scanArea_recursive = 0;
     let LtSettings;
     let strings;
-    let _turnInfo = [];
+    // let _turnInfo = [];
     let _turnData = {};
     let laneCount = 0;
     let LTHighlightLayer = { name: "LT Highlights Layer" };
@@ -659,7 +654,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
         // LTLaneGraphics = new OpenLayers.Layer.Vector("LTLaneGraphics", { uniqueName: "LTLaneGraphics" });
         // W.map.addLayer(LTLaneGraphics);
         // LTLaneGraphics.setVisibility(true);
-        sdk.Map.addLayer({ layerName: LTLaneGraphics.name, styleRules: Object.values(styleRules) });
+        sdk.Map.addLayer({ layerName: LTLaneGraphics.name, styleRules: Object.values(styleRules), zIndexing: true });
         sdk.LayerSwitcher.addLayerCheckbox(LTLaneGraphics);
         sdk.Map.setLayerVisibility({
             layerName: LTLaneGraphics.name,
@@ -678,11 +673,15 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
                 else if (payload.name === LTHighlightLayer.name) {
                     LtSettings.highlightsVisible = payload.checked;
                 }
+                else if (payload.name === LTNamesLayer.name) {
+                    LtSettings.ltNamesVisible = payload.checked;
+                }
+                saveSettings();
                 if (payload.checked)
                     scanArea();
             },
         });
-        sdk.Map.addLayer({ layerName: LTNamesLayer.name, styleRules: Object.values(styleRules) });
+        sdk.Map.addLayer({ layerName: LTNamesLayer.name, styleRules: Object.values(styleRules), zIndexing: true });
         // Layer for lane text
         sdk.LayerSwitcher.addLayerCheckbox(LTNamesLayer);
         sdk.Map.setLayerVisibility({
@@ -1507,8 +1506,8 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
                 delOpp.off();
                 if (!getId("li-del-rev-btn") &&
                     !revDone &&
-                    selSeg?.fromLanesInfo &&
-                    selSeg.fromLanesInfo.numberOfLanes > 0) {
+                    selSeg?.fromNodeLanesCount &&
+                    selSeg.fromNodeLanesCount > 0) {
                     if ($(".rev-lanes > div.lane-instruction.lane-instruction-from > div.instruction").length > 0) {
                         $btnCont2.prependTo(".rev-lanes > div.lane-instruction.lane-instruction-from > div.instruction");
                         $(".rev-lanes > div.lane-instruction.lane-instruction-from > div.instruction").css("border-bottom", `4px dashed ${LtSettings.BAColor}`);
@@ -1948,7 +1947,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
     }
     // returns true if object is within window  bounds and above zoom threshold
     function onScreen(obj, curZoomLevel) {
-        if (!obj.geometry) {
+        if (!obj || !obj.geometry) {
             return false;
         }
         // Either FREEWAY or Zoom >=4
@@ -2092,6 +2091,8 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
             HIGHLIGHT: 10,
             OVER_HIGHLIGHT: 20,
         };
+        fwdLnsCount = !fwdLnsCount ? 0 : fwdLnsCount;
+        revLnsCount = !revLnsCount ? 0 : revLnsCount;
         // const geo = objGeo.clone();
         const applyCSHighlight = getId("lt-CSEnable").checked;
         // Need to rework this to account for segment length, cause of geo adjustment and such
@@ -2251,10 +2252,10 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
                 createVector(newString.clone(), LtSettings.CS2Color, VectorStyle.HIGHLIGHT);
             }
             if (heurNom === HeuristicsCandidate.PASS) {
-                createVector(newString.clone(), LtSettings.HeurColor, heurOverHighlight ? VectorStyle.OVER_HIGHLIGHT : VectorStyle.HIGHLIGHT);
+                createVector(newString, LtSettings.HeurColor, heurOverHighlight ? VectorStyle.OVER_HIGHLIGHT : VectorStyle.HIGHLIGHT);
             }
             else if (heurNom === HeuristicsCandidate.FAIL) {
-                createVector(newString.clone(), LtSettings.HeurFailColor, heurOverHighlight ? VectorStyle.OVER_HIGHLIGHT : VectorStyle.HIGHLIGHT);
+                createVector(newString, LtSettings.HeurFailColor, heurOverHighlight ? VectorStyle.OVER_HIGHLIGHT : VectorStyle.HIGHLIGHT);
             }
         }
         function createVector(geoCom, lineColor, style) {
@@ -2276,17 +2277,20 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
                 case VectorStyle.HIGHLIGHT:
                     strokeWidth = 15;
                     strokeOpacity = 0.6;
+                    break;
                 case VectorStyle.OVER_HIGHLIGHT:
                     strokeWidth = 18;
                     strokeOpacity = 0.85;
+                    break;
                 default:
                     break;
             }
             Object.assign(styleRules.vectorHighlightStyle.style, {
-                stroke: lineColor,
-                "stroke-width": strokeWidth,
-                "stroke-opacity": strokeOpacity,
-                "stroke-dasharray": strokeDashArray.join(" "),
+                strokeColor: stroke,
+                stroke: stroke,
+                strokeWidth: strokeWidth,
+                strokeOpacity: strokeOpacity,
+                strokeDashstyle: strokeDashArray.join(" "),
             });
             // const line = document.getElementById(geoCom.id);
             // if (line) {
@@ -2389,18 +2393,28 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
                 scanSegments(sdk.DataModel.Segments.getAll(), false);
             }
             if (isEnabled) {
-                const selFeat = W.selectionManager.getSelectedWMEFeatures();
-                if (selFeat.length === 2) {
+                // const selFeat = W.selectionManager.getSelectedWMEFeatures();
+                const selectedFeat = sdk.Editing.getSelection();
+                if (selectedFeat?.ids.length === 2 && selectedFeat.objectType === "segment") {
                     // We have exactly TWO features selected.  Check heuristics and highlight
-                    scanHeuristicsCandidates(selFeat);
+                    scanHeuristicsCandidates(selectedFeat.ids);
                 }
             }
         } //jm6087
     }
     // Given two features, checks if they are segments, and their path qualifies for heuristics; then highlight
-    function scanHeuristicsCandidates(features) {
-        let segs = sdk.DataModel.Segments.getAll();
-        let count = segs.length;
+    function scanHeuristicsCandidates(featureIds) {
+        let segs = [];
+        let count = 0;
+        for (let idx = 0; idx < featureIds.length; ++idx) {
+            if (typeof featureIds[idx] === "string") {
+                lt_log(`Segment ID: ${featureIds} reported as Segment ID`, 1);
+            }
+            let seg = sdk.DataModel.Segments.getById({ segmentId: featureIds[idx] });
+            if (!seg)
+                continue;
+            count = segs.push(seg);
+        }
         // _.each(features, (f) => {
         //     if (f && f._wmeObject && f._wmeObject.type === "segment") {
         //         count = segs.push(f._wmeObject);
@@ -2410,7 +2424,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
         return count;
     }
     // Check all given segments for heuristics qualification
-    function scanSegments(segments, selectedSegsOverride) {
+    function scanSegments(segments, selectedSegsOverride = false) {
         const heurChecks = getId("lt-LaneHeuristicsChecks").checked;
         const heurScan_PosHighlight = heurChecks && getId("lt-LaneHeurPosHighlight").checked;
         const heurScan_NegHighlight = heurChecks && getId("lt-LaneHeurNegHighlight").checked;
@@ -2426,7 +2440,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
                 let tryRedo = false;
                 let segLength = lt_segment_length(s);
                 // FORWARD
-                tryRedo = tryRedo || scanSegment_Inner(s, Direction.FORWARD, segLength, tryRedo);
+                tryRedo || scanSegment_Inner(s, Direction.FORWARD, segLength, tryRedo);
                 // If errors encountered, scan again. (Usually this is an issue with first loading of DOM after zoom or long pan)
                 if (tryRedo && lt_scanArea_recursive > 0) {
                     lt_log("LT errors found, scanning again", 2);
@@ -2435,7 +2449,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
                     lt_scanArea_timer.start();
                     return;
                 }
-                tryRedo = tryRedo || scanSegment_Inner(s, Direction.REVERSE, segLength, tryRedo);
+                tryRedo || scanSegment_Inner(s, Direction.REVERSE, segLength, tryRedo);
                 // If errors encountered, scan again. (Usually this is an issue with first loading of DOM after zoom or long pan)
                 if (tryRedo && lt_scanArea_recursive > 0) {
                     lt_log("LT errors found, scanning again", 2);
@@ -2525,12 +2539,13 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
                 // Selected segment highlights
                 lt_log(`candidate(f):${heurCand}`);
                 if (heurCand !== HeuristicsCandidate.NONE) {
-                    if (entrySeg != null && segments.findIndex((element) => element === entrySeg.seg) > -1) {
-                        let nodeColor = heurCand === HeuristicsCandidate.PASS
-                            ? `${LtSettings.NodeColor}`
-                            : `${LtSettings.HeurFailColor}`;
+                    if (entrySeg != null && segments.findIndex((element) => element.id === entrySeg.seg) > -1) {
+                        let nodeColor = heurCand === HeuristicsCandidate.PASS ? LtSettings.NodeColor : LtSettings.HeurFailColor;
                         highlightSegment(seg.geometry.coordinates, direction, false, false, 0, 0, false, csMode, badLn, heurCand, true);
-                        highlightSegment(entrySeg, entrySeg.direction, false, false, 0, 0, false, 0, false, heurCand, true);
+                        let eSeg = sdk.DataModel.Segments.getById({ segmentId: entrySeg.seg });
+                        if (eSeg) {
+                            highlightSegment(eSeg?.geometry.coordinates, entrySeg.direction, false, false, 0, 0, false, 0, false, heurCand, true);
+                        }
                         highlightNode(node?.geometry.coordinates, nodeColor, true);
                         highlightNode(oppNode?.geometry.coordinates, nodeColor, true);
                         //                    highlightSegment(seg.geometry, direction, false, false, 0, 0, false, csMode, badLn, heurCand, true);
@@ -2555,13 +2570,12 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
         let turnLanes = [];
         // const turnGraph = W.model.getTurnGraph();
         // const pturns = turnGraph.getAllPathTurns();
-        const pturns = sdk.DataModel.Turns.getTurnsFromSegment({ segmentId: s.id });
+        const pturns = sdk.DataModel.Turns.getTurnsFromSegment({ segmentId: s.id }).filter((t => t.isPathTurn));
+        pturns.push(...sdk.DataModel.Turns.getTurnsToSegment({ segmentId: s.id }).filter((t => t.isPathTurn)));
         const zoomLevel = sdk.Map.getZoomLevel();
         function addTurns(fromLns, toLns) {
-            if (!toLns)
+            if (toLns === undefined || fromLns === undefined)
                 return;
-            if (!fromLns)
-                fromLns = 0;
             for (let k = fromLns; k < toLns + 1; k++) {
                 let newValue = true;
                 for (let j = 0; j < turnLanes.length; j++) {
@@ -2576,7 +2590,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
         }
         for (let i = 0; i < segs.length; i++) {
             const seg2 = getSegObj(segs[i]);
-            let turnsThrough = sdk.DataModel.Turns.getTurnsThroughNode({ nodeId: node.id });
+            let turnsThrough = !node ? [] : sdk.DataModel.Turns.getTurnsThroughNode({ nodeId: node?.id });
             for (let idx = 0; idx < turnsThrough.length; ++idx) {
                 let t = turnsThrough[idx];
                 if (t.isUTurn || (t.fromSegmentId !== s.id && t.toSegmentId !== segs[i]))

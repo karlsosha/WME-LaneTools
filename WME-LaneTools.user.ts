@@ -21,11 +21,11 @@
 /* global W */
 /* global WazeWrap */
 
-// import { KeyboardShortcut, Node, Segment, Turn, UserSession, WmeSDK } from "wme-sdk";
-// import { Point, LineString, Position } from "geojson";
-// import _ from "underscore";
-// import $ from "jquery";
-// import WazeWrap from "https://greasyfork.org/scripts/24851-wazewrap/code/WazeWrap.js";
+import { KeyboardShortcut, Node, Segment, Turn, UserSession, WmeSDK } from "wme-sdk";
+import { Point, LineString, Position } from "geojson";
+import _ from "underscore";
+import $ from "jquery";
+import WazeWrap from "https://greasyfork.org/scripts/24851-wazewrap/code/WazeWrap.js";
 
 unsafeWindow.SDK_INITIALIZED.then(ltInit);
 
@@ -799,7 +799,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
         // LTLaneGraphics = new OpenLayers.Layer.Vector("LTLaneGraphics", { uniqueName: "LTLaneGraphics" });
         // W.map.addLayer(LTLaneGraphics);
         // LTLaneGraphics.setVisibility(true);
-        sdk.Map.addLayer({ layerName: LTLaneGraphics.name, styleRules: Object.values(styleRules) });
+        sdk.Map.addLayer({ layerName: LTLaneGraphics.name, styleRules: Object.values(styleRules), zIndexing: true });
         sdk.LayerSwitcher.addLayerCheckbox(LTLaneGraphics);
         sdk.Map.setLayerVisibility({
             layerName: LTLaneGraphics.name,
@@ -817,12 +817,15 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
                     LtSettings.ltGraphicsVisible = payload.checked;
                 } else if (payload.name === LTHighlightLayer.name) {
                     LtSettings.highlightsVisible = payload.checked;
+                } else if (payload.name === LTNamesLayer.name) {
+                    LtSettings.ltNamesVisible = payload.checked;
                 }
+                saveSettings();
                 if (payload.checked) scanArea();
             },
         });
 
-        sdk.Map.addLayer({ layerName: LTNamesLayer.name, styleRules: Object.values(styleRules) });
+        sdk.Map.addLayer({ layerName: LTNamesLayer.name, styleRules: Object.values(styleRules), zIndexing: true });
         // Layer for lane text
 
         sdk.LayerSwitcher.addLayerCheckbox(LTNamesLayer);
@@ -1728,8 +1731,8 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
                 if (
                     !getId("li-del-rev-btn") &&
                     !revDone &&
-                    selSeg?.fromLanesInfo &&
-                    selSeg.fromLanesInfo.numberOfLanes > 0
+                    selSeg?.fromNodeLanesCount &&
+                    selSeg.fromNodeLanesCount > 0
                 ) {
                     if ($(".rev-lanes > div.lane-instruction.lane-instruction-from > div.instruction").length > 0) {
                         $btnCont2.prependTo(
@@ -2604,13 +2607,13 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
             }
             if (heurNom === HeuristicsCandidate.PASS) {
                 createVector(
-                    newString.clone(),
+                    newString,
                     LtSettings.HeurColor,
                     heurOverHighlight ? VectorStyle.OVER_HIGHLIGHT : VectorStyle.HIGHLIGHT
                 );
             } else if (heurNom === HeuristicsCandidate.FAIL) {
                 createVector(
-                    newString.clone(),
+                    newString,
                     LtSettings.HeurFailColor,
                     heurOverHighlight ? VectorStyle.OVER_HIGHLIGHT : VectorStyle.HIGHLIGHT
                 );
@@ -2645,10 +2648,11 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
                     break;
             }
             Object.assign(styleRules.vectorHighlightStyle.style, {
+                strokeColor: stroke,
                 stroke: stroke,
-                "stroke-width": strokeWidth,
-                "stroke-opacity": strokeOpacity,
-                "stroke-dasharray": strokeDashArray.join(" "),
+                strokeWidth: strokeWidth,
+                strokeOpacity: strokeOpacity,
+                strokeDashstyle: strokeDashArray.join(" "),
             });
             // const line = document.getElementById(geoCom.id);
 
@@ -2764,19 +2768,28 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
             }
 
             if (isEnabled) {
-                const selFeat = W.selectionManager.getSelectedWMEFeatures();
-                if (selFeat.length === 2) {
+                // const selFeat = W.selectionManager.getSelectedWMEFeatures();
+                const selectedFeat = sdk.Editing.getSelection();
+                if (selectedFeat?.ids.length === 2 && selectedFeat.objectType === "segment") {
                     // We have exactly TWO features selected.  Check heuristics and highlight
-                    scanHeuristicsCandidates(selFeat);
+                    scanHeuristicsCandidates(selectedFeat.ids);
                 }
             }
         } //jm6087
     }
 
     // Given two features, checks if they are segments, and their path qualifies for heuristics; then highlight
-    function scanHeuristicsCandidates(features) {
-        let segs: Segment[] = sdk.DataModel.Segments.getAll();
-        let count = segs.length;
+    function scanHeuristicsCandidates(featureIds: (string | number)[]) {
+        let segs: Segment[] = [];
+        let count: number = 0;
+        for(let idx = 0 ; idx < featureIds.length ; ++idx) {
+            if(typeof featureIds[idx] === "string") {
+                lt_log(`Segment ID: ${featureIds} reported as Segment ID`, 1);
+            }
+            let seg : Segment | null = sdk.DataModel.Segments.getById({segmentId: featureIds[idx]});
+            if(!seg) continue;
+            count = segs.push(seg);
+        }
         // _.each(features, (f) => {
         //     if (f && f._wmeObject && f._wmeObject.type === "segment") {
         //         count = segs.push(f._wmeObject);
@@ -2807,7 +2820,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
                 let segLength = lt_segment_length(s);
 
                 // FORWARD
-                tryRedo = tryRedo || scanSegment_Inner(s, Direction.FORWARD, segLength, tryRedo);
+                tryRedo || scanSegment_Inner(s, Direction.FORWARD, segLength, tryRedo);
 
                 // If errors encountered, scan again. (Usually this is an issue with first loading of DOM after zoom or long pan)
                 if (tryRedo && lt_scanArea_recursive > 0) {
@@ -2818,7 +2831,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
                     return;
                 }
 
-                tryRedo = tryRedo || scanSegment_Inner(s, Direction.REVERSE, segLength, tryRedo);
+                tryRedo || scanSegment_Inner(s, Direction.REVERSE, segLength, tryRedo);
 
                 // If errors encountered, scan again. (Usually this is an issue with first loading of DOM after zoom or long pan)
                 if (tryRedo && lt_scanArea_recursive > 0) {
@@ -2992,12 +3005,12 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
         let turnLanes: number[] = [];
         // const turnGraph = W.model.getTurnGraph();
         // const pturns = turnGraph.getAllPathTurns();
-        const pturns: Turn[] = sdk.DataModel.Turns.getTurnsFromSegment({ segmentId: s.id });
+        const pturns: Turn[] = sdk.DataModel.Turns.getTurnsFromSegment({ segmentId: s.id }).filter((t => t.isPathTurn));
+        pturns.push(...sdk.DataModel.Turns.getTurnsToSegment({ segmentId: s.id }).filter((t => t.isPathTurn)))
         const zoomLevel = sdk.Map.getZoomLevel();
 
         function addTurns(fromLns: number | undefined, toLns: number | undefined) {
-            if (!toLns) return;
-            if (!fromLns) fromLns = 0;
+            if (toLns === undefined || fromLns === undefined) return;
             for (let k = fromLns; k < toLns + 1; k++) {
                 let newValue = true;
                 for (let j = 0; j < turnLanes.length; j++) {
