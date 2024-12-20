@@ -118,6 +118,12 @@ function ltInit() {
         ANY: 0,
         FORWARD: 1,
     };
+
+    interface SegmentReference {
+        seg: number;
+        direction: number;
+    }
+
     const LT_ROAD_TYPE: RoadTypes = {
         // Streets
         NARROW_STREET: 22,
@@ -313,7 +319,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
     let lt_scanArea_recursive = 0;
     let LtSettings: SettingsInterface;
     let strings: TabMenuItem;
-    let _turnInfo = [];
+    // let _turnInfo = [];
     let _turnData = {};
     let laneCount: number = 0;
     let LTHighlightLayer: LayerDescriptor = { name: "LT Highlights Layer" };
@@ -2258,8 +2264,8 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
         return obj && "roadType" in obj;
     }
     // returns true if object is within window  bounds and above zoom threshold
-    function onScreen(obj: Segment | Node, curZoomLevel: number) {
-        if (!obj.geometry) {
+    function onScreen(obj: Segment | Node | null | undefined, curZoomLevel: number) {
+        if (!obj || !obj.geometry) {
             return false;
         }
 
@@ -2420,7 +2426,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
         fwdLnsCount: number | undefined,
         revLnsCount: number | undefined,
         applyLioHighlight: boolean,
-        csMode,
+        csMode: number,
         isBad: boolean,
         heur,
         heurOverHighlight
@@ -2431,6 +2437,9 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
             HIGHLIGHT: 10,
             OVER_HIGHLIGHT: 20,
         };
+
+        fwdLnsCount = !fwdLnsCount ? 0 : fwdLnsCount;
+        revLnsCount = !revLnsCount ? 0 : revLnsCount;
 
         // const geo = objGeo.clone();
         const applyCSHighlight = getId("lt-CSEnable").checked;
@@ -2579,7 +2588,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
             };
         }
 
-        function drawHighlight(newString, lio, bad, heurNom, heurOverHighlight = false) {
+        function drawHighlight(newString: any, lio: boolean, bad: boolean, heurNom: number, heurOverHighlight = false) {
             if (bad) {
                 createVector(newString, LtSettings.ErrorColor, VectorStyle.OVER_HIGHLIGHT);
                 return;
@@ -2627,14 +2636,16 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
                 case VectorStyle.HIGHLIGHT:
                     strokeWidth = 15;
                     strokeOpacity = 0.6;
+                    break;
                 case VectorStyle.OVER_HIGHLIGHT:
                     strokeWidth = 18;
                     strokeOpacity = 0.85;
+                    break;
                 default:
                     break;
             }
             Object.assign(styleRules.vectorHighlightStyle.style, {
-                stroke: lineColor,
+                stroke: stroke,
                 "stroke-width": strokeWidth,
                 "stroke-opacity": strokeOpacity,
                 "stroke-dasharray": strokeDashArray.join(" "),
@@ -2777,7 +2788,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
     }
 
     // Check all given segments for heuristics qualification
-    function scanSegments(segments: Segment[], selectedSegsOverride) {
+    function scanSegments(segments: Segment[], selectedSegsOverride: boolean = false) {
         const heurChecks = getId("lt-LaneHeuristicsChecks").checked;
         const heurScan_PosHighlight = heurChecks && getId("lt-LaneHeurPosHighlight").checked;
         const heurScan_NegHighlight = heurChecks && getId("lt-LaneHeurNegHighlight").checked;
@@ -2839,11 +2850,11 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
             let tio = false;
             let badLn = false;
             let lio = false;
-            let csMode = 0;
+            let csMode: number = 0;
             let heurCand = HeuristicsCandidate.NONE;
             let entrySeg = null;
 
-            let entrySegRef = {
+            let entrySegRef: SegmentReference = {
                 seg: 0,
                 direction: Direction.NONE,
             };
@@ -2919,11 +2930,9 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
                 // Selected segment highlights
                 lt_log(`candidate(f):${heurCand}`);
                 if (heurCand !== HeuristicsCandidate.NONE) {
-                    if (entrySeg != null && segments.findIndex((element) => element === entrySeg.seg) > -1) {
+                    if (entrySeg != null && segments.findIndex((element) => element.id === entrySeg.seg) > -1) {
                         let nodeColor =
-                            heurCand === HeuristicsCandidate.PASS
-                                ? `${LtSettings.NodeColor}`
-                                : `${LtSettings.HeurFailColor}`;
+                            heurCand === HeuristicsCandidate.PASS ? LtSettings.NodeColor : LtSettings.HeurFailColor;
                         highlightSegment(
                             seg.geometry.coordinates,
                             direction,
@@ -2937,19 +2946,22 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
                             heurCand,
                             true
                         );
-                        highlightSegment(
-                            entrySeg,
-                            entrySeg.direction,
-                            false,
-                            false,
-                            0,
-                            0,
-                            false,
-                            0,
-                            false,
-                            heurCand,
-                            true
-                        );
+                        let eSeg = sdk.DataModel.Segments.getById({ segmentId: entrySeg.seg });
+                        if (eSeg) {
+                            highlightSegment(
+                                eSeg?.geometry.coordinates,
+                                entrySeg.direction,
+                                false,
+                                false,
+                                0,
+                                0,
+                                false,
+                                0,
+                                false,
+                                heurCand,
+                                true
+                            );
+                        }
                         highlightNode(node?.geometry.coordinates, nodeColor, true);
                         highlightNode(oppNode?.geometry.coordinates, nodeColor, true);
                         //                    highlightSegment(seg.geometry, direction, false, false, 0, 0, false, csMode, badLn, heurCand, true);
@@ -3001,7 +3013,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
 
         for (let i = 0; i < segs.length; i++) {
             const seg2 = getSegObj(segs[i]);
-            let turnsThrough: Turn[] = sdk.DataModel.Turns.getTurnsThroughNode({ nodeId: node.id });
+            let turnsThrough: Turn[] = !node ? [] : sdk.DataModel.Turns.getTurnsThroughNode({ nodeId: node?.id });
             for (let idx = 0; idx < turnsThrough.length; ++idx) {
                 let t: Turn = turnsThrough[idx];
                 if (t.isUTurn || (t.fromSegmentId !== s.id && t.toSegmentId !== segs[i])) continue;
@@ -3283,7 +3295,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
         curNodeEntry: Node | null,
         laneCount: number | undefined | null,
         segLength: number,
-        inSegRef
+        inSegRef: SegmentReference | null
     ) {
         /* CRITERIA FOR HEURISTICS, as described on the wiki: https://wazeopedia.waze.com/wiki/USA/User:Nzahn1/Lanes#Mapping_lanes_on_divided_roadways
     1. Both left and right turns are possible at the intersection;
