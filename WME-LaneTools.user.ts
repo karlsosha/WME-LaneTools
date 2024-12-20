@@ -21,11 +21,11 @@
 /* global W */
 /* global WazeWrap */
 
-import { KeyboardShortcut, Node, Segment, Turn, UserSession, WmeSDK } from "wme-sdk";
-import { Point, LineString, Position } from "geojson";
-import _ from "underscore";
-import $ from "jquery";
-import WazeWrap from "https://greasyfork.org/scripts/24851-wazewrap/code/WazeWrap.js";
+// import { KeyboardShortcut, Node, Segment, Turn, UserSession, WmeSDK } from "wme-sdk";
+// import { Point, LineString, Position } from "geojson";
+// import _ from "underscore";
+// import $ from "jquery";
+// import WazeWrap from "https://greasyfork.org/scripts/24851-wazewrap/code/WazeWrap.js";
 
 unsafeWindow.SDK_INITIALIZED.then(ltInit);
 
@@ -2844,8 +2844,8 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
         });
 
         function scanSegment_Inner(seg: Segment, direction: number, segLength: number, tryRedo: boolean) {
-            const fwdLaneCount: number = !seg.toLanesInfo ? 0 : seg.toLanesInfo.numberOfLanes;
-            const revLaneCount: number = !seg.fromLanesInfo ? 0 : seg.fromLanesInfo.numberOfLanes;
+            const fwdLaneCount: number = seg.fromNodeLanesCount;
+            const revLaneCount: number = seg.toNodeLanesCount;
 
             let node: Node | null = getNodeObj(seg.toNodeId);
             let oppNode: Node | null = getNodeObj(seg.fromNodeId);

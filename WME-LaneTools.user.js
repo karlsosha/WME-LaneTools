@@ -1,3 +1,4 @@
+"use strict";
 // ==UserScript==
 // @name         WME LaneTools
 // @namespace    https://github.com/SkiDooGuy/WME-LaneTools
@@ -17,9 +18,13 @@
 // @connect      raw.githubusercontent.com
 // @contributionURL https://github.com/WazeDev/Thank-The-Authors
 // ==/UserScript==
-import _ from "underscore";
-import $ from "jquery";
-import WazeWrap from "https://greasyfork.org/scripts/24851-wazewrap/code/WazeWrap.js";
+/* global W */
+/* global WazeWrap */
+// import { KeyboardShortcut, Node, Segment, Turn, UserSession, WmeSDK } from "wme-sdk";
+// import { Point, LineString, Position } from "geojson";
+// import _ from "underscore";
+// import $ from "jquery";
+// import WazeWrap from "https://greasyfork.org/scripts/24851-wazewrap/code/WazeWrap.js";
 unsafeWindow.SDK_INITIALIZED.then(ltInit);
 function ltInit() {
     const Direction = {
@@ -2460,8 +2465,8 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
             }
         });
         function scanSegment_Inner(seg, direction, segLength, tryRedo) {
-            const fwdLaneCount = !seg.toLanesInfo ? 0 : seg.toLanesInfo.numberOfLanes;
-            const revLaneCount = !seg.fromLanesInfo ? 0 : seg.fromLanesInfo.numberOfLanes;
+            const fwdLaneCount = seg.fromNodeLanesCount;
+            const revLaneCount = seg.toNodeLanesCount;
             let node = getNodeObj(seg.toNodeId);
             let oppNode = getNodeObj(seg.fromNodeId);
             let laneCount = fwdLaneCount;
