@@ -20,23 +20,10 @@
 // ==/UserScript==
 /* global W */
 /* global WazeWrap */
-// import {
-//     City,
-//     KeyboardShortcut,
-//     Node,
-//     Segment,
-//     State,
-//     Street,
-//     Turn,
-//     User,
-//     UserSession,
-//     LaneGuidanceMode,
-//     WmeSDK,
-// } from "wme-sdk";
+// import { KeyboardShortcut, Node, Segment, Turn, UserSession, WmeSDK } from "wme-sdk";
 // import { Point, LineString, Position } from "geojson";
 // import _ from "underscore";
 // import $ from "jquery";
-// import * as olSphere from "ol/sphere";
 // import WazeWrap from "https://greasyfork.org/scripts/24851-wazewrap/code/WazeWrap.js";
 unsafeWindow.SDK_INITIALIZED.then(ltInit);
 function ltInit() {
@@ -260,6 +247,15 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
     function applyVectorHightlightStyle(properties) {
         return properties.styleName === "vectorStyle" && properties.layerName === LTHighlightLayer.name;
     }
+    function applyBoxStyle(properties) {
+        return properties.styleName === "boxStyle" && properties.layerName === LTLaneGraphics.name;
+    }
+    function applyIconBoxStyle(properties) {
+        return properties.styleName === "iconBoxStyle" && properties.layerName === LTLaneGraphics.name;
+    }
+    function applyIconStyle(properties) {
+        return properties.styleName === "iconStyle" && properties.layerName === LTLaneGraphics.name;
+    }
     let styleRules = {
         namesStyle: {
             predicate: applyNamesStyle,
@@ -267,12 +263,24 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
         },
         nodeHighlightStyle: {
             predicate: applyNodeHightlightStyle,
-            style: {}
+            style: {},
         },
         vectorHighlightStyle: {
             predicate: applyVectorHightlightStyle,
-            style: {}
-        }
+            style: {},
+        },
+        boxStyle: {
+            predicate: applyBoxStyle,
+            style: {},
+        },
+        iconBoxStyle: {
+            predicate: applyIconBoxStyle,
+            style: {},
+        },
+        iconStyle: {
+            predicate: applyIconStyle,
+            style: {},
+        },
     };
     console.log("LaneTools: initializing...");
     function laneToolsBootstrap(tries = 0) {
@@ -638,7 +646,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
         await loadSpreadsheet();
         initLaneGuidanceClickSaver();
         // Layer for highlights
-        sdk.Map.addLayer({ layerName: LTHighlightLayer.name, styleRules: Object.values(styleRules) });
+        sdk.Map.addLayer({ layerName: LTHighlightLayer.name, styleRules: Object.values(styleRules), zIndexing: true });
         sdk.LayerSwitcher.addLayerCheckbox(LTHighlightLayer);
         sdk.Map.setLayerVisibility({
             layerName: LTHighlightLayer.name,
@@ -691,6 +699,12 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
             eventName: "wme-map-move-end",
             eventHandler: () => {
                 scanArea();
+                displayLaneGraphics();
+            },
+        });
+        sdk.Events.on({
+            eventName: "wme-selection-changed",
+            eventHandler: () => {
                 displayLaneGraphics();
             },
         });
@@ -1491,12 +1505,15 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
                 delFwd.off();
                 delRev.off();
                 delOpp.off();
-                if (!getId("li-del-rev-btn") && !revDone && selSeg[0]._wmeObject.attributes.revLaneCount > 0) {
+                if (!getId("li-del-rev-btn") &&
+                    !revDone &&
+                    selSeg?.fromLanesInfo &&
+                    selSeg.fromLanesInfo.numberOfLanes > 0) {
                     if ($(".rev-lanes > div.lane-instruction.lane-instruction-from > div.instruction").length > 0) {
                         $btnCont2.prependTo(".rev-lanes > div.lane-instruction.lane-instruction-from > div.instruction");
                         $(".rev-lanes > div.lane-instruction.lane-instruction-from > div.instruction").css("border-bottom", `4px dashed ${LtSettings.BAColor}`);
                     }
-                    else if (selSeg[0]._wmeObject.attributes.revDirection != true) {
+                    else if (selSeg.isAtoB) {
                         //jm6087
                         $oppButton.prop("title", "rev");
                         $oppButton.prependTo("#edit-panel > div > div > div > div.segment-edit-section > wz-tabs > wz-tab.lanes-tab");
@@ -1505,12 +1522,15 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
                 else {
                     $(".rev-lanes > div.lane-instruction.lane-instruction-from > div.instruction").css("border-bottom", `4px dashed ${LtSettings.BAColor}`);
                 }
-                if (!getId("li-del-fwd-btn") && !fwdDone && selSeg[0]._wmeObject.attributes.fwdLaneCount > 0) {
+                if (!getId("li-del-fwd-btn") &&
+                    !fwdDone &&
+                    selSeg?.toLanesInfo &&
+                    selSeg.toLanesInfo.numberOfLanes > 0) {
                     if ($(".fwd-lanes > div.lane-instruction.lane-instruction-from > div.instruction").length > 0) {
                         $btnCont1.prependTo(".fwd-lanes > div.lane-instruction.lane-instruction-from > div.instruction");
                         $(".fwd-lanes > div.lane-instruction.lane-instruction-from > div.instruction").css("border-bottom", `4px dashed ${LtSettings.ABColor}`);
                     }
-                    else if (selSeg[0]._wmeObject.attributes.fwdDirection != true) {
+                    else if (selSeg.isBtoA) {
                         //jm6087
                         $oppButton.prop("title", "fwd");
                         $oppButton.prependTo("#edit-panel > div > div > div > div.segment-edit-section > wz-tabs > wz-tab.lanes-tab");
@@ -1806,25 +1826,26 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
             }
         }
         function colorCSDir() {
-            const seg = selSeg[0]._wmeObject;
-            const fwdNode = getNodeObj(seg.attributes.toNodeID);
-            const revNode = getNodeObj(seg.attributes.fromNodeID);
-            let fwdConfig = checkLanesConfiguration(seg, fwdNode, fwdNode.attributes.segIDs, seg.attributes.fwdLaneCount);
-            let revConfig = checkLanesConfiguration(seg, revNode, revNode.attributes.segIDs, seg.attributes.revLaneCount);
-            if (fwdConfig[4] > 0) {
-                let csColor = fwdConfig[4] === 1 ? LtSettings.CS1Color : LtSettings.CS2Color;
+            if (!selSeg)
+                return;
+            const fwdNode = getNodeObj(selSeg?.toNodeId);
+            const revNode = getNodeObj(selSeg?.fromNodeId);
+            let fwdConfig = checkLanesConfiguration(selSeg, fwdNode, fwdNode ? fwdNode.connectedSegmentIds : [], selSeg.toLanesInfo?.numberOfLanes);
+            let revConfig = checkLanesConfiguration(selSeg, revNode, revNode ? revNode.connectedSegmentIds : [], selSeg.fromLanesInfo?.numberOfLanes);
+            if (fwdConfig.csMode > 0) {
+                let csColor = fwdConfig.csMode === 1 ? LtSettings.CS1Color : LtSettings.CS2Color;
                 let arrowDiv = $("#segment-edit-lanes > div > div > div.fwd-lanes > div.lane-instruction.lane-instruction-to > div.instruction > div.lane-arrows > div").children();
                 for (let i = 0; i < arrowDiv.length; i++) {
-                    if (arrowDiv[i].title === fwdConfig[5]) {
+                    if (arrowDiv[i].title === fwdConfig.csStreet) {
                         $(arrowDiv[i]).css("background-color", csColor);
                     }
                 }
             }
-            if (revConfig[4] > 0) {
-                let csColor = revConfig[4] === 1 ? LtSettings.CS1Color : LtSettings.CS2Color;
+            if (revConfig.csMode > 0) {
+                let csColor = revConfig.csMode === 1 ? LtSettings.CS1Color : LtSettings.CS2Color;
                 let arrowDiv = $("#segment-edit-lanes > div > div > div.rev-lanes > div.lane-instruction.lane-instruction-to > div.instruction > div.lane-arrows > div").children();
                 for (let i = 0; i < arrowDiv.length; i++) {
-                    if (arrowDiv[i].title === revConfig[5]) {
+                    if (arrowDiv[i].title === revConfig.csStreet) {
                         $(arrowDiv[i]).css("background-color", csColor);
                     }
                 }
@@ -2254,17 +2275,18 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
                     break;
                 case VectorStyle.HIGHLIGHT:
                     strokeWidth = 15;
-                    strokeOpacity = .6;
+                    strokeOpacity = 0.6;
                 case VectorStyle.OVER_HIGHLIGHT:
                     strokeWidth = 18;
                     strokeOpacity = 0.85;
-                default: break;
+                default:
+                    break;
             }
             Object.assign(styleRules.vectorHighlightStyle.style, {
                 stroke: lineColor,
                 "stroke-width": strokeWidth,
                 "stroke-opacity": strokeOpacity,
-                "stroke-dasharray": strokeDashArray.join(" ")
+                "stroke-dasharray": strokeDashArray.join(" "),
             });
             // const line = document.getElementById(geoCom.id);
             // if (line) {
@@ -2308,7 +2330,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
             fill: color,
             r: overSized ? 18 : 10,
             "fill-opacity": 0.9,
-            "stroke-width": 0
+            "stroke-width": 0,
         };
         Object.assign(styleRules.nodeHighlightStyle.style, nodeStyle);
         // LTHighlightLayer.addFeatures([highlight]);
@@ -2424,8 +2446,8 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
             }
         });
         function scanSegment_Inner(seg, direction, segLength, tryRedo) {
-            const fwdLaneCount = seg.toLanesInfo?.numberOfLanes ? seg.toLanesInfo?.numberOfLanes : 0;
-            const revLaneCount = seg.fromLanesInfo?.numberOfLanes ? seg.toLanesInfo?.numberOfLanes : 0;
+            const fwdLaneCount = !seg.toLanesInfo ? 0 : seg.toLanesInfo.numberOfLanes;
+            const revLaneCount = !seg.fromLanesInfo ? 0 : seg.fromLanesInfo.numberOfLanes;
             let node = getNodeObj(seg.toNodeId);
             let oppNode = getNodeObj(seg.fromNodeId);
             let laneCount = fwdLaneCount;
@@ -2818,10 +2840,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
     11. We must have an incoming segment supplemenatary to outgoing segment 1.  (alt-incoming)
     12. That alt-incoming segment must be within perpendicular tolerance to BOTH the median segment and the incoming segment.
     */
-        if (nodeExitSegIds == null ||
-            curNodeEntry == null ||
-            laneCount == null ||
-            inSegRef == null) {
+        if (nodeExitSegIds == null || curNodeEntry == null || laneCount == null || inSegRef == null) {
             lt_log("isHeuristicsCandidate received bad argument (null)", 1);
             return 0;
         }
@@ -3349,67 +3368,73 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
         return svgs;
     }
     function getStartPoints(node, featDis, numIcons, sign) {
-        let temp = {};
+        let temp = {
+            x: 0,
+            y: 0,
+        };
+        let start = !featDis || !featDis.start ? 0 : featDis.start;
+        let boxheight = !featDis || !featDis.boxheight ? 0 : featDis.boxheight;
+        let boxincwidth = !featDis || !featDis.boxincwidth ? 0 : featDis.boxincwidth;
         if (sign === 0) {
             temp = {
-                x: node.geometry.coordinates[0] + featDis.start * 2,
-                y: node.geometry.coordinates[1] + featDis.boxheight,
+                x: node.geometry.coordinates[0] + start * 2,
+                y: node.geometry.coordinates[1] + boxheight,
                 //                x: node.geometry.x + (featDis.start * 2),
                 //                y: node.geometry.y + (featDis.boxheight)
             };
         }
         else if (sign === 1) {
             temp = {
-                x: node.geometry.coordinates[0] + featDis.boxheight,
-                y: node.geometry.coordinates[1] + (featDis.boxincwidth * numIcons) / 1.8,
+                x: node.geometry.coordinates[0] + boxheight,
+                y: node.geometry.coordinates[1] + (boxincwidth * numIcons) / 1.8,
                 //                x: node.geometry.x + featDis.boxheight,
                 //                y: node.geometry.y + (featDis.boxincwidth * numIcons/1.8)
             };
         }
         else if (sign === 2) {
             temp = {
-                x: node.geometry.coordinates[0] - (featDis.start + featDis.boxincwidth * numIcons),
-                y: node.geometry.coordinates[1] + (featDis.start + featDis.boxheight),
+                x: node.geometry.coordinates[0] - (start + boxincwidth * numIcons),
+                y: node.geometry.coordinates[1] + (start + boxheight),
                 //                x: node.geometry.x - (featDis.start + (featDis.boxincwidth * numIcons)),
                 //                y: node.geometry.y + (featDis.start + featDis.boxheight)
             };
         }
         else if (sign === 3) {
             temp = {
-                x: node.geometry.coordinates[0] + (featDis.start + featDis.boxincwidth),
-                y: node.geometry.coordinates[1] - (featDis.start + featDis.boxheight),
+                x: node.geometry.coordinates[0] + (start + boxincwidth),
+                y: node.geometry.coordinates[1] - (start + boxheight),
                 //                x: node.geometry.x + (featDis.start + featDis.boxincwidth),
                 //                y: node.geometry.y - (featDis.start + featDis.boxheight)
             };
         }
         else if (sign === 4) {
             temp = {
-                x: node.geometry.coordinates[0] - (featDis.start + featDis.boxheight * 1.5),
-                y: node.geometry.coordinates[1] - (featDis.start + featDis.boxincwidth * numIcons * 1.5),
+                x: node.geometry.coordinates[0] - (start + boxheight * 1.5),
+                y: node.geometry.coordinates[1] - (start + boxincwidth * numIcons * 1.5),
                 //                x: node.geometry.x - (featDis.start + (featDis.boxheight * 1.5)),
                 //                y: node.geometry.y - (featDis.start + (featDis.boxincwidth * numIcons * 1.5))
             };
         }
         else if (sign === 5) {
             temp = {
-                x: node.geometry.coordinates[0] + (featDis.start + featDis.boxincwidth / 2),
-                y: node.geometry.coordinates[1] + featDis.start / 2,
+                x: node.geometry.coordinates[0] + (start + boxincwidth / 2),
+                y: node.geometry.coordinates[1] + start / 2,
                 //                x: node.geometry.x + (featDis.start + featDis.boxincwidth/2),
                 //                y: node.geometry.y + (featDis.start/2)
             };
         }
         else if (sign === 6) {
             temp = {
-                x: node.geometry.coordinates[0] - featDis.start,
-                y: node.geometry.coordinates[1] - featDis.start * ((featDis.boxincwidth * numIcons) / 2),
+                x: node.geometry.coordinates[0] - start,
+                y: node.geometry.coordinates[1] - start * ((boxincwidth * numIcons) / 2),
                 //                x: node.geometry.x - (featDis.start),
                 //                y: node.geometry.y - (featDis.start * (featDis.boxincwidth * numIcons/2))
             };
         }
         else if (sign === 7) {
             temp = {
-                x: node.geometry.coordinates[0] - featDis.start * ((featDis.boxincwidth * numIcons) / 2),
-                y: node.geometry.coordinates[1] - featDis.start,
+                x: node.geometry.coordinates[0] - start * ((boxincwidth * numIcons) / 2),
+                y: node.geometry.coordinates[1] - start,
                 //                x: node.geometry.x - (featDis.start * (featDis.boxincwidth * numIcons/2)),
                 //                y: node.geometry.y - (featDis.start)
             };
@@ -3532,8 +3557,12 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
         return label_distance;
     }
     function drawIcons(seg, node, imgs) {
+        if (!seg || !node)
+            return;
         let featDis = getFeatDistance();
-        let deg = getCardinalAngle(node.attributes.id, seg);
+        let deg = getCardinalAngle(node.id, seg);
+        if (!deg)
+            return;
         let centerPoint;
         let points = [];
         let operatorSign = 0;
@@ -3602,44 +3631,137 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
         // let boxRotate = deg * -1;
         let startPoint = getStartPoints(node, featDis, numIcons, operatorSign);
         // Box coords
-        var boxPoint1 = new OpenLayers.Geometry.Point(startPoint.x, startPoint.y + featDis.boxheight);
-        var boxPoint2 = new OpenLayers.Geometry.Point(startPoint.x + featDis.boxincwidth * numIcons, startPoint.y + featDis.boxheight);
-        var boxPoint3 = new OpenLayers.Geometry.Point(startPoint.x + featDis.boxincwidth * numIcons, startPoint.y);
-        var boxPoint4 = new OpenLayers.Geometry.Point(startPoint.x, startPoint.y);
+        // var boxPoint1 = new OpenLayers.Geometry.Point(startPoint.x, startPoint.y + featDis.boxheight);
+        // var boxPoint2 = new OpenLayers.Geometry.Point(
+        //     startPoint.x + featDis.boxincwidth * numIcons,
+        //     startPoint.y + featDis.boxheight
+        // );
+        // var boxPoint3 = new OpenLayers.Geometry.Point(startPoint.x + featDis.boxincwidth * numIcons, startPoint.y);
+        // var boxPoint4 = new OpenLayers.Geometry.Point(startPoint.x, startPoint.y);
+        var boxPoint1 = [
+            startPoint.x,
+            startPoint.y + (!featDis || !featDis.boxheight ? 0 : featDis.boxheight),
+        ];
+        var boxPoint2 = [
+            startPoint.x + (!featDis || !featDis.boxincwidth ? 0 : featDis.boxincwidth),
+            startPoint.y + (!featDis || !featDis.boxheight ? 0 : featDis.boxheight),
+        ];
+        var boxPoint3 = [
+            startPoint.x + (!featDis || !featDis.boxincwidth ? 0 : featDis.boxincwidth * numIcons),
+            startPoint.y,
+        ];
+        var boxPoint4 = [startPoint.x, startPoint.y];
         points.push(boxPoint1, boxPoint2, boxPoint3, boxPoint4);
-        var boxStyle = {
+        Object.assign(styleRules.boxStyle.style, {
             strokeColor: "#ffffff",
             strokeOpacity: 1,
             strokeWidth: 8,
             fillColor: "#ffffff",
+        });
+        // let boxRing = new OpenLayers.Geometry.LinearRing(points);
+        // centerPoint = boxRing.getCentroid();
+        // boxRing.rotate(boxRotate, centerPoint);
+        // let boxVector = new OpenLayers.Feature.Vector(boxRing, null, boxStyle);
+        let boxRing = {
+            id: "polygon_" + points.toString(),
+            geometry: {
+                type: "Polygon",
+                coordinates: [points],
+            },
+            type: "Feature",
+            properties: { styleName: "boxStyle", layerName: LTLaneGraphics.name },
         };
-        let boxRing = new OpenLayers.Geometry.LinearRing(points);
-        centerPoint = boxRing.getCentroid();
-        boxRing.rotate(boxRotate, centerPoint);
-        let boxVector = new OpenLayers.Feature.Vector(boxRing, null, boxStyle);
-        LTLaneGraphics.addFeatures([boxVector]);
+        // LTLaneGraphics.addFeatures([boxVector]);
+        sdk.Map.addFeatureToLayer({ feature: boxRing, layerName: LTLaneGraphics.name });
         let num = 0;
         _.each(imgs, (img) => {
             let iconPoints = [];
             // Icon Background
-            var iconPoint1 = new OpenLayers.Geometry.Point(startPoint.x + featDis.boxincwidth * num + featDis.iconbordermargin, startPoint.y + featDis.iconborderheight);
-            var iconPoint2 = new OpenLayers.Geometry.Point(startPoint.x + featDis.boxincwidth * num + featDis.iconborderwidth, startPoint.y + featDis.iconborderheight);
-            var iconPoint3 = new OpenLayers.Geometry.Point(startPoint.x + featDis.boxincwidth * num + featDis.iconborderwidth, startPoint.y + featDis.iconbordermargin);
-            var iconPoint4 = new OpenLayers.Geometry.Point(startPoint.x + featDis.boxincwidth * num + featDis.iconbordermargin, startPoint.y + featDis.iconbordermargin);
+            // var iconPoint1 = new OpenLayers.Geometry.Point(
+            //     startPoint.x + featDis.boxincwidth * num + featDis.iconbordermargin,
+            //     startPoint.y + featDis.iconborderheight
+            // );
+            var iconPoint1 = [
+                startPoint.x +
+                    (!featDis
+                        ? 0
+                        : (!featDis.boxincwidth ? 0 : featDis.boxincwidth) * num +
+                            (!featDis.iconbordermargin ? 0 : featDis.iconbordermargin)),
+                startPoint.y + (!featDis || !featDis.iconborderheight ? 0 : featDis.iconborderheight),
+            ];
+            // var iconPoint2 = new OpenLayers.Geometry.Point(
+            //     startPoint.x + featDis.boxincwidth * num + featDis.iconborderwidth,
+            //     startPoint.y + featDis.iconborderheight
+            // );
+            var iconPoint2 = [
+                startPoint.x +
+                    (!featDis
+                        ? 0
+                        : (!featDis.boxincwidth ? 0 : featDis.boxincwidth) * num +
+                            (!featDis.iconborderwidth ? 0 : featDis.iconborderwidth)),
+                startPoint.y + (!featDis || !featDis.iconborderheight ? 0 : featDis.iconborderheight),
+            ];
+            // var iconPoint3 = new OpenLayers.Geometry.Point(
+            //     startPoint.x + featDis.boxincwidth * num + featDis.iconborderwidth,
+            //     startPoint.y + featDis.iconbordermargin
+            // );
+            var iconPoint3 = [
+                startPoint.x +
+                    (!featDis
+                        ? 0
+                        : (!featDis.boxincwidth ? 0 : featDis.boxincwidth) * num +
+                            (!featDis.iconborderwidth ? 0 : featDis.iconborderwidth)),
+                startPoint.y + (!featDis || !featDis.iconbordermargin ? 0 : featDis.iconbordermargin),
+            ];
+            // var iconPoint4 = new OpenLayers.Geometry.Point(
+            //     startPoint.x + featDis.boxincwidth * num + featDis.iconbordermargin,
+            //     startPoint.y + featDis.iconbordermargin
+            // );
+            var iconPoint4 = [
+                startPoint.x +
+                    (!featDis
+                        ? 0
+                        : (!featDis.boxincwidth ? 0 : featDis.boxincwidth) * num +
+                            (!featDis.iconbordermargin ? 0 : featDis.iconbordermargin)),
+                startPoint.y + (!featDis || !featDis.iconbordermargin ? 0 : featDis.iconbordermargin),
+            ];
             iconPoints.push(iconPoint1, iconPoint2, iconPoint3, iconPoint4);
-            var iconBoxStyle = {
+            Object.assign(styleRules.iconBoxStyle.style, {
                 strokeColor: "#000000",
                 strokeOpacity: 1,
                 strokeWidth: 1,
                 fillColor: "#26bae8",
+            });
+            // let iconBoxRing = new OpenLayers.Geometry.LinearRing(iconPoints);
+            let iconBoxRing = {
+                id: "polygon_" + iconPoints.toString(),
+                geometry: {
+                    type: "Polygon",
+                    coordinates: [iconPoints],
+                },
+                type: "Feature",
+                properties: { styleName: "iconBoxStyle", layerName: LTLaneGraphics.name },
             };
-            let iconBoxRing = new OpenLayers.Geometry.LinearRing(iconPoints);
-            iconBoxRing.rotate(boxRotate, centerPoint);
-            let iconBoxVector = new OpenLayers.Feature.Vector(iconBoxRing, null, iconBoxStyle);
-            LTLaneGraphics.addFeatures([iconBoxVector]);
+            // iconBoxRing.rotate(boxRotate, centerPoint);
+            // let iconBoxVector = new OpenLayers.Feature.Vector(iconBoxRing, null, iconBoxStyle);
+            // LTLaneGraphics.addFeatures([iconBoxVector]);
+            sdk.Map.addFeatureToLayer({ feature: iconBoxRing, layerName: LTLaneGraphics.name });
             // Icon coords
-            let arrowOrigin = iconBoxRing.getCentroid();
-            let iconStart = new OpenLayers.Geometry.Point(arrowOrigin.x, arrowOrigin.y);
+            // let arrowOrigin = iconBoxRing.getCentroid();
+            let arrowOrigin = {
+                x: (iconPoint1[0] + iconPoint3[0]) / 2,
+                y: (iconPoint1[1] + iconPoint3[1]) / 2,
+            };
+            // let iconStart = new OpenLayers.Geometry.Point(arrowOrigin.x, arrowOrigin.y);
+            let iconStart = {
+                id: "point_" + iconPoints.toString(),
+                geometry: {
+                    type: "Point",
+                    coordinates: [arrowOrigin.x, arrowOrigin.y],
+                },
+                type: "Feature",
+                properties: { styleName: "iconStyle", layerName: LTLaneGraphics.name },
+            };
             let ulabel = "";
             let usize = {
                 x: 0,
@@ -3663,7 +3785,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
                 uoffset.x = -8;
                 uoffset.y = 4;
             }
-            let iconStyle = {
+            Object.assign(styleRules.iconStyle.style, {
                 externalGraphic: img["svg"],
                 graphicHeight: featDis.graphicHeight,
                 graphicWidth: featDis.graphicWidth,
@@ -3672,14 +3794,15 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
                 color: "#26bae8",
                 rotation: iconRotate,
                 backgroundGraphic: ulabel,
-                backgroundHeight: featDis.graphicHeight * usize.y,
-                backgroundWidth: featDis.graphicWidth * usize.x,
+                backgroundHeight: !featDis || !featDis.graphicHeight ? 0 : featDis.graphicHeight * usize.y,
+                backgroundWidth: !featDis || !featDis.graphicWidth ? 0 : featDis.graphicWidth * usize.x,
                 backgroundXOffset: uoffset.x,
                 backgroundYOffset: uoffset.y,
-            };
+            });
             // Add icon to map
-            let iconFeature = new OpenLayers.Feature.Vector(iconStart, null, iconStyle);
-            LTLaneGraphics.addFeatures([iconFeature]);
+            // let iconFeature = new OpenLayers.Feature.Vector(iconStart, null, iconStyle);
+            // LTLaneGraphics.addFeatures([iconFeature]);
+            sdk.Map.addFeatureToLayer({ layerName: LTLaneGraphics.name, feature: iconStart });
             num++;
         });
         // LTLaneGraphics.setZIndex(2890);
@@ -3689,17 +3812,19 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
         const selection = sdk.Editing.getSelection();
         if (!getId("lt-ScriptEnabled").checked ||
             !getId("lt-IconsEnable").checked ||
+            selection == null ||
             selection?.objectType !== "segment" ||
-            selection.ids.length !== 1)
+            (selection.ids && selection.ids.length !== 1))
             return;
-        const seg = sdk.DataModel.Segments.getById(selection.ids[0]);
+        const seg = sdk.DataModel.Segments.getById({ segmentId: selection.ids[0] });
+        if (!seg)
+            return;
         const zoomLevel = sdk.Map.getZoomLevel();
         if (zoomLevel < 15 ||
-            (seg.attributes.roadType !==
-                (LT_ROAD_TYPE.FREEWAY || LT_ROAD_TYPE.MAJOR_HIGHWAY || LT_ROAD_TYPE.MINOR_HIGHWAY) &&
+            (seg.roadType !== (LT_ROAD_TYPE.FREEWAY || LT_ROAD_TYPE.MAJOR_HIGHWAY || LT_ROAD_TYPE.MINOR_HIGHWAY) &&
                 zoomLevel < 16))
             return;
-        let fwdEle = seg?.fromLanesInfo?.numberOfLanes > 0
+        let fwdEle = seg && seg.toLanesInfo && seg.toLanesInfo.numberOfLanes > 0
             ? getIcons($(".fwd-lanes")
                 .find(".lane-arrow")
                 .map(function () {
@@ -3707,7 +3832,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
             })
                 .get())
             : false;
-        let revEle = seg?.toLanesInfo?.numberOfLanes > 0
+        let revEle = seg && seg.fromLanesInfo && seg.fromLanesInfo.numberOfLanes > 0
             ? getIcons($(".rev-lanes")
                 .find(".lane-arrow")
                 .map(function () {
@@ -3724,14 +3849,14 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
                 setTimeout(displayLaneGraphics, 200);
                 return;
             }
-            drawIcons(seg, sdk.DataModel.Nodes.getById(seg?.toNodeId), fwdImgs);
+            drawIcons(seg, !seg || !seg.toNodeId ? null : sdk.DataModel.Nodes.getById({ nodeId: seg?.toNodeId }), fwdImgs);
         }
         if (revEle) {
             if (Object.keys(revEle).length === 0) {
                 setTimeout(displayLaneGraphics, 200);
                 return;
             }
-            drawIcons(seg, sdk.DataModel.Nodes.getById(seg?.fromNodeId), revImgs);
+            drawIcons(seg, !seg || !seg.fromNodeId ? null : sdk.DataModel.Nodes.getById({ nodeId: seg?.fromNodeId }), revImgs);
         }
         // There are now 23 zoom levels where 22 is fully zoomed and currently 14 is where major road types load data and 16 loads the rest
     }
