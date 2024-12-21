@@ -849,12 +849,6 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
             },
         });
         sdk.Events.on({
-            eventName: "wme-selection-changed",
-            eventHandler: () => {
-                displayLaneGraphics();
-            },
-        });
-        sdk.Events.on({
             eventName: "wme-map-zoom-changed",
             eventHandler: () => {
                 scanArea();
@@ -866,6 +860,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
             eventHandler: () => {
                 scanArea();
                 lanesTabSetup();
+                displayLaneGraphics();
             },
         });
 
@@ -2401,7 +2396,8 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
             label: laneNum,
             angle: "",
             labelAlign: "cm",
-            "stroke-width": "0",
+            strokeWidth: 0,
+            pointRadius: 0
         };
         Object.assign(styleRules.namesStyle.style, namesStyle);
         let lnLabel = {
@@ -2575,9 +2571,10 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
         }
 
         function buildGeoComponentString(geometry: Position[], from: number, to: number) {
-            let components = [];
+            let components: Position[] = [];
+            let cIdx: number = 0;
             for (let i = from; i < to; i++) {
-                components[i] = geometry[i];
+                components[cIdx++] = geometry[i];
             }
             // return new OpenLayers.Geometry.LineString(components, {});
             return {
@@ -2693,13 +2690,13 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
                 coordinates: objGeo,
             },
             type: "Feature",
-            properties: { styleName: "styleNode", layerName: LTHighlightLayer.name },
+            properties: { styleName: "nodeStyle", layerName: LTHighlightLayer.name },
         };
         let nodeStyle = {
-            fill: color,
-            r: overSized ? 18 : 10,
-            "fill-opacity": 0.9,
-            "stroke-width": 0,
+            fillColor: color,
+            pointRadius: overSized ? 18 : 10,
+            fillOpacity: 0.9,
+            strokeWidth: 0,
         };
         Object.assign(styleRules.nodeHighlightStyle.style, nodeStyle);
         // LTHighlightLayer.addFeatures([highlight]);
@@ -2818,27 +2815,31 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
                 // const sAtts = s.getAttributes();
                 let tryRedo = false;
                 let segLength = lt_segment_length(s);
+                try {
+                    // FORWARD
+                    tryRedo || scanSegment_Inner(s, Direction.FORWARD, segLength, tryRedo);
 
-                // FORWARD
-                tryRedo || scanSegment_Inner(s, Direction.FORWARD, segLength, tryRedo);
+                    // If errors encountered, scan again. (Usually this is an issue with first loading of DOM after zoom or long pan)
+                    if (tryRedo && lt_scanArea_recursive > 0) {
+                        lt_log("LT errors found, scanning again", 2);
+                        removeHighlights();
+                        lt_scanArea_recursive--;
+                        lt_scanArea_timer.start();
+                        return;
+                    }
 
-                // If errors encountered, scan again. (Usually this is an issue with first loading of DOM after zoom or long pan)
-                if (tryRedo && lt_scanArea_recursive > 0) {
-                    lt_log("LT errors found, scanning again", 2);
-                    removeHighlights();
-                    lt_scanArea_recursive--;
-                    lt_scanArea_timer.start();
-                    return;
+                    tryRedo || scanSegment_Inner(s, Direction.REVERSE, segLength, tryRedo);
+
+                    // If errors encountered, scan again. (Usually this is an issue with first loading of DOM after zoom or long pan)
+                    if (tryRedo && lt_scanArea_recursive > 0) {
+                        lt_log("LT errors found, scanning again", 2);
+                        removeHighlights();
+                        lt_scanArea_recursive--;
+                        lt_scanArea_timer.start();
+                    }
                 }
-
-                tryRedo || scanSegment_Inner(s, Direction.REVERSE, segLength, tryRedo);
-
-                // If errors encountered, scan again. (Usually this is an issue with first loading of DOM after zoom or long pan)
-                if (tryRedo && lt_scanArea_recursive > 0) {
-                    lt_log("LT errors found, scanning again", 2);
-                    removeHighlights();
-                    lt_scanArea_recursive--;
-                    lt_scanArea_timer.start();
+                catch(e) {
+                    lt_log(e.toString(), 1);
                 }
             }
         });
