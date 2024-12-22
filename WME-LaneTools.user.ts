@@ -2397,7 +2397,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
             angle: "",
             labelAlign: "cm",
             strokeWidth: 0,
-            pointRadius: 0
+            pointRadius: 0,
         };
         Object.assign(styleRules.namesStyle.style, namesStyle);
         let lnLabel = {
@@ -2779,12 +2779,12 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
     function scanHeuristicsCandidates(featureIds: (string | number)[]) {
         let segs: Segment[] = [];
         let count: number = 0;
-        for(let idx = 0 ; idx < featureIds.length ; ++idx) {
-            if(typeof featureIds[idx] === "string") {
+        for (let idx = 0; idx < featureIds.length; ++idx) {
+            if (typeof featureIds[idx] === "string") {
                 lt_log(`Segment ID: ${featureIds} reported as Segment ID`, 1);
             }
-            let seg : Segment | null = sdk.DataModel.Segments.getById({segmentId: featureIds[idx]});
-            if(!seg) continue;
+            let seg: Segment | null = sdk.DataModel.Segments.getById({ segmentId: featureIds[idx] });
+            if (!seg) continue;
             count = segs.push(seg);
         }
         // _.each(features, (f) => {
@@ -2815,31 +2815,26 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
                 // const sAtts = s.getAttributes();
                 let tryRedo = false;
                 let segLength = lt_segment_length(s);
-                try {
-                    // FORWARD
-                    tryRedo || scanSegment_Inner(s, Direction.FORWARD, segLength, tryRedo);
+                // FORWARD
+                tryRedo || scanSegment_Inner(s, Direction.FORWARD, segLength, tryRedo);
 
-                    // If errors encountered, scan again. (Usually this is an issue with first loading of DOM after zoom or long pan)
-                    if (tryRedo && lt_scanArea_recursive > 0) {
-                        lt_log("LT errors found, scanning again", 2);
-                        removeHighlights();
-                        lt_scanArea_recursive--;
-                        lt_scanArea_timer.start();
-                        return;
-                    }
-
-                    tryRedo || scanSegment_Inner(s, Direction.REVERSE, segLength, tryRedo);
-
-                    // If errors encountered, scan again. (Usually this is an issue with first loading of DOM after zoom or long pan)
-                    if (tryRedo && lt_scanArea_recursive > 0) {
-                        lt_log("LT errors found, scanning again", 2);
-                        removeHighlights();
-                        lt_scanArea_recursive--;
-                        lt_scanArea_timer.start();
-                    }
+                // If errors encountered, scan again. (Usually this is an issue with first loading of DOM after zoom or long pan)
+                if (tryRedo && lt_scanArea_recursive > 0) {
+                    lt_log("LT errors found, scanning again", 2);
+                    removeHighlights();
+                    lt_scanArea_recursive--;
+                    lt_scanArea_timer.start();
+                    return;
                 }
-                catch(e) {
-                    lt_log(e.toString(), 1);
+
+                tryRedo || scanSegment_Inner(s, Direction.REVERSE, segLength, tryRedo);
+
+                // If errors encountered, scan again. (Usually this is an issue with first loading of DOM after zoom or long pan)
+                if (tryRedo && lt_scanArea_recursive > 0) {
+                    lt_log("LT errors found, scanning again", 2);
+                    removeHighlights();
+                    lt_scanArea_recursive--;
+                    lt_scanArea_timer.start();
                 }
             }
         });
@@ -3006,8 +3001,8 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
         let turnLanes: number[] = [];
         // const turnGraph = W.model.getTurnGraph();
         // const pturns = turnGraph.getAllPathTurns();
-        const pturns: Turn[] = sdk.DataModel.Turns.getTurnsFromSegment({ segmentId: s.id }).filter((t => t.isPathTurn));
-        pturns.push(...sdk.DataModel.Turns.getTurnsToSegment({ segmentId: s.id }).filter((t => t.isPathTurn)))
+        const pturns: Turn[] = sdk.DataModel.Turns.getTurnsFromSegment({ segmentId: s.id }).filter((t) => t.isPathTurn);
+        pturns.push(...sdk.DataModel.Turns.getTurnsToSegment({ segmentId: s.id }).filter((t) => t.isPathTurn));
         const zoomLevel = sdk.Map.getZoomLevel();
 
         function addTurns(fromLns: number | undefined, toLns: number | undefined) {
