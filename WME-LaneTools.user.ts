@@ -1277,6 +1277,9 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
             AddTIO,
             IconsEnable,
             IconsRotate,
+            highlightsVisible,
+            ltGraphicsVisible,
+            ltNamesVisible,
         } = LtSettings;
 
         const localSettings: SettingsInterface = {
@@ -1322,9 +1325,9 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
             AddTIO,
             IconsEnable,
             IconsRotate,
-            highlightsVisible: false,
-            ltGraphicsVisible: false,
-            ltNamesVisible: false,
+            highlightsVisible,
+            ltGraphicsVisible,
+            ltNamesVisible,
         };
 
         // Grab keyboard shortcuts and store them for saving
@@ -1754,8 +1757,8 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
                 if (
                     !getId("li-del-fwd-btn") &&
                     !fwdDone &&
-                    selSeg?.toLanesInfo &&
-                    selSeg.toLanesInfo.numberOfLanes > 0
+                    selSeg?.toNodeLanesCount &&
+                    selSeg.toNodeLanesCount > 0
                 ) {
                     if ($(".fwd-lanes > div.lane-instruction.lane-instruction-from > div.instruction").length > 0) {
                         $btnCont1.prependTo(
@@ -2118,13 +2121,13 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
                 selSeg,
                 fwdNode,
                 fwdNode ? fwdNode.connectedSegmentIds : [],
-                selSeg.toLanesInfo?.numberOfLanes
+                selSeg?.toNodeLanesCount
             );
             let revConfig = checkLanesConfiguration(
                 selSeg,
                 revNode,
                 revNode ? revNode.connectedSegmentIds : [],
-                selSeg.fromLanesInfo?.numberOfLanes
+                selSeg?.fromNodeLanesCount
             );
 
             if (fwdConfig.csMode > 0) {
@@ -2594,13 +2597,13 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
                 return;
             }
             if (lio) {
-                createVector(newString.clone(), LtSettings.LIOColor, VectorStyle.HIGHLIGHT);
+                createVector(newString, LtSettings.LIOColor, VectorStyle.HIGHLIGHT);
             }
             if (csMode === 1 && applyCSHighlight) {
-                createVector(newString.clone(), LtSettings.CS1Color, VectorStyle.HIGHLIGHT);
+                createVector(newString, LtSettings.CS1Color, VectorStyle.HIGHLIGHT);
             }
             if (csMode === 2 && applyCSHighlight) {
-                createVector(newString.clone(), LtSettings.CS2Color, VectorStyle.HIGHLIGHT);
+                createVector(newString, LtSettings.CS2Color, VectorStyle.HIGHLIGHT);
             }
             if (heurNom === HeuristicsCandidate.PASS) {
                 createVector(
@@ -4394,7 +4397,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
             return;
 
         let fwdEle =
-            seg && seg.toNodeLanesCount > 0
+            seg && seg?.toNodeLanesCount && seg.toNodeLanesCount > 0
                 ? getIcons(
                       $(".fwd-lanes")
                           .find(".lane-arrow")
@@ -4405,7 +4408,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
                   )
                 : false;
         let revEle =
-            seg && seg.fromNodeLanesCount > 0
+            seg && seg?.fromNodeLanesCount && seg.fromNodeLanesCount > 0
                 ? getIcons(
                       $(".rev-lanes")
                           .find(".lane-arrow")

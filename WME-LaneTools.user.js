@@ -1090,7 +1090,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
         });
     }
     async function saveSettings() {
-        const { ScriptEnabled, HighlightsEnable, LabelsEnable, NodesEnable, UIEnable, AutoLanesTab, AutoOpenWidth, AutoExpandLanes, ABColor, BAColor, LabelColor, ErrorColor, NodeColor, TIOColor, LIOColor, CS1Color, CS2Color, CopyEnable, SelAllEnable, serverSelect, LIOEnable, CSEnable, AutoFocusLanes, ReverseLanesIcon, ClickSaveEnable, ClickSaveStraight, ClickSaveTurns, enableScript, enableHighlights, enableUIEnhancements, enableHeuristics, HeurColor, HeurFailColor, LaneHeurPosHighlight, LaneHeurNegHighlight, LaneHeuristicsChecks, highlightCSIcons, highlightOverride, AddTIO, IconsEnable, IconsRotate, } = LtSettings;
+        const { ScriptEnabled, HighlightsEnable, LabelsEnable, NodesEnable, UIEnable, AutoLanesTab, AutoOpenWidth, AutoExpandLanes, ABColor, BAColor, LabelColor, ErrorColor, NodeColor, TIOColor, LIOColor, CS1Color, CS2Color, CopyEnable, SelAllEnable, serverSelect, LIOEnable, CSEnable, AutoFocusLanes, ReverseLanesIcon, ClickSaveEnable, ClickSaveStraight, ClickSaveTurns, enableScript, enableHighlights, enableUIEnhancements, enableHeuristics, HeurColor, HeurFailColor, LaneHeurPosHighlight, LaneHeurNegHighlight, LaneHeuristicsChecks, highlightCSIcons, highlightOverride, AddTIO, IconsEnable, IconsRotate, highlightsVisible, ltGraphicsVisible, ltNamesVisible, } = LtSettings;
         const localSettings = {
             lastSaveAction: Date.now(),
             ScriptEnabled,
@@ -1134,9 +1134,9 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
             AddTIO,
             IconsEnable,
             IconsRotate,
-            highlightsVisible: false,
-            ltGraphicsVisible: false,
-            ltNamesVisible: false,
+            highlightsVisible,
+            ltGraphicsVisible,
+            ltNamesVisible,
         };
         // Grab keyboard shortcuts and store them for saving
         // for (const name in W.accelerators.Actions) {
@@ -1523,8 +1523,8 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
                 }
                 if (!getId("li-del-fwd-btn") &&
                     !fwdDone &&
-                    selSeg?.toLanesInfo &&
-                    selSeg.toLanesInfo.numberOfLanes > 0) {
+                    selSeg?.toNodeLanesCount &&
+                    selSeg.toNodeLanesCount > 0) {
                     if ($(".fwd-lanes > div.lane-instruction.lane-instruction-from > div.instruction").length > 0) {
                         $btnCont1.prependTo(".fwd-lanes > div.lane-instruction.lane-instruction-from > div.instruction");
                         $(".fwd-lanes > div.lane-instruction.lane-instruction-from > div.instruction").css("border-bottom", `4px dashed ${LtSettings.ABColor}`);
@@ -1829,8 +1829,8 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
                 return;
             const fwdNode = getNodeObj(selSeg?.toNodeId);
             const revNode = getNodeObj(selSeg?.fromNodeId);
-            let fwdConfig = checkLanesConfiguration(selSeg, fwdNode, fwdNode ? fwdNode.connectedSegmentIds : [], selSeg.toLanesInfo?.numberOfLanes);
-            let revConfig = checkLanesConfiguration(selSeg, revNode, revNode ? revNode.connectedSegmentIds : [], selSeg.fromLanesInfo?.numberOfLanes);
+            let fwdConfig = checkLanesConfiguration(selSeg, fwdNode, fwdNode ? fwdNode.connectedSegmentIds : [], selSeg?.toNodeLanesCount);
+            let revConfig = checkLanesConfiguration(selSeg, revNode, revNode ? revNode.connectedSegmentIds : [], selSeg?.fromNodeLanesCount);
             if (fwdConfig.csMode > 0) {
                 let csColor = fwdConfig.csMode === 1 ? LtSettings.CS1Color : LtSettings.CS2Color;
                 let arrowDiv = $("#segment-edit-lanes > div > div > div.fwd-lanes > div.lane-instruction.lane-instruction-to > div.instruction > div.lane-arrows > div").children();
@@ -2066,7 +2066,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
             angle: "",
             labelAlign: "cm",
             strokeWidth: 0,
-            pointRadius: 0
+            pointRadius: 0,
         };
         Object.assign(styleRules.namesStyle.style, namesStyle);
         let lnLabel = {
@@ -2245,13 +2245,13 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
                 return;
             }
             if (lio) {
-                createVector(newString.clone(), LtSettings.LIOColor, VectorStyle.HIGHLIGHT);
+                createVector(newString, LtSettings.LIOColor, VectorStyle.HIGHLIGHT);
             }
             if (csMode === 1 && applyCSHighlight) {
-                createVector(newString.clone(), LtSettings.CS1Color, VectorStyle.HIGHLIGHT);
+                createVector(newString, LtSettings.CS1Color, VectorStyle.HIGHLIGHT);
             }
             if (csMode === 2 && applyCSHighlight) {
-                createVector(newString.clone(), LtSettings.CS2Color, VectorStyle.HIGHLIGHT);
+                createVector(newString, LtSettings.CS2Color, VectorStyle.HIGHLIGHT);
             }
             if (heurNom === HeuristicsCandidate.PASS) {
                 createVector(newString, LtSettings.HeurColor, heurOverHighlight ? VectorStyle.OVER_HIGHLIGHT : VectorStyle.HIGHLIGHT);
@@ -2441,28 +2441,23 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
                 // const sAtts = s.getAttributes();
                 let tryRedo = false;
                 let segLength = lt_segment_length(s);
-                try {
-                    // FORWARD
-                    tryRedo || scanSegment_Inner(s, Direction.FORWARD, segLength, tryRedo);
-                    // If errors encountered, scan again. (Usually this is an issue with first loading of DOM after zoom or long pan)
-                    if (tryRedo && lt_scanArea_recursive > 0) {
-                        lt_log("LT errors found, scanning again", 2);
-                        removeHighlights();
-                        lt_scanArea_recursive--;
-                        lt_scanArea_timer.start();
-                        return;
-                    }
-                    tryRedo || scanSegment_Inner(s, Direction.REVERSE, segLength, tryRedo);
-                    // If errors encountered, scan again. (Usually this is an issue with first loading of DOM after zoom or long pan)
-                    if (tryRedo && lt_scanArea_recursive > 0) {
-                        lt_log("LT errors found, scanning again", 2);
-                        removeHighlights();
-                        lt_scanArea_recursive--;
-                        lt_scanArea_timer.start();
-                    }
+                // FORWARD
+                tryRedo || scanSegment_Inner(s, Direction.FORWARD, segLength, tryRedo);
+                // If errors encountered, scan again. (Usually this is an issue with first loading of DOM after zoom or long pan)
+                if (tryRedo && lt_scanArea_recursive > 0) {
+                    lt_log("LT errors found, scanning again", 2);
+                    removeHighlights();
+                    lt_scanArea_recursive--;
+                    lt_scanArea_timer.start();
+                    return;
                 }
-                catch (e) {
-                    lt_log(e.toString(), 1);
+                tryRedo || scanSegment_Inner(s, Direction.REVERSE, segLength, tryRedo);
+                // If errors encountered, scan again. (Usually this is an issue with first loading of DOM after zoom or long pan)
+                if (tryRedo && lt_scanArea_recursive > 0) {
+                    lt_log("LT errors found, scanning again", 2);
+                    removeHighlights();
+                    lt_scanArea_recursive--;
+                    lt_scanArea_timer.start();
                 }
             }
         });
@@ -2577,8 +2572,8 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
         let turnLanes = [];
         // const turnGraph = W.model.getTurnGraph();
         // const pturns = turnGraph.getAllPathTurns();
-        const pturns = sdk.DataModel.Turns.getTurnsFromSegment({ segmentId: s.id }).filter((t => t.isPathTurn));
-        pturns.push(...sdk.DataModel.Turns.getTurnsToSegment({ segmentId: s.id }).filter((t => t.isPathTurn)));
+        const pturns = sdk.DataModel.Turns.getTurnsFromSegment({ segmentId: s.id }).filter((t) => t.isPathTurn);
+        pturns.push(...sdk.DataModel.Turns.getTurnsToSegment({ segmentId: s.id }).filter((t) => t.isPathTurn));
         const zoomLevel = sdk.Map.getZoomLevel();
         function addTurns(fromLns, toLns) {
             if (toLns === undefined || fromLns === undefined)
@@ -3845,7 +3840,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
             (seg.roadType !== (LT_ROAD_TYPE.FREEWAY || LT_ROAD_TYPE.MAJOR_HIGHWAY || LT_ROAD_TYPE.MINOR_HIGHWAY) &&
                 zoomLevel < 16))
             return;
-        let fwdEle = seg && seg.toNodeLanesCount > 0
+        let fwdEle = seg && seg?.toNodeLanesCount && seg.toNodeLanesCount > 0
             ? getIcons($(".fwd-lanes")
                 .find(".lane-arrow")
                 .map(function () {
@@ -3853,7 +3848,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
             })
                 .get())
             : false;
-        let revEle = seg && seg.fromNodeLanesCount > 0
+        let revEle = seg && seg?.fromNodeLanesCount && seg.fromNodeLanesCount > 0
             ? getIcons($(".rev-lanes")
                 .find(".lane-arrow")
                 .map(function () {
