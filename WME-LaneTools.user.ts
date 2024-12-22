@@ -35,8 +35,8 @@ function ltInit() {
     }
 
     interface Coordinates {
-        x: number;
-        y: number;
+        x: number | undefined;
+        y: number | undefined;
     }
     interface LaneConfiguration {
         tlns: boolean;
@@ -4325,13 +4325,13 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
                 properties: { styleName: "iconStyle", layerName: LTLaneGraphics.name },
             };
             let ulabel = "";
-            let usize = {
-                x: 0,
-                y: 0,
+            let usize: Coordinates = {
+                x: undefined,
+                y: undefined,
             };
-            let uoffset = {
-                x: 0,
-                y: 0,
+            let uoffset: Coordinates = {
+                x: undefined,
+                y: undefined,
             };
             if (img["uturn"] === true) {
                 ulabel = "https://editor-assets.waze.com/production/font/aae5ed152758cb6a9191b91e6cedf322.svg";
@@ -4357,8 +4357,8 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
                 color: "#26bae8",
                 rotation: iconRotate,
                 backgroundGraphic: ulabel,
-                backgroundHeight: !featDis || !featDis.graphicHeight ? 0 : featDis.graphicHeight * usize.y,
-                backgroundWidth: !featDis || !featDis.graphicWidth ? 0 : featDis.graphicWidth * usize.x,
+                backgroundHeight: (!featDis || !featDis.graphicHeight || !usize.y) ? undefined : featDis.graphicHeight * usize.y,
+                backgroundWidth: (!featDis || !featDis.graphicWidth || !usize.x) ? undefined : featDis.graphicWidth * usize.x,
                 backgroundXOffset: uoffset.x,
                 backgroundYOffset: uoffset.y,
             });
