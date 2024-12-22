@@ -3845,7 +3845,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
             (seg.roadType !== (LT_ROAD_TYPE.FREEWAY || LT_ROAD_TYPE.MAJOR_HIGHWAY || LT_ROAD_TYPE.MINOR_HIGHWAY) &&
                 zoomLevel < 16))
             return;
-        let fwdEle = seg && seg.toLanesInfo && seg.toLanesInfo.numberOfLanes > 0
+        let fwdEle = seg && seg.toNodeLanesCount > 0
             ? getIcons($(".fwd-lanes")
                 .find(".lane-arrow")
                 .map(function () {
@@ -3853,7 +3853,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
             })
                 .get())
             : false;
-        let revEle = seg && seg.fromLanesInfo && seg.fromLanesInfo.numberOfLanes > 0
+        let revEle = seg && seg.fromNodeLanesCount > 0
             ? getIcons($(".rev-lanes")
                 .find(".lane-arrow")
                 .map(function () {
