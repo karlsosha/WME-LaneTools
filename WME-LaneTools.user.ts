@@ -1754,12 +1754,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
                     );
                 }
 
-                if (
-                    !getId("li-del-fwd-btn") &&
-                    !fwdDone &&
-                    selSeg?.toNodeLanesCount &&
-                    selSeg.toNodeLanesCount > 0
-                ) {
+                if (!getId("li-del-fwd-btn") && !fwdDone && selSeg?.toNodeLanesCount && selSeg.toNodeLanesCount > 0) {
                     if ($(".fwd-lanes > div.lane-instruction.lane-instruction-from > div.instruction").length > 0) {
                         $btnCont1.prependTo(
                             ".fwd-lanes > div.lane-instruction.lane-instruction-from > div.instruction"
@@ -3930,72 +3925,68 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
 
         return svgs;
     }
-    function getStartPoints(node: Node, featDis: FeatureDistance, numIcons: number, sign: number) {
-        let temp: Coordinates = {
-            x: 0,
-            y: 0,
-        };
+
+    function epsg4326toEpsg3857(coordinates: Position): Position {
+        let x: number = (coordinates[0] * 20037508.34) / 180;
+        let y: number = Math.log(Math.tan(((90 + coordinates[1]) * Math.PI) / 360)) / (Math.PI / 180);
+        y = (y * 20037508.34) / 180;
+        return [x, y];
+    }
+
+    function epsg3857toEpsg4326(pos: Position): Position {
+        let x = pos[0];
+        let y = pos[1];
+        x = (x * 180) / 20037508.34;
+        y = (y * 180) / 20037508.34;
+        y = (Math.atan(Math.pow(Math.E, y * (Math.PI / 180))) * 360) / Math.PI - 90;
+        return [x, y];
+    }
+
+    function getStartPoints(node: Node, featDis: FeatureDistance, numIcons: number, sign: number): Position {
         let start: number = !featDis || !featDis.start ? 0 : featDis.start;
         let boxheight: number = !featDis || !featDis.boxheight ? 0 : featDis.boxheight;
         let boxincwidth: number = !featDis || !featDis.boxincwidth ? 0 : featDis.boxincwidth;
-        if (sign === 0) {
-            temp = {
-                x: node.geometry.coordinates[0] + start * 2,
-                y: node.geometry.coordinates[1] + boxheight,
-                //                x: node.geometry.x + (featDis.start * 2),
-                //                y: node.geometry.y + (featDis.boxheight)
-            };
-        } else if (sign === 1) {
-            temp = {
-                x: node.geometry.coordinates[0] + boxheight,
-                y: node.geometry.coordinates[1] + (boxincwidth * numIcons) / 1.8,
-                //                x: node.geometry.x + featDis.boxheight,
-                //                y: node.geometry.y + (featDis.boxincwidth * numIcons/1.8)
-            };
-        } else if (sign === 2) {
-            temp = {
-                x: node.geometry.coordinates[0] - (start + boxincwidth * numIcons),
-                y: node.geometry.coordinates[1] + (start + boxheight),
-                //                x: node.geometry.x - (featDis.start + (featDis.boxincwidth * numIcons)),
-                //                y: node.geometry.y + (featDis.start + featDis.boxheight)
-            };
-        } else if (sign === 3) {
-            temp = {
-                x: node.geometry.coordinates[0] + (start + boxincwidth),
-                y: node.geometry.coordinates[1] - (start + boxheight),
-                //                x: node.geometry.x + (featDis.start + featDis.boxincwidth),
-                //                y: node.geometry.y - (featDis.start + featDis.boxheight)
-            };
-        } else if (sign === 4) {
-            temp = {
-                x: node.geometry.coordinates[0] - (start + boxheight * 1.5),
-                y: node.geometry.coordinates[1] - (start + boxincwidth * numIcons * 1.5),
-                //                x: node.geometry.x - (featDis.start + (featDis.boxheight * 1.5)),
-                //                y: node.geometry.y - (featDis.start + (featDis.boxincwidth * numIcons * 1.5))
-            };
-        } else if (sign === 5) {
-            temp = {
-                x: node.geometry.coordinates[0] + (start + boxincwidth / 2),
-                y: node.geometry.coordinates[1] + start / 2,
-                //                x: node.geometry.x + (featDis.start + featDis.boxincwidth/2),
-                //                y: node.geometry.y + (featDis.start/2)
-            };
-        } else if (sign === 6) {
-            temp = {
-                x: node.geometry.coordinates[0] - start,
-                y: node.geometry.coordinates[1] - start * ((boxincwidth * numIcons) / 2),
-                //                x: node.geometry.x - (featDis.start),
-                //                y: node.geometry.y - (featDis.start * (featDis.boxincwidth * numIcons/2))
-            };
-        } else if (sign === 7) {
-            temp = {
-                x: node.geometry.coordinates[0] - start * ((boxincwidth * numIcons) / 2),
-                y: node.geometry.coordinates[1] - start,
-                //                x: node.geometry.x - (featDis.start * (featDis.boxincwidth * numIcons/2)),
-                //                y: node.geometry.y - (featDis.start)
-            };
+        const nodePos = epsg4326toEpsg3857(node.geometry.coordinates);
+        switch (sign) {
+            case 0:
+                return epsg3857toEpsg4326([nodePos[0] + start * 2, nodePos[1] + boxheight]);
+            //                x: node.geometry.x + (featDis.start * 2),
+            //                y: node.geometry.y + (featDis.boxheight)
+            case 1:
+                return epsg3857toEpsg4326([nodePos[0] + boxheight, nodePos[1] + (boxincwidth * numIcons) / 1.8]);
+            //                x: node.geometry.x + featDis.boxheight,
+            //                y: node.geometry.y + (featDis.boxincwidth * numIcons/1.8)
+            case 2:
+                return epsg3857toEpsg4326([nodePos[0] - (start + boxincwidth + numIcons), nodePos[1] + boxheight]);
+            //                x: node.geometry.x - (featDis.start + (featDis.boxincwidth * numIcons)),
+            //                y: node.geometry.y + (featDis.start + featDis.boxheight)
+            case 3:
+                return epsg3857toEpsg4326([nodePos[0] + start + boxincwidth, nodePos[1] - (start + boxheight)]);
+            //                x: node.geometry.x + (featDis.start + featDis.boxincwidth),
+            //                y: node.geometry.y - (featDis.start + featDis.boxheight)
+            case 4:
+                return epsg3857toEpsg4326([
+                    nodePos[0] - (start + boxheight * 1.5),
+                    nodePos[1] + (boxincwidth + numIcons * 1.5),
+                ]);
+            //                x: node.geometry.x - (featDis.start + (featDis.boxheight * 1.5)),
+            //                y: node.geometry.y - (featDis.start + (featDis.boxincwidth * numIcons * 1.5))
+            case 5:
+                return epsg3857toEpsg4326([nodePos[0] + (start + boxincwidth / 2.0), nodePos[1] + start / 2.0]);
+            //                x: node.geometry.x + (featDis.start + featDis.boxincwidth/2),
+            //                y: node.geometry.y + (featDis.start/2)
+            case 6:
+                return epsg3857toEpsg4326([nodePos[0] - start, nodePos[1] - start * ((boxincwidth * numIcons) / 2)]);
+            //                x: node.geometry.x - (featDis.start),
+            //                y: node.geometry.y - (featDis.start * (featDis.boxincwidth * numIcons/2))
+            case 7:
+                return epsg3857toEpsg4326([nodePos[0] - start * ((boxincwidth * numIcons) / 2), nodePos[1] - start]);
+            //                x: node.geometry.x - (featDis.start * (featDis.boxincwidth * numIcons/2)),
+            //                y: node.geometry.y - (featDis.start)
+            default:
+                break;
         }
-        return temp;
+        return [];
     }
 
     function getFeatDistance(): FeatureDistance {
@@ -4180,7 +4171,8 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
 
         // let boxRotate = deg * -1;
 
-        let startPoint = getStartPoints(node, featDis, numIcons, operatorSign);
+        let startPoint: Position = getStartPoints(node, featDis, numIcons, operatorSign);
+        if (!startPoint[0] || !startPoint[1]) return;
 
         // Box coords
         // var boxPoint1 = new OpenLayers.Geometry.Point(startPoint.x, startPoint.y + featDis.boxheight);
@@ -4190,19 +4182,18 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
         // );
         // var boxPoint3 = new OpenLayers.Geometry.Point(startPoint.x + featDis.boxincwidth * numIcons, startPoint.y);
         // var boxPoint4 = new OpenLayers.Geometry.Point(startPoint.x, startPoint.y);
-        var boxPoint1: Position = [
-            startPoint.x,
-            startPoint.y + (!featDis || !featDis.boxheight ? 0 : featDis.boxheight),
-        ];
-        var boxPoint2: Position = [
-            startPoint.x + (!featDis || !featDis.boxincwidth ? 0 : featDis.boxincwidth),
-            startPoint.y + (!featDis || !featDis.boxheight ? 0 : featDis.boxheight),
-        ];
-        var boxPoint3: Position = [
-            startPoint.x + (!featDis || !featDis.boxincwidth ? 0 : featDis.boxincwidth * numIcons),
-            startPoint.y,
-        ];
-        var boxPoint4: Position = [startPoint.x, startPoint.y];
+        var boxPoint1: Position = epsg4326toEpsg3857(startPoint);
+        boxPoint1[1] += !featDis || !featDis.boxheight ? 0 : featDis.boxheight;
+        boxPoint1 = epsg3857toEpsg4326(boxPoint1);
+        var boxPoint2: Position = epsg4326toEpsg3857(startPoint);
+        boxPoint2[0] += !featDis || !featDis.boxincwidth ? 0 : featDis.boxincwidth * numIcons;
+        boxPoint2[1] += !featDis || !featDis.boxheight ? 0 : featDis.boxheight;
+        boxPoint2 = epsg3857toEpsg4326(boxPoint2);
+        var boxPoint3: Position = epsg4326toEpsg3857(startPoint);
+        boxPoint3[0] += !featDis || !featDis.boxincwidth ? 0 : featDis.boxincwidth * numIcons;
+        boxPoint3 = epsg3857toEpsg4326(boxPoint3);
+        var boxPoint4: Position = startPoint;
+
         points.push(boxPoint1, boxPoint2, boxPoint3, boxPoint4);
 
         Object.assign(styleRules.boxStyle.style, {
@@ -4210,6 +4201,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
             strokeOpacity: 1,
             strokeWidth: 8,
             fillColor: "#ffffff",
+            // rotate: boxRotate
         });
 
         // let boxRing = new OpenLayers.Geometry.LinearRing(points);
@@ -4237,51 +4229,48 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
             //     startPoint.x + featDis.boxincwidth * num + featDis.iconbordermargin,
             //     startPoint.y + featDis.iconborderheight
             // );
-            var iconPoint1 = [
-                startPoint.x +
-                    (!featDis
-                        ? 0
-                        : (!featDis.boxincwidth ? 0 : featDis.boxincwidth) * num +
-                          (!featDis.iconbordermargin ? 0 : featDis.iconbordermargin)),
-                startPoint.y + (!featDis || !featDis.iconborderheight ? 0 : featDis.iconborderheight),
-            ];
+            var iconPoint1 = epsg4326toEpsg3857(startPoint);
+            iconPoint1[0] += !featDis
+                ? 0
+                : (!featDis.boxincwidth ? 0 : featDis.boxincwidth) * num +
+                  (!featDis.iconbordermargin ? 0 : featDis.iconbordermargin);
+            iconPoint1[1] += !featDis || !featDis.iconborderheight ? 0 : featDis.iconborderheight;
+            iconPoint1 = epsg3857toEpsg4326(iconPoint1);
 
             // var iconPoint2 = new OpenLayers.Geometry.Point(
             //     startPoint.x + featDis.boxincwidth * num + featDis.iconborderwidth,
             //     startPoint.y + featDis.iconborderheight
             // );
-            var iconPoint2 = [
-                startPoint.x +
-                    (!featDis
-                        ? 0
-                        : (!featDis.boxincwidth ? 0 : featDis.boxincwidth) * num +
-                          (!featDis.iconborderwidth ? 0 : featDis.iconborderwidth)),
-                startPoint.y + (!featDis || !featDis.iconborderheight ? 0 : featDis.iconborderheight),
-            ];
+            var iconPoint2 = epsg4326toEpsg3857(startPoint);
+            iconPoint2[0] += !featDis
+                ? 0
+                : (!featDis.boxincwidth ? 0 : featDis.boxincwidth) * num +
+                  (!featDis.iconborderwidth ? 0 : featDis.iconborderwidth);
+            iconPoint2[1] += !featDis || !featDis.iconborderheight ? 0 : featDis.iconborderheight;
+            iconPoint2 = epsg3857toEpsg4326(iconPoint2);
             // var iconPoint3 = new OpenLayers.Geometry.Point(
             //     startPoint.x + featDis.boxincwidth * num + featDis.iconborderwidth,
             //     startPoint.y + featDis.iconbordermargin
             // );
-            var iconPoint3 = [
-                startPoint.x +
-                    (!featDis
-                        ? 0
-                        : (!featDis.boxincwidth ? 0 : featDis.boxincwidth) * num +
-                          (!featDis.iconborderwidth ? 0 : featDis.iconborderwidth)),
-                startPoint.y + (!featDis || !featDis.iconbordermargin ? 0 : featDis.iconbordermargin),
-            ];
+            var iconPoint3 = epsg4326toEpsg3857(startPoint);
+            iconPoint3[0] += !featDis
+                ? 0
+                : (!featDis.boxincwidth ? 0 : featDis.boxincwidth) * num +
+                  (!featDis.iconborderwidth ? 0 : featDis.iconborderwidth);
+            iconPoint3[1] += !featDis || !featDis.iconbordermargin ? 0 : featDis.iconbordermargin;
+            iconPoint3 = epsg3857toEpsg4326(iconPoint3);
+
             // var iconPoint4 = new OpenLayers.Geometry.Point(
             //     startPoint.x + featDis.boxincwidth * num + featDis.iconbordermargin,
             //     startPoint.y + featDis.iconbordermargin
             // );
-            var iconPoint4 = [
-                startPoint.x +
-                    (!featDis
-                        ? 0
-                        : (!featDis.boxincwidth ? 0 : featDis.boxincwidth) * num +
-                          (!featDis.iconbordermargin ? 0 : featDis.iconbordermargin)),
-                startPoint.y + (!featDis || !featDis.iconbordermargin ? 0 : featDis.iconbordermargin),
-            ];
+            var iconPoint4 = epsg4326toEpsg3857(startPoint);
+            iconPoint4[0] += !featDis
+                ? 0
+                : (!featDis.boxincwidth ? 0 : featDis.boxincwidth) * num +
+                  (!featDis.iconbordermargin ? 0 : featDis.iconbordermargin);
+            iconPoint4[1] += !featDis || !featDis.iconbordermargin ? 0 : featDis.iconbordermargin;
+            iconPoint4 = epsg3857toEpsg4326(iconPoint4);
             iconPoints.push(iconPoint1, iconPoint2, iconPoint3, iconPoint4);
 
             Object.assign(styleRules.iconBoxStyle.style, {
@@ -4289,6 +4278,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
                 strokeOpacity: 1,
                 strokeWidth: 1,
                 fillColor: "#26bae8",
+                // rotate: boxRotate
             });
 
             // let iconBoxRing = new OpenLayers.Geometry.LinearRing(iconPoints);
@@ -4353,12 +4343,15 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
                 graphicHeight: featDis.graphicHeight,
                 graphicWidth: featDis.graphicWidth,
                 fillColor: "#26bae8",
-                bgcolor: "#26bae8",
-                color: "#26bae8",
-                rotation: iconRotate,
+                fillOpacity: 1,
+                backgroundColor: "#26bae8",
+                strokeColor: "#26bae8",
+                // rotation: iconRotate,
                 backgroundGraphic: ulabel,
-                backgroundHeight: (!featDis || !featDis.graphicHeight || !usize.y) ? undefined : featDis.graphicHeight * usize.y,
-                backgroundWidth: (!featDis || !featDis.graphicWidth || !usize.x) ? undefined : featDis.graphicWidth * usize.x,
+                backgroundHeight:
+                    !featDis || !featDis.graphicHeight || !usize.y ? undefined : featDis.graphicHeight * usize.y,
+                backgroundWidth:
+                    !featDis || !featDis.graphicWidth || !usize.x ? undefined : featDis.graphicWidth * usize.x,
                 backgroundXOffset: uoffset.x,
                 backgroundYOffset: uoffset.y,
             });
