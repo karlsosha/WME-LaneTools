@@ -3263,11 +3263,14 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
     }
     function initLaneGuidanceClickSaver() {
         let laneObserver = new MutationObserver((mutations) => {
-            if (
-                W.selectionManager.getSelectedWMEFeatures()[0] &&
-                W.selectionManager.getSelectedWMEFeatures()[0].featureType === "segment" &&
-                getId("lt-ScriptEnabled").checked
-            ) {
+            // if (
+            //     W.selectionManager.getSelectedWMEFeatures()[0] &&
+            //     W.selectionManager.getSelectedWMEFeatures()[0].featureType === "segment" &&
+            //     getId("lt-ScriptEnabled").checked
+            // )
+            let selection = sdk.Editing.getSelection();
+            if(selection?.objectType === "segment" && getId("lt-ScriptEnabled").checked)
+            {
                 let laneCountElement = document.getElementsByName("laneCount");
                 for (let idx = 0; idx < laneCountElement.length; idx++) {
                     laneCountElement[idx].addEventListener("keyup", processLaneNumberChange, false);
