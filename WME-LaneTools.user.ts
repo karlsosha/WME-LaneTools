@@ -4393,7 +4393,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
             return;
 
         let fwdEle =
-            seg && seg?.toNodeLanesCount && seg.toNodeLanesCount > 0
+            seg && seg?.fromNodeLanesCount && seg.fromNodeLanesCount > 0
                 ? getIcons(
                       $(".fwd-lanes")
                           .find(".lane-arrow")
@@ -4404,7 +4404,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
                   )
                 : false;
         let revEle =
-            seg && seg?.fromNodeLanesCount && seg.fromNodeLanesCount > 0
+            seg && seg?.toNodeLanesCount && seg.toNodeLanesCount > 0
                 ? getIcons(
                       $(".rev-lanes")
                           .find(".lane-arrow")
