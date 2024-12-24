@@ -20,9 +20,9 @@
 // ==/UserScript==
 /* global W */
 /* global WazeWrap */
-// import { KeyboardShortcut, Node, Segment, Turn, UserSession, WmeSDK } from "wme-sdk";
+// import { KeyboardShortcut, Node, Segment, Turn, UserSession, WmeSDK, User } from "wme-sdk";
 // import { Point, LineString, Position } from "geojson";
-// import _ from "underscore";
+// import _, { select } from "underscore";
 // import $ from "jquery";
 // import WazeWrap from "https://greasyfork.org/scripts/24851-wazewrap/code/WazeWrap.js";
 unsafeWindow.SDK_INITIALIZED.then(ltInit);
@@ -1434,7 +1434,6 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
         }
         // const selSeg = W.selectionManager.getSelectedWMEFeatures();
         const selection = sdk.Editing.getSelection();
-        const selSeg = sdk.DataModel.Segments.getById({ segmentId: selection?.ids[0] });
         let fwdDone = false;
         let revDone = false;
         let isRotated = false;
@@ -1444,8 +1443,9 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
             // W.model.nodes.getObjectById(W.selectionManager.getSegmentSelection().segments[0].attributes.toNodeID)
             //     .attributes.geometry;
             //        W.model.nodes.get(W.selectionManager.getSegmentSelection().segments[0].attributes.toNodeID).attributes.geometry
-            const nodeB = sdk.DataModel.Nodes.getById({ nodeId: selSeg?.toNodeId });
-            document.getElementById(nodeB?.id);
+            const selSeg = selection && selection.objectType === "segment" ? sdk.DataModel.Segments.getById({ segmentId: selection.ids[0] }) : null;
+            const nodeB = selSeg && selSeg.toNodeId ? sdk.DataModel.Nodes.getById({ nodeId: selSeg.toNodeId }) : null;
+            nodeB && document.getElementById(nodeB?.id.toString());
             // document.getElementById(
             //     W.model.nodes.getObjectById(W.selectionManager.getSegmentSelection().segments[0].attributes.toNodeID)
             //         .attributes.geometry.id
@@ -1456,8 +1456,9 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
         function hoverNodeFrom() {
             // W.model.nodes.getObjectById(W.selectionManager.getSegmentSelection().segments[0].attributes.fromNodeID)
             //     .attributes.geometry;
-            const nodeA = sdk.DataModel.Nodes.getById({ nodeId: selSeg?.fromNodeId });
-            document.getElementById(nodeA?.id);
+            const selSeg = selection && selection.objectType === "segment" ? sdk.DataModel.Segments.getById({ segmentId: selection.ids[0] }) : null;
+            const nodeA = selSeg && selSeg.fromNodeId ? sdk.DataModel.Nodes.getById({ nodeId: selSeg.fromNodeId }) : null;
+            nodeA && document.getElementById(nodeA?.id.toString());
             //        W.model.nodes.get(W.selectionManager.getSegmentSelection().segments[0].attributes.fromNodeID).attributes.geometry
             // document.getElementById(
             //     W.model.nodes.getObjectById(W.selectionManager.getSegmentSelection().segments[0].attributes.fromNodeID)
@@ -1486,7 +1487,8 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
                 colorCSDir();
             }
             // Add delete buttons and preselected lane number buttons to UI
-            if (_pickleColor && (_pickleColor >= 1 || editorInfo.editableCountryIDS.length > 0)) {
+            if (_pickleColor && _pickleColor >= 1) {
+                const selSeg = selection && selection.objectType === "segment" ? sdk.DataModel.Segments.getById({ segmentId: selection.ids[0] }) : null;
                 if (getId("li-del-opp-btn"))
                     $("#li-del-opp-btn").remove();
                 let $fwdButton = $(`<button type="button" id="li-del-fwd-btn" style="height:20px;background-color:white;border:1px solid grey;border-radius:8px;">${strings.delFwd}</button>`);
@@ -1506,7 +1508,8 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
                 delOpp.off();
                 if (!getId("li-del-rev-btn") &&
                     !revDone &&
-                    selSeg?.fromNodeLanesCount &&
+                    selSeg &&
+                    selSeg.fromNodeLanesCount &&
                     selSeg.fromNodeLanesCount > 0) {
                     if ($(".rev-lanes > div.lane-instruction.lane-instruction-from > div.instruction").length > 0) {
                         $btnCont2.prependTo(".rev-lanes > div.lane-instruction.lane-instruction-from > div.instruction");
@@ -1561,17 +1564,15 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
                     updateUI();
                 });
             }
-            waitForElementLoaded(".fwd-lanes > div.lane-instruction.lane-instruction-to > div.instruction > div.lane-edit > .edit-lane-guidance").then((elem) => {
+            waitForElementLoaded(".fwd-lanes > div.lane-instruction.lane-instruction-from > div.instruction > div.edit-region > .direction-lanes-edit").then((elem) => {
                 $(elem).off();
                 $(elem).on("click", function () {
-                    let actions = [];
                     showAddLaneGuidance("fwd");
                 });
             });
-            waitForElementLoaded(".rev-lanes > div.lane-instruction.lane-instruction-to > div.instruction > div.lane-edit > .edit-lane-guidance").then((elem) => {
+            waitForElementLoaded(".rev-lanes > div.lane-instruction.lane-instruction-to > div.instruction > div.edit-region > .direction-lanes-edit").then((elem) => {
                 $(elem).off();
                 $(elem).on("click", function () {
-                    let actions = [];
                     showAddLaneGuidance("rev");
                 });
             });
@@ -1685,8 +1686,8 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
                     prependElement.prepend(addLanesItem);
                     setupLaneCountControls(lanes, classNamesList);
                     $(".lt-add-lanes").on("click", function () {
-                        let numAdd = $(this).text();
-                        numAdd = Number.parseInt(numAdd, 10);
+                        let numAddStr = $(this).text();
+                        let numAdd = Number.parseInt(numAddStr, 10);
                         if ($(this).hasClass("lt-add-lanes " + laneDir)) {
                             // As of React >=15.6.  Triggering change or input events on the input form cannot be
                             // done via jquery selectors.  Which means that they have to be triggered via
@@ -1757,8 +1758,8 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
             //     setupLaneCountControls(lnSelector, classNamesList);
             // }
             $(".lt-add-Width").on("click", function () {
-                let numAdd = $(this).text();
-                numAdd = Number.parseInt(numAdd, 10);
+                let numAddStr = $(this).text();
+                let numAdd = Number.parseInt(numAddStr, 10);
                 if ($(this).hasClass("lt-add-Width " + laneDir)) {
                     const lanes = $(dirLanesClass);
                     lanes.find("#number-of-lanes").val(numAdd);
@@ -1822,6 +1823,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
             }
         }
         function colorCSDir() {
+            const selSeg = selection && selection.objectType === "segment" ? sdk.DataModel.Segments.getById({ segmentId: selection.ids[0] }) : null;
             if (!selSeg)
                 return;
             const fwdNode = getNodeObj(selSeg?.toNodeId);
@@ -1862,8 +1864,8 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
             isRotated = true;
         }
         // Begin lanes tab enhancements
-        if (getId("lt-UIEnable").checked && getId("lt-ScriptEnabled").checked && selSeg.length > 0) {
-            if (selSeg.length === 1 && selSeg[0]._wmeObject.type === "segment") {
+        if (getId("lt-UIEnable").checked && getId("lt-ScriptEnabled").checked) {
+            if (selection && selection.objectType === "segment") {
                 // Check to ensure that there is only one segment object selected, then setup click event
                 waitForElementLoaded(".lanes-tab").then((elm) => {
                     formatLanesTab(getId("lt-AutoLanesTab").checked || elm.isActive);
@@ -1874,9 +1876,9 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
                 //    updateUI(event);
                 //});
             }
-            else if (selSeg.length === 2) {
+            else if (selection && selection.ids.length === 2) {
                 // We have exactly TWO features selected.  Check heuristics and highlight
-                scanHeuristicsCandidates(selSeg);
+                scanHeuristicsCandidates(selection);
             }
         }
         function formatLanesTab(clickTab = false, tries = 0) {
@@ -2394,22 +2396,19 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
             if (isEnabled) {
                 // const selFeat = W.selectionManager.getSelectedWMEFeatures();
                 const selectedFeat = sdk.Editing.getSelection();
-                if (selectedFeat?.ids.length === 2 && selectedFeat.objectType === "segment") {
-                    // We have exactly TWO features selected.  Check heuristics and highlight
-                    scanHeuristicsCandidates(selectedFeat.ids);
-                }
+                scanHeuristicsCandidates(selectedFeat);
             }
         } //jm6087
     }
     // Given two features, checks if they are segments, and their path qualifies for heuristics; then highlight
-    function scanHeuristicsCandidates(featureIds) {
+    function scanHeuristicsCandidates(selection) {
         let segs = [];
         let count = 0;
-        for (let idx = 0; idx < featureIds.length; ++idx) {
-            if (typeof featureIds[idx] === "string") {
-                lt_log(`Segment ID: ${featureIds} reported as Segment ID`, 1);
+        for (let idx = 0; selection && idx < selection.ids.length; ++idx) {
+            if (typeof selection.ids[idx] === "string") {
+                lt_log(`Segment ID: ${selection.ids[idx]} reported as Segment ID incorrectly`, 1);
             }
-            let seg = sdk.DataModel.Segments.getById({ segmentId: featureIds[idx] });
+            let seg = sdk.DataModel.Segments.getById({ segmentId: selection.ids[idx] });
             if (!seg)
                 continue;
             count = segs.push(seg);
