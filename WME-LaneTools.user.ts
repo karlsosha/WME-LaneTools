@@ -12,6 +12,7 @@
 // @match        https://beta.waze.com/*/editor*
 // @exclude      https://www.waze.com/user/editor*
 // @require      https://greasyfork.org/scripts/24851-wazewrap/code/WazeWrap.js
+// @require      https://cdn.jsdelivr.net/npm/@turf/turf@7/turf.min.js
 // @grant        GM_xmlhttpRequest
 // @grant        unsafeWindow
 // @connect      raw.githubusercontent.com
@@ -21,15 +22,17 @@
 /* global W */
 /* global WazeWrap */
 
-// import { KeyboardShortcut, Node, Segment, Turn, UserSession, WmeSDK, User } from "wme-sdk";
-// import { Point, LineString, Position } from "geojson";
-// import _, { select } from "underscore";
+// import { KeyboardShortcut, Node, Segment, Selection, Turn, UserSession, WmeSDK } from "wme-sdk";
+// import { Position } from "geojson";
+// import _ from "underscore";
 // import $ from "jquery";
+// import * as turf from "@turf/turf";
 // import WazeWrap from "https://greasyfork.org/scripts/24851-wazewrap/code/WazeWrap.js";
 
 unsafeWindow.SDK_INITIALIZED.then(ltInit);
 
 function ltInit() {
+    type LaneDirection = "fwd" | "rev";
     interface LayerDescriptor {
         name: string;
     }
@@ -1654,7 +1657,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
             // W.model.nodes.getObjectById(W.selectionManager.getSegmentSelection().segments[0].attributes.toNodeID)
             //     .attributes.geometry;
             //        W.model.nodes.get(W.selectionManager.getSegmentSelection().segments[0].attributes.toNodeID).attributes.geometry
-            const selSeg: Segment | null = selection && selection.objectType === "segment" ? sdk.DataModel.Segments.getById({segmentId : selection.ids[0]}) : null;
+            const selSeg: Segment | null = isSegmentSelected(selection) ? sdk.DataModel.Segments.getById({segmentId : selection.ids[0]}) : null;
             const nodeB = selSeg && selSeg.toNodeId ? sdk.DataModel.Nodes.getById({ nodeId: selSeg.toNodeId }) : null;
             nodeB && document.getElementById(nodeB?.id.toString());
             // document.getElementById(
@@ -1668,7 +1671,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
         function hoverNodeFrom() {
             // W.model.nodes.getObjectById(W.selectionManager.getSegmentSelection().segments[0].attributes.fromNodeID)
             //     .attributes.geometry;
-            const selSeg: Segment | null = selection && selection.objectType === "segment" ? sdk.DataModel.Segments.getById({segmentId : selection.ids[0]}) : null;
+            const selSeg: Segment | null = isSegmentSelected(selection) ? sdk.DataModel.Segments.getById({segmentId : selection.ids[0]}) : null;
 
             const nodeA = selSeg && selSeg.fromNodeId ? sdk.DataModel.Nodes.getById({ nodeId: selSeg.fromNodeId }) : null;
             nodeA && document.getElementById(nodeA?.id.toString());
@@ -1704,7 +1707,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
 
             // Add delete buttons and preselected lane number buttons to UI
             if (_pickleColor && _pickleColor >= 1) {
-                const selSeg: Segment | null = selection && selection.objectType === "segment" ? sdk.DataModel.Segments.getById({segmentId : selection.ids[0]}) : null;
+                const selSeg: Segment | null = isSegmentSelected(selection) ? sdk.DataModel.Segments.getById({segmentId : selection.ids[0]}) : null;
 
                 if (getId("li-del-opp-btn")) $("#li-del-opp-btn").remove();
 
@@ -1811,7 +1814,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
             }
 
             waitForElementLoaded(
-                ".fwd-lanes > div.lane-instruction.lane-instruction-to > div.instruction > div.lane-edit > .edit-lane-guidance"
+                ".fwd-lanes > div.lane-instruction.lane-instruction- > div.instruction > div.lane-edit > .edit-lane-guidance"
             ).then((elem) => {
                 $(elem).off();
                 $(elem).on("click", function () {
@@ -1931,7 +1934,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
                 $(this).css({ "background-color": "navy", color: "white" });
             });
         }
-        function addLnsBtns(laneDir: string) {
+        function addLnsBtns(laneDir: LaneDirection) {
             // Add predetermined lane values
             if (laneDir !== "fwd" && laneDir !== "rev") {
                 throw new Error(`Direction ${laneDir} is not supported`);
@@ -2112,7 +2115,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
         }
 
         function colorCSDir() {
-            const selSeg: Segment | null = selection && selection.objectType === "segment" ? sdk.DataModel.Segments.getById({segmentId : selection.ids[0]}) : null;
+            const selSeg: Segment | null = isSegmentSelected(selection) ? sdk.DataModel.Segments.getById({segmentId : selection.ids[0]}) : null;
 
             if (!selSeg) return;
             const fwdNode = getNodeObj(selSeg?.toNodeId);
@@ -2175,7 +2178,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
         }
         // Begin lanes tab enhancements
         if (getId("lt-UIEnable").checked && getId("lt-ScriptEnabled").checked) {
-            if (selection && selection.objectType === "segment") {
+            if (isSegmentSelected(selection)) {
                 // Check to ensure that there is only one segment object selected, then setup click event
                 waitForElementLoaded(".lanes-tab").then((elm) => {
                     formatLanesTab(getId("lt-AutoLanesTab").checked || elm.isActive);
@@ -2258,12 +2261,16 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
         }
     }
 
-    function getId(ele) {
+    function getId(ele: string) : HTMLElement | null {
         return document.getElementById(ele);
     }
 
     function isSegment(obj: any): obj is Segment {
         return obj && "roadType" in obj;
+    }
+
+    function isSegmentSelected(selection: Selection | null) : boolean {
+        return (selection && selection.objectType === "segment") || false;
     }
     // returns true if object is within window  bounds and above zoom threshold
     function onScreen(obj: Segment | Node | null | undefined, curZoomLevel: number) {
@@ -2328,7 +2335,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
         //    return segment.geometry.components[segment.geometry.components.length - 2];
     }
 
-    function delLanes(dir) {
+    function delLanes(dir: LaneDirection) {
         const selObjs = W.selectionManager.getSelectedWMEFeatures();
         const selSeg = selObjs[0]._wmeObject;
         const turnGraph = W.model.getTurnGraph();
@@ -2777,7 +2784,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
     }
 
     // Given two features, checks if they are segments, and their path qualifies for heuristics; then highlight
-    function scanHeuristicsCandidates(selection) {
+    function scanHeuristicsCandidates(selection: Selection) {
         let segs : Segment [] = []
         let count: number = 0;
         for (let idx = 0; selection && idx < selection.ids.length; ++idx) {
@@ -4200,7 +4207,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
         boxPoint3 = epsg3857toEpsg4326(boxPoint3);
         var boxPoint4: Position = startPoint;
 
-        points.push(boxPoint1, boxPoint2, boxPoint3, boxPoint4);
+        points.push(boxPoint1, boxPoint2, boxPoint3, boxPoint4, boxPoint1);
 
         Object.assign(styleRules.boxStyle.style, {
             strokeColor: "#ffffff",
@@ -4214,12 +4221,12 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
         // centerPoint = boxRing.getCentroid();
         // boxRing.rotate(boxRotate, centerPoint);
         // let boxVector = new OpenLayers.Feature.Vector(boxRing, null, boxStyle);
+        let turfBoxRing = turf.polygon([points])
+        turfBoxRing = turf.transformRotate(turfBoxRing, -1 * boxRotate);
+        centerPoint = turf.centroid(turfBoxRing);
         let boxRing = {
             id: "polygon_" + points.toString(),
-            geometry: {
-                type: "Polygon",
-                coordinates: [points],
-            },
+            geometry: turfBoxRing.geometry,
             type: "Feature",
             properties: { styleName: "boxStyle", layerName: LTLaneGraphics.name },
         };
@@ -4277,7 +4284,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
                   (!featDis.iconbordermargin ? 0 : featDis.iconbordermargin);
             iconPoint4[1] += !featDis || !featDis.iconbordermargin ? 0 : featDis.iconbordermargin;
             iconPoint4 = epsg3857toEpsg4326(iconPoint4);
-            iconPoints.push(iconPoint1, iconPoint2, iconPoint3, iconPoint4);
+            iconPoints.push(iconPoint1, iconPoint2, iconPoint3, iconPoint4, iconPoint1);
 
             Object.assign(styleRules.iconBoxStyle.style, {
                 strokeColor: "#000000",
@@ -4288,12 +4295,11 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
             });
 
             // let iconBoxRing = new OpenLayers.Geometry.LinearRing(iconPoints);
+            let turfIconBoxRing = turf.polygon([iconPoints]);
+            turfIconBoxRing = turf.transformRotate(turfIconBoxRing, -1*boxRotate, {pivot: centerPoint.geometry});
             let iconBoxRing = {
                 id: "polygon_" + iconPoints.toString(),
-                geometry: {
-                    type: "Polygon",
-                    coordinates: [iconPoints],
-                },
+                geometry: turfIconBoxRing.geometry,
                 type: "Feature",
                 properties: { styleName: "iconBoxStyle", layerName: LTLaneGraphics.name },
             };
@@ -4305,18 +4311,11 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
             sdk.Map.addFeatureToLayer({ feature: iconBoxRing, layerName: LTLaneGraphics.name });
 
             // Icon coords
-            // let arrowOrigin = iconBoxRing.getCentroid();
-            let arrowOrigin: Coordinates = {
-                x: (iconPoint1[0] + iconPoint3[0]) / 2,
-                y: (iconPoint1[1] + iconPoint3[1]) / 2,
-            };
+            let arrowOrigin = turf.centroid(turfIconBoxRing);
             // let iconStart = new OpenLayers.Geometry.Point(arrowOrigin.x, arrowOrigin.y);
             let iconStart = {
                 id: "point_" + iconPoints.toString(),
-                geometry: {
-                    type: "Point",
-                    coordinates: [arrowOrigin.x, arrowOrigin.y],
-                },
+                geometry: arrowOrigin.geometry,
                 type: "Feature",
                 properties: { styleName: "iconStyle", layerName: LTLaneGraphics.name },
             };
@@ -4352,7 +4351,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
                 fillOpacity: 1,
                 backgroundColor: "#26bae8",
                 strokeColor: "#26bae8",
-                // rotation: iconRotate,
+                rotation: iconRotate,
                 backgroundGraphic: ulabel,
                 backgroundHeight:
                     !featDis || !featDis.graphicHeight || !usize.y ? undefined : featDis.graphicHeight * usize.y,

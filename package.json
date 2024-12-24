@@ -1,6 +1,7 @@
 {
   "name": "wme-road-shield-assistant",
   "devDependencies": {
+    "@turf/turf": "^7.1.0",
     "@types/jquery": "^3.5.32",
     "@types/ol": "^7.0.0",
     "@types/tampermonkey": "^5.0.4",
