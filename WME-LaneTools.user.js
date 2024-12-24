@@ -3413,7 +3413,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
             //                x: node.geometry.x + (featDis.start * 2),
             //                y: node.geometry.y + (featDis.boxheight)
             case 1:
-                return epsg3857toEpsg4326([nodePos[0] + boxheight, nodePos[1] + (boxincwidth * numIcons) / 1.8]);
+                return epsg3857toEpsg4326([nodePos[0] + boxheight, nodePos[1] + (boxincwidth * numIcons)]);
             //                x: node.geometry.x + featDis.boxheight,
             //                y: node.geometry.y + (featDis.boxincwidth * numIcons/1.8)
             case 2:
@@ -3426,8 +3426,8 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
             //                y: node.geometry.y - (featDis.start + featDis.boxheight)
             case 4:
                 return epsg3857toEpsg4326([
-                    nodePos[0] - (start + boxheight * 1.5),
-                    nodePos[1] + (boxincwidth + numIcons * 1.5),
+                    nodePos[0] - (start + boxheight * 3),
+                    nodePos[1] + (boxincwidth + numIcons * 0.5),
                 ]);
             //                x: node.geometry.x - (featDis.start + (featDis.boxheight * 1.5)),
             //                y: node.geometry.y - (featDis.start + (featDis.boxincwidth * numIcons * 1.5))
@@ -3440,7 +3440,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
             //                x: node.geometry.x - (featDis.start),
             //                y: node.geometry.y - (featDis.start * (featDis.boxincwidth * numIcons/2))
             case 7:
-                return epsg3857toEpsg4326([nodePos[0] - start * ((boxincwidth * numIcons) / 2), nodePos[1] - start]);
+                return epsg3857toEpsg4326([nodePos[0] - start * boxincwidth * numIcons, nodePos[1] + start]);
             //                x: node.geometry.x - (featDis.start * (featDis.boxincwidth * numIcons/2)),
             //                y: node.geometry.y - (featDis.start)
             default:
@@ -3461,7 +3461,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
         };
         switch (sdk.Map.getZoomLevel()) {
             case 22:
-                label_distance.start = 0.5;
+                label_distance.start = 2;
                 label_distance.boxheight = 1.7;
                 label_distance.boxincwidth = 1.1;
                 label_distance.iconbordermargin = 0.1;
@@ -3471,7 +3471,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
                 label_distance.graphicWidth = 25;
                 break;
             case 21:
-                label_distance.start = 1;
+                label_distance.start = 2;
                 label_distance.boxheight = 3.2;
                 label_distance.boxincwidth = 2.2;
                 label_distance.iconbordermargin = 0.2;
@@ -3501,7 +3501,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
                 label_distance.graphicWidth = 25;
                 break;
             case 18:
-                label_distance.start = 6;
+                label_distance.start = 3;
                 label_distance.boxheight = 20.0;
                 label_distance.boxincwidth = 14.0;
                 label_distance.iconbordermargin = 0.5;
