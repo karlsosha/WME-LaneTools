@@ -1564,13 +1564,13 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
                     updateUI();
                 });
             }
-            waitForElementLoaded(".fwd-lanes > div.lane-instruction.lane-instruction-from > div.instruction > div.edit-region > .direction-lanes-edit").then((elem) => {
+            waitForElementLoaded(".fwd-lanes > div.lane-instruction.lane-instruction-to > div.instruction > div.lane-edit > .edit-lane-guidance").then((elem) => {
                 $(elem).off();
                 $(elem).on("click", function () {
                     showAddLaneGuidance("fwd");
                 });
             });
-            waitForElementLoaded(".rev-lanes > div.lane-instruction.lane-instruction-to > div.instruction > div.edit-region > .direction-lanes-edit").then((elem) => {
+            waitForElementLoaded(".rev-lanes > div.lane-instruction.lane-instruction-to > div.instruction > div.lane-edit > .edit-lane-guidance").then((elem) => {
                 $(elem).off();
                 $(elem).on("click", function () {
                     showAddLaneGuidance("rev");

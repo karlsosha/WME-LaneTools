@@ -1811,7 +1811,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
             }
 
             waitForElementLoaded(
-                ".fwd-lanes > div.lane-instruction.lane-instruction-from > div.instruction > div.edit-region > .direction-lanes-edit"
+                ".fwd-lanes > div.lane-instruction.lane-instruction-to > div.instruction > div.lane-edit > .edit-lane-guidance"
             ).then((elem) => {
                 $(elem).off();
                 $(elem).on("click", function () {
@@ -1819,7 +1819,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
                 });
             });
             waitForElementLoaded(
-                ".rev-lanes > div.lane-instruction.lane-instruction-to > div.instruction > div.edit-region > .direction-lanes-edit"
+                ".rev-lanes > div.lane-instruction.lane-instruction-to > div.instruction > div.lane-edit > .edit-lane-guidance"
             ).then((elem) => {
                 $(elem).off();
                 $(elem).on("click", function () {
