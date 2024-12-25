@@ -1446,7 +1446,9 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
             // W.model.nodes.getObjectById(W.selectionManager.getSegmentSelection().segments[0].attributes.toNodeID)
             //     .attributes.geometry;
             //        W.model.nodes.get(W.selectionManager.getSegmentSelection().segments[0].attributes.toNodeID).attributes.geometry
-            const selSeg = isSegmentSelected(selection) ? sdk.DataModel.Segments.getById({ segmentId: selection.ids[0] }) : null;
+            const selSeg = isSegmentSelected(selection)
+                ? sdk.DataModel.Segments.getById({ segmentId: selection.ids[0] })
+                : null;
             const nodeB = selSeg && selSeg.toNodeId ? sdk.DataModel.Nodes.getById({ nodeId: selSeg.toNodeId }) : null;
             nodeB && document.getElementById(nodeB?.id.toString());
             // document.getElementById(
@@ -1459,7 +1461,9 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
         function hoverNodeFrom() {
             // W.model.nodes.getObjectById(W.selectionManager.getSegmentSelection().segments[0].attributes.fromNodeID)
             //     .attributes.geometry;
-            const selSeg = isSegmentSelected(selection) ? sdk.DataModel.Segments.getById({ segmentId: selection.ids[0] }) : null;
+            const selSeg = isSegmentSelected(selection)
+                ? sdk.DataModel.Segments.getById({ segmentId: selection.ids[0] })
+                : null;
             const nodeA = selSeg && selSeg.fromNodeId ? sdk.DataModel.Nodes.getById({ nodeId: selSeg.fromNodeId }) : null;
             nodeA && document.getElementById(nodeA?.id.toString());
             //        W.model.nodes.get(W.selectionManager.getSegmentSelection().segments[0].attributes.fromNodeID).attributes.geometry
@@ -1491,7 +1495,9 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
             }
             // Add delete buttons and preselected lane number buttons to UI
             if (_pickleColor && _pickleColor >= 1) {
-                const selSeg = isSegmentSelected(selection) ? sdk.DataModel.Segments.getById({ segmentId: selection.ids[0] }) : null;
+                const selSeg = isSegmentSelected(selection)
+                    ? sdk.DataModel.Segments.getById({ segmentId: selection.ids[0] })
+                    : null;
                 if (getId("li-del-opp-btn"))
                     $("#li-del-opp-btn").remove();
                 let $fwdButton = $(`<button type="button" id="li-del-fwd-btn" style="height:20px;background-color:white;border:1px solid grey;border-radius:8px;">${strings.delFwd}</button>`);
@@ -1512,13 +1518,13 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
                 if (!getId("li-del-rev-btn") &&
                     !revDone &&
                     selSeg &&
-                    selSeg.fromNodeLanesCount &&
-                    selSeg.fromNodeLanesCount > 0) {
+                    selSeg.toNodeLanesCount &&
+                    selSeg.toNodeLanesCount > 0) {
                     if ($(".rev-lanes > div.lane-instruction.lane-instruction-from > div.instruction").length > 0) {
                         $btnCont2.prependTo(".rev-lanes > div.lane-instruction.lane-instruction-from > div.instruction");
                         $(".rev-lanes > div.lane-instruction.lane-instruction-from > div.instruction").css("border-bottom", `4px dashed ${LtSettings.BAColor}`);
                     }
-                    else if (selSeg.isAtoB) {
+                    else if (selSeg.isBtoA) {
                         //jm6087
                         $oppButton.prop("title", "rev");
                         $oppButton.prependTo("#edit-panel > div > div > div > div.segment-edit-section > wz-tabs > wz-tab.lanes-tab");
@@ -1527,12 +1533,15 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
                 else {
                     $(".rev-lanes > div.lane-instruction.lane-instruction-from > div.instruction").css("border-bottom", `4px dashed ${LtSettings.BAColor}`);
                 }
-                if (!getId("li-del-fwd-btn") && !fwdDone && selSeg?.toNodeLanesCount && selSeg.toNodeLanesCount > 0) {
+                if (!getId("li-del-fwd-btn") &&
+                    !fwdDone &&
+                    selSeg?.fromNodeLanesCount &&
+                    selSeg.fromNodeLanesCount > 0) {
                     if ($(".fwd-lanes > div.lane-instruction.lane-instruction-from > div.instruction").length > 0) {
                         $btnCont1.prependTo(".fwd-lanes > div.lane-instruction.lane-instruction-from > div.instruction");
                         $(".fwd-lanes > div.lane-instruction.lane-instruction-from > div.instruction").css("border-bottom", `4px dashed ${LtSettings.ABColor}`);
                     }
-                    else if (selSeg.isBtoA) {
+                    else if (selSeg.isAtoB) {
                         //jm6087
                         $oppButton.prop("title", "fwd");
                         $oppButton.prependTo("#edit-panel > div > div > div > div.segment-edit-section > wz-tabs > wz-tab.lanes-tab");
@@ -1826,7 +1835,9 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
             }
         }
         function colorCSDir() {
-            const selSeg = isSegmentSelected(selection) ? sdk.DataModel.Segments.getById({ segmentId: selection.ids[0] }) : null;
+            const selSeg = isSegmentSelected(selection)
+                ? sdk.DataModel.Segments.getById({ segmentId: selection.ids[0] })
+                : null;
             if (!selSeg)
                 return;
             const fwdNode = getNodeObj(selSeg?.toNodeId);
@@ -2007,38 +2018,60 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
         //    return segment.geometry.components[segment.geometry.components.length - 2];
     }
     function delLanes(dir) {
-        const selObjs = W.selectionManager.getSelectedWMEFeatures();
-        const selSeg = selObjs[0]._wmeObject;
-        const turnGraph = W.model.getTurnGraph();
+        const selObjs = sdk.Editing.getSelection();
+        if (!isSegmentSelected(selObjs)) {
+            lt_log("Object selected for Delete Lanes is not a Segment", 1);
+            return;
+        }
+        if (selObjs?.ids && selObjs?.ids.length > 1) {
+            lt_log("Multiple Objects selected cannot perform Lane Deletion", 1);
+            return;
+        }
+        const selSeg = sdk.DataModel.Segments.getById({ segmentId: selObjs?.ids[0] });
+        if (!selSeg) {
+            lt_log(`No Segment with ID: ${selObjs?.ids[0]}`, 1);
+        }
         const mAction = new MultiAction();
-        let node;
         let conSegs;
         let updates = {};
         //    mAction.setModel(W.model);
         if (dir === "fwd") {
             updates.fwdLaneCount = 0;
-            node = getNodeObj(selSeg.attributes.toNodeID);
-            conSegs = node.getSegmentIds();
+            var node = getNodeObj(selSeg?.toNodeId);
+            if (!node) {
+                throw new Error(`Unable to Get Node: ${selSeg?.toNodeId}`);
+            }
+            conSegs = node.connectedSegmentIds;
             const fwdLanes = $(".fwd-lanes");
             fwdLanes.find(".form-control").val(0);
             fwdLanes.find(".form-control").trigger("change");
         }
         if (dir === "rev") {
             updates.revLaneCount = 0;
-            node = getNodeObj(selSeg.attributes.fromNodeID);
-            conSegs = node.getSegmentIds();
+            var node = getNodeObj(selSeg?.fromNodeId);
+            if (!node) {
+                throw new Error(`Unable to Get Node: ${selSeg?.toNodeId}`);
+            }
+            conSegs = node.connectedSegmentIds;
             const revLanes = $(".rev-lanes");
             revLanes.find(".form-control").val(0);
             revLanes.find(".form-control").trigger("change");
         }
+        if (!conSegs)
+            return;
         mAction.doSubAction(W.model, new UpdateObj(selSeg, updates));
+        let turnGraph = W.model.getTurnGraph();
         for (let i = 0; i < conSegs.length; i++) {
-            let turnStatus = turnGraph.getTurnThroughNode(node, selSeg, getSegObj(conSegs[i]));
-            let turnData = turnStatus.getTurnData();
-            if (turnData.hasLanes()) {
-                turnData = turnData.withLanes();
-                turnStatus = turnStatus.withTurnData(turnData);
-                mAction.doSubAction(W.model, new SetTurn(turnGraph, turnStatus));
+            let turns = sdk.DataModel.Turns.getTurnsThroughNode({ nodeId: node.id });
+            for (let idx = 0; idx < turns.length; ++idx) {
+                if (turns[idx].fromSegmentId !== selSeg.id || turns[idx].toSegmentId !== conSegs[i])
+                    continue;
+                let turnData = turnStatus.getTurnData();
+                if (turnData.hasLanes()) {
+                    turnData = turnData.withLanes();
+                    turnStatus = turnStatus.withTurnData(turnData);
+                    mAction.doSubAction(W.model, new SetTurn(turnGraph, turnStatus));
+                }
             }
         }
         mAction._description = "Deleted lanes and turn associations";
@@ -3412,7 +3445,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
             //                x: node.geometry.x + (featDis.start * 2),
             //                y: node.geometry.y + (featDis.boxheight)
             case 1:
-                return epsg3857toEpsg4326([nodePos[0] + boxheight, nodePos[1] + (boxincwidth * numIcons)]);
+                return epsg3857toEpsg4326([nodePos[0] + boxheight, nodePos[1] + boxincwidth * numIcons]);
             //                x: node.geometry.x + featDis.boxheight,
             //                y: node.geometry.y + (featDis.boxincwidth * numIcons/1.8)
             case 2:
@@ -3431,7 +3464,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
             //                x: node.geometry.x - (featDis.start + (featDis.boxheight * 1.5)),
             //                y: node.geometry.y - (featDis.start + (featDis.boxincwidth * numIcons * 1.5))
             case 5:
-                return epsg3857toEpsg4326([nodePos[0] + (start + boxincwidth / 2.0), nodePos[1] + start / 2.0]);
+                return epsg3857toEpsg4326([nodePos[0] + (start + boxincwidth), nodePos[1] + start]);
             //                x: node.geometry.x + (featDis.start + featDis.boxincwidth/2),
             //                y: node.geometry.y + (featDis.start/2)
             case 6:
