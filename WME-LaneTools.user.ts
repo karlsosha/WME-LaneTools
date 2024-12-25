@@ -2137,13 +2137,13 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
             const fwdNode = getNodeObj(selSeg?.toNodeId);
             const revNode = getNodeObj(selSeg?.fromNodeId);
 
-            let fwdConfig = checkLanesConfiguration(
+            let fwdConfig: LaneConfiguration = checkLanesConfiguration(
                 selSeg,
                 fwdNode,
                 fwdNode ? fwdNode.connectedSegmentIds : [],
                 selSeg?.toNodeLanesCount
             );
-            let revConfig = checkLanesConfiguration(
+            let revConfig: LaneConfiguration = checkLanesConfiguration(
                 selSeg,
                 revNode,
                 revNode ? revNode.connectedSegmentIds : [],
@@ -2918,7 +2918,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
                 const nodeSegs = node.connectedSegmentIds;
 
                 if (laneCount && laneCount > 0) {
-                    let config = checkLanesConfiguration(seg, node, nodeSegs, laneCount);
+                    let config: LaneConfiguration = checkLanesConfiguration(seg, node, nodeSegs, laneCount);
                     tlns = config.tlns;
                     tio = config.tio;
                     lio = config.lio;
@@ -3034,8 +3034,8 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
         node: Node | null | undefined,
         segs: number[],
         numLanes: number | null | undefined
-    ) {
-        let laneConfiguration: LaneConfiguration = {
+    ): LaneConfiguration {
+        let laneConfig: LaneConfiguration = {
             tlns: false,
             tio: false,
             badLn: false,
@@ -3080,27 +3080,27 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
                 if (t.isAllowed) {
                     // Check for turn instruction override
                     if (t.instructionOpCode !== null) {
-                        laneConfiguration.tio = true;
+                        laneConfig.tio = true;
                     }
                     // Check for lanes
                     if (t.lanes !== null) {
-                        laneConfiguration.tlns = true;
+                        laneConfig.tlns = true;
                         // Check for lane angle override
                         if (t.lanes.angleOverride !== null) {
-                            laneConfiguration.lio = true;
+                            laneConfig.lio = true;
                         }
                         // Check for Continue Straight override
                         // 1 is for view only, 2 is for view and hear
                         let primaryStreetId: number | null | undefined = seg2?.primaryStreetId;
                         if (primaryStreetId && primaryStreetId !== null) {
                             if (t.lanes.guidanceMode === "display") {
-                                laneConfiguration.csMode = 1;
-                                laneConfiguration.csStreet = sdk.DataModel.Streets.getById({
+                                laneConfig.csMode = 1;
+                                laneConfig.csStreet = sdk.DataModel.Streets.getById({
                                     streetId: primaryStreetId,
                                 })?.name;
                             } else if (t.lanes.guidanceMode === "display-and-voice") {
-                                laneConfiguration.csMode = 2;
-                                laneConfiguration.csStreet = sdk.DataModel.Streets.getById({
+                                laneConfig.csMode = 2;
+                                laneConfig.csStreet = sdk.DataModel.Streets.getById({
                                     streetId: primaryStreetId,
                                 })?.name;
                             }
@@ -3133,13 +3133,13 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
         turnLanes.sort();
         for (let z = 0; z < turnLanes.length; z++) {
             if (turnLanes[z] !== z) {
-                laneConfiguration.badLn = true;
+                laneConfig.badLn = true;
             }
         }
         if (numLanes && turnLanes.length < numLanes && onScreen(node, zoomLevel)) {
-            laneConfiguration.badLn = true;
+            laneConfig.badLn = true;
         }
-        return laneConfiguration;
+        return laneConfig;
     }
 
     function setTurns(direction: LaneDirection) {
@@ -3252,9 +3252,9 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
         }
     }
 
-    function waitForElementLoaded(selector, root = null) {
+    function waitForElementLoaded(selector: string, root: ShadowRoot | null | undefined) {
         return new Promise((resolve) => {
-            if (root === null) {
+            if (!root) {
                 if (document.querySelector(selector)) {
                     return resolve(document.querySelector(selector));
                 }
