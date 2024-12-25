@@ -92,6 +92,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
     const configArray = {};
     const RBSArray = { failed: false };
     const IsBeta = location.href.indexOf("beta.waze.com") !== -1;
+    const env = IsBeta ? "beta" : "production";
     const TAB_TRANSLATIONS = {
         // Default english values
         default: {
@@ -2542,7 +2543,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
                 // Selected segment highlights
                 lt_log(`candidate(f):${heurCand}`);
                 if (heurCand !== HeuristicsCandidate.NONE) {
-                    if (entrySeg != null && segments.findIndex((element) => element.id === entrySeg.seg) > -1) {
+                    if (entrySeg && segments.findIndex((element) => element.id === entrySeg.seg) > -1) {
                         let nodeColor = heurCand === HeuristicsCandidate.PASS ? LtSettings.NodeColor : LtSettings.HeurFailColor;
                         highlightSegment(seg.geometry.coordinates, direction, false, false, 0, 0, false, csMode, badLn, heurCand, true);
                         let eSeg = sdk.DataModel.Segments.getById({ segmentId: entrySeg.seg });
@@ -2573,8 +2574,12 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
         let turnLanes = [];
         // const turnGraph = W.model.getTurnGraph();
         // const pturns = turnGraph.getAllPathTurns();
-        const pturns = sdk.DataModel.Turns.getTurnsFromSegment({ segmentId: s.id }).filter((t) => t.isPathTurn);
-        pturns.push(...sdk.DataModel.Turns.getTurnsToSegment({ segmentId: s.id }).filter((t) => t.isPathTurn));
+        let fromTurns = sdk.DataModel.Turns.getTurnsFromSegment({ segmentId: s.id });
+        let toTurns = sdk.DataModel.Turns.getTurnsToSegment({ segmentId: s.id });
+        let pturns = fromTurns.filter((t) => t.isPathTurn);
+        pturns.push(...toTurns.filter((t) => t.isPathTurn));
+        let jpturns = fromTurns.filter((t) => t.isJunctionBoxTurn);
+        jpturns.push(...toTurns.filter((t) => t.isJunctionBoxTurn));
         const zoomLevel = sdk.Map.getZoomLevel();
         function addTurns(fromLns, toLns) {
             if (toLns === undefined || fromLns === undefined)
@@ -2645,17 +2650,10 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
         }
         // check turns in JBs
         // const jb = W.model.bigJunctions.getObjectArray();
-        const jb = sdk.DataModel.BigJunctions.getAll();
-        for (let j = 0; j < jb.length; j++) {
-            const jb1 = jb[j];
-            const jpturns = jb1.segmentIds;
-            for (let t = 0; t < jpturns.length; t++) {
-                if (jpturns[t] == s.id) {
-                    const tdat = jpturns[t].lanes;
-                    if (tdat) {
-                        addTurns(tdat.fromLaneIndex, tdat.toLaneIndex);
-                    }
-                }
+        for (let t = 0; t < jpturns.length; t++) {
+            const tdat = jpturns[t].lanes;
+            if (tdat) {
+                addTurns(tdat.fromLaneIndex, tdat.toLaneIndex);
             }
         }
         turnLanes.sort();
@@ -2664,13 +2662,14 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
                 laneConfiguration.badLn = true;
             }
         }
-        if (turnLanes.length < numLanes && onScreen(node, zoomLevel)) {
+        if (numLanes && turnLanes.length < numLanes && onScreen(node, zoomLevel)) {
             laneConfiguration.badLn = true;
         }
         return laneConfiguration;
     }
     function setTurns(direction) {
-        if (!getId("lt-ClickSaveEnable").checked) {
+        let clickSaveEnabled = getId("lt-ClickSaveEnable");
+        if (!clickSaveEnabled || !clickSaveEnabled.checked) {
             return;
         }
         let lanesPane = document.getElementsByClassName(direction)[0];
@@ -3769,14 +3768,14 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
                 y: undefined,
             };
             if (img["uturn"] === true) {
-                ulabel = "https://editor-assets.waze.com/production/font/aae5ed152758cb6a9191b91e6cedf322.svg";
+                ulabel = `https://web-assets.waze.com/webapps/wme/${sdk.getWMEVersion()}-${env}/font/989fe58ac11ed7d3/u-turn-small.svg`;
                 usize.x = 0.6;
                 usize.y = 0.6;
                 uoffset.x = -7;
                 uoffset.y = -12;
             }
             if (img["miniuturn"] === true) {
-                ulabel = "https://editor-assets.waze.com/production/font/aae5ed152758cb6a9191b91e6cedf322.svg";
+                ulabel = `https://web-assets.waze.com/webapps/wme/${sdk.getWMEVersion()}-${env}/font/989fe58ac11ed7d3/u-turn-small.svg`;
                 usize.x = 0.3;
                 usize.y = 0.25;
                 uoffset.x = -8;
