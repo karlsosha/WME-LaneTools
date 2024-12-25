@@ -1535,7 +1535,8 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
                 }
                 if (!getId("li-del-fwd-btn") &&
                     !fwdDone &&
-                    selSeg?.fromNodeLanesCount &&
+                    selSeg &&
+                    selSeg.fromNodeLanesCount &&
                     selSeg.fromNodeLanesCount > 0) {
                     if ($(".fwd-lanes > div.lane-instruction.lane-instruction-from > div.instruction").length > 0) {
                         $btnCont1.prependTo(".fwd-lanes > div.lane-instruction.lane-instruction-from > div.instruction");
