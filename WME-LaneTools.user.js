@@ -29,11 +29,13 @@
 // import WazeWrap from "https://greasyfork.org/scripts/24851-wazewrap/code/WazeWrap.js";
 unsafeWindow.SDK_INITIALIZED.then(ltInit);
 function ltInit() {
-    const Direction = {
-        REVERSE: -1,
-        ANY: 0,
-        FORWARD: 1,
-    };
+    let Direction;
+    (function (Direction) {
+        Direction[Direction["REVERSE"] = -1] = "REVERSE";
+        Direction[Direction["ANY"] = 0] = "ANY";
+        Direction[Direction["FORWARD"] = 1] = "FORWARD";
+    })(Direction || (Direction = {}));
+    ;
     const LT_ROAD_TYPE = {
         // Streets
         NARROW_STREET: 22,
@@ -62,12 +64,14 @@ function ltInit() {
     //     MIN_ZOOM_ALL: 14,
     //     MIN_ZOOM_NONFREEWAY: 17,
     // };
-    const HeuristicsCandidate = {
-        ERROR: -2,
-        FAIL: -1,
-        NONE: 0,
-        PASS: 1,
-    };
+    let HeuristicsCandidate;
+    (function (HeuristicsCandidate) {
+        HeuristicsCandidate[HeuristicsCandidate["ERROR"] = -2] = "ERROR";
+        HeuristicsCandidate[HeuristicsCandidate["FAIL"] = -1] = "FAIL";
+        HeuristicsCandidate[HeuristicsCandidate["NONE"] = 0] = "NONE";
+        HeuristicsCandidate[HeuristicsCandidate["PASS"] = 1] = "PASS";
+    })(HeuristicsCandidate || (HeuristicsCandidate = {}));
+    ;
     if (!unsafeWindow.getWmeSdk) {
         throw new Error("SDK is not installed");
     }
@@ -1789,7 +1793,8 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
         }
         function focusEle() {
             // Places the focus on the relevant lanes # input if the direction exists
-            if (getId("lt-AutoFocusLanes").checked) {
+            let autoFocusLanes = getId("lt-AutoFocusLanes");
+            if (autoFocusLanes && autoFocusLanes.checked) {
                 const fwdLanes = $(".fwd-lanes");
                 const revLanes = $(".rev-lanes");
                 if (fwdLanes.find(".edit-region").children().length > 0 && !fwdDone) {
@@ -1801,7 +1806,8 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
             }
         }
         function insertSelAll(dir) {
-            if (getId("lt-SelAllEnable").checked) {
+            let setAllEnable = getId("lt-SelAllEnable");
+            if (setAllEnable && setAllEnable.checked) {
                 $(".street-name").css("user-select", "none");
                 let inputDirection = dir === "fwd" ? $(".fwd-lanes").find(".form-control")[0] : $(".rev-lanes").find(".form-control")[0];
                 let startVal = $(inputDirection).val();
@@ -1937,11 +1943,12 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
         $("#lt-LaneHeuristicsChecks").trigger("click");
     }
     function displayToolbar() {
-        const objSelected = W.selectionManager.getSelectedWMEFeatures();
-        if (objSelected.length === 1 && getId("lt-CopyEnable").checked && getId("lt-ScriptEnabled").checked) {
-            if (objSelected[0]._wmeObject.type.toLowerCase() === "segment") {
-                //        if (objSelected[0].model.type.toLowerCase() === 'segment') {
-                const map = $("#map");
+        const objSelected = sdk.Editing.getSelection();
+        let scriptEnabled = getId("lt-ScriptEnabled");
+        let copyEnable = getId("lt-CopyEnable");
+        if (scriptEnabled && scriptEnabled.checked && copyEnable && copyEnable.checked && objSelected.length === 1) {
+            if (objSelected && objSelected?.objectType === "segment") {
+                const map = sdk.Map.getMapViewportElement();
                 $("#lt-toolbar-container").css({
                     display: "block",
                     left: map.width() * 0.1,
@@ -2519,7 +2526,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
             let entrySeg = null;
             let entrySegRef = {
                 seg: 0,
-                direction: Direction.NONE,
+                direction: Direction.ANY,
             };
             // CHECK LANES & HEURISTICS
             if (node !== null && onScreen(node, zoomLevel)) {
@@ -2881,22 +2888,20 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
         // console.log('LaneTools: Click Saver Module loaded');
     }
     function isHeuristicsCandidate(segCandidate, curNodeExit, nodeExitSegIds, curNodeEntry, laneCount, segLength, inSegRef) {
-        /* CRITERIA FOR HEURISTICS, as described on the wiki: https://wazeopedia.waze.com/wiki/USA/User:Nzahn1/Lanes#Mapping_lanes_on_divided_roadways
-    1. Both left and right turns are possible at the intersection;
-    2. The two portions of the divided roadway are essentially parallel to each other;
-    3. The two intersecting roads are more or less perpendicular to each other;
-    4. The median segment in question is 50 m or shorter; and
-    5. The number of lanes entering the intersection is equal to the total number of lanes exiting the intersection
-         (total number of lanes exiting intersection = number of lanes on the median segment +
-            number of right-turn only lanes on the entry segment --  other words, no new lanes are added in the median).
-
-    MY OBSERVATIONS
-    11. We must have an incoming segment supplemenatary to outgoing segment 1.  (alt-incoming)
-    12. That alt-incoming segment must be within perpendicular tolerance to BOTH the median segment and the incoming segment.
-    */
+        // CRITERIA FOR HEURISTICS, as described on the wiki: https://wazeopedia.waze.com/wiki/USA/User:Nzahn1/Lanes#Mapping_lanes_on_divided_roadways
+        // 1. Both left and right turns are possible at the intersection;
+        // 2. The two portions of the divided roadway are essentially parallel to each other;
+        // 3. The two intersecting roads are more or less perpendicular to each other;
+        // 4. The median segment in question is 50 m or shorter; and
+        // 5. The number of lanes entering the intersection is equal to the total number of lanes exiting the intersection
+        //      (total number of lanes exiting intersection = number of lanes on the median segment +
+        //         number of right-turn only lanes on the entry segment --  other words, no new lanes are added in the median).
+        // MY OBSERVATIONS
+        // 11. We must have an incoming segment supplemenatary to outgoing segment 1.  (alt-incoming)
+        // 12. That alt-incoming segment must be within perpendicular tolerance to BOTH the median segment and the incoming segment.
         if (nodeExitSegIds == null || curNodeEntry == null || laneCount == null || inSegRef == null) {
             lt_log("isHeuristicsCandidate received bad argument (null)", 1);
-            return 0;
+            return HeuristicsCandidate.NONE;
         }
         let outSeg2 = null;
         let outTurnAngle2 = null;
@@ -2912,7 +2917,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
         // #4 first: Check the length (and get outta' here if not)
         //  1/1/21: This is now redundant with outer loop. But leaving it in just in case...
         if (segLength > MAX_LEN_HEUR) {
-            return 0;
+            return HeuristicsCandidate.NONE;
         }
         // Get current segment heading at the node
         const segId = segCandidate.id;
@@ -2920,9 +2925,24 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
         let segBeginAzm = lt_getMathAzimuth_from_node(curNodeEntry.id, segCandidate);
         let out1TargetAngle = -90.0; // For right-hand side of the road countries  (right-turn)
         let out2TargetAngle = 90.0; // (left-turn)
+        if (segCandidate.primaryStreetId === null) {
+            lt_log(`Unable to process Heuristics on Segment: ${segCandidate.id} as it has no Primary Street Set`, 1);
+            return HeuristicsCandidate.NONE;
+        }
         let street = sdk.DataModel.Streets.getById({ streetId: segCandidate.primaryStreetId });
-        let city = sdk.DataModel.Cities.getById({ cityId: street?.cityId });
-        let segmentCountry = sdk.DataModel.Countries.getById({ countryId: city?.countryId });
+        if (!street) {
+            lt_log(`Unable to Process Heuristics on Street: ${segCandidate.primaryStreetId} as street with this id doesn't exist`, 1);
+            return HeuristicsCandidate.NONE;
+        }
+        let city = street && street.cityId ? sdk.DataModel.Cities.getById({ cityId: street.cityId }) : null;
+        if (!city) {
+            lt_log(`Unable to Process Heuristics on City ${street?.cityId} as it doesn't exist`, 1);
+            return HeuristicsCandidate.NONE;
+        }
+        let segmentCountry = city.countryId ? sdk.DataModel.Countries.getById({ countryId: city?.countryId }) : null;
+        if (!segmentCountry) {
+            lt_log(`Unable to Process Heuristics on Country ${city.countryId}`, 1);
+        }
         if (segmentCountry?.isLeftHandTraffic) {
             out1TargetAngle = 90.0; // left turn
             out2TargetAngle = -90.0; // right turn
@@ -2944,7 +2964,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
             let ia = lt_getMathAzimuth_to_node(curNodeEntry.id, is); // absolute math azimuth
             let ita = lt_turn_angle(ia, segBeginAzm); // turn angle
             lt_log(`Turn angle from inseg ${nodeEntrySegIds[ii]}: ${ita}(${ia},${segBeginAzm})`, 3);
-            if (Math.abs(ita) > MAX_STRAIGHT_DIF) {
+            if (ita !== null && Math.abs(ita) > MAX_STRAIGHT_DIF) {
                 // tolerance met?
                 if (Math.abs(ita) > MAX_STRAIGHT_TO_CONSIDER) {
                     continue;
@@ -2991,10 +3011,18 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
             inTurnAngle = ita;
             inNumLanesThrough = nl;
             inSegIsHeurFail = thisTimeFail;
-            inSegRef.inSeg = inSeg;
-            inSegRef.inSegDir = inSeg?.toNodeId === curNodeEntry.id ? Direction.FORWARD : Direction.REVERSE;
+            if (!inSegRef) {
+                let newSegRef = {
+                    seg: 0,
+                    direction: Direction.ANY
+                };
+                inSegRef = newSegRef;
+            }
+            if (inSeg)
+                inSegRef.seg = inSeg.id;
+            inSegRef.direction = inSeg?.toNodeId === curNodeEntry.id ? Direction.FORWARD : Direction.REVERSE;
         }
-        if (inSeg == null) {
+        if (inSeg === null) {
             lt_log("== No inseg found ==================================================================", 2);
             return 0; // otherwise wait for later
         }
@@ -3016,12 +3044,12 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
             let ota = lt_turn_angle(segEndAzm, oa); // turn angle
             lt_log(`Turn angle to outseg2 ${nodeExitSegIds[ii]}: ${ota}(${segEndAzm},${oa})`, 2);
             // Just to be sure, we can't do Heuristics if there's a chance to turn right (RH)
-            if (Math.abs(out1TargetAngle - ota) < MAX_PERP_TO_CONSIDER) {
+            if (ota !== null && Math.abs(out1TargetAngle - ota) < MAX_PERP_TO_CONSIDER) {
                 // tolerance met?
-                return 0;
+                return HeuristicsCandidate.NONE;
             }
             // Ok now check our turn angle
-            if (Math.abs(out2TargetAngle - ota) > MAX_PERP_DIF) {
+            if (ota !== null && Math.abs(out2TargetAngle - ota) > MAX_PERP_DIF) {
                 // tolerance met?
                 if (Math.abs(out2TargetAngle - ota) > MAX_PERP_TO_CONSIDER) {
                     continue;
@@ -3067,7 +3095,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
             //  Since we already have azm of this seg TOWARD the node, just check the supplementary turn angle. Must also be within tolerance. (See Geometry proof :)
             let tta = lt_turn_angle(inAzm, ia);
             lt_log(`Turn angle from inseg (supplementary) ${nodeEntrySegIds[ii]}: ${tta}(${inAzm},${ia})`, 3);
-            if (Math.abs(out1TargetAngle - tta) > MAX_PERP_DIF_ALT) {
+            if (tta !== null && Math.abs(out1TargetAngle - tta) > MAX_PERP_DIF_ALT) {
                 // tolerance met?
                 if (Math.abs(out1TargetAngle - tta) > MAX_PERP_TO_CONSIDER) {
                     // too far out of tolerance to care (don't consider it a candidate at all)
@@ -3119,17 +3147,27 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
         ////////////////////////////////////////////// end of func /////////////////////////////////////////////////////////
         // get the absolute angle for a segment at an end point - borrowed from JAI
         function lt_getMathAzimuth_from_node(nodeId, segment) {
-            if (nodeId == null || segment == null) {
+            if (nodeId === null || segment === null) {
                 return null;
             }
             let ja_dx, ja_dy;
             if (segment.fromNodeId === nodeId) {
-                ja_dx = lt_get_second_point(segment)[0] - lt_get_first_point(segment)[0];
-                ja_dy = lt_get_second_point(segment)[1] - lt_get_first_point(segment)[1];
+                let secondPoint = lt_get_second_point(segment);
+                let firstPoint = lt_get_first_point(segment);
+                if (!secondPoint || !firstPoint) {
+                    throw new Error("Missing Start and end Point of the Segment");
+                }
+                ja_dx = secondPoint[0] - firstPoint[0];
+                ja_dy = secondPoint[1] - firstPoint[1];
             }
             else {
-                ja_dx = lt_get_next_to_last_point(segment)[0] - lt_get_last_point(segment)[0];
-                ja_dy = lt_get_next_to_last_point(segment)[1] - lt_get_last_point(segment)[1];
+                let nextToLastPoint = lt_get_next_to_last_point(segment);
+                let lastPoint = lt_get_last_point(segment);
+                if (!nextToLastPoint || !lastPoint) {
+                    throw new Error("Missing Points at the End of the Segment");
+                }
+                ja_dx = nextToLastPoint[0] - lastPoint[0];
+                ja_dy = nextToLastPoint[1] - lastPoint[1];
             }
             let angle_rad = Math.atan2(ja_dy, ja_dx);
             let angle_deg = ((angle_rad * 180) / Math.PI) % 360;
@@ -3137,6 +3175,8 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
             return angle_deg;
         }
         function lt_getMathAzimuth_to_node(nodeId, segment) {
+            if (!nodeId || !segment)
+                return null;
             let fromAzm = lt_getMathAzimuth_from_node(nodeId, segment);
             if (fromAzm === null)
                 return null;
@@ -3153,6 +3193,8 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
          * @returns {number}
          */
         function lt_turn_angle(aIn, aOut) {
+            if (aIn === null || aOut === null)
+                return null;
             let angleInAdjusted = aIn;
             let angleOutAdjusted = aOut;
             while (aOut > 180.0) {
@@ -3233,7 +3275,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
     }
     function copyLaneInfo(side) {
         _turnInfo = [];
-        const selFeatures = W.selectionManager.getSelectedWMEFeatures();
+        const selFeatures = sdk.Editing.getSelection();
         const seg = selFeatures[0]._wmeObject;
         const segAtt = seg.getFeatureAttributes();
         const segGeo = seg.geometry.components;
