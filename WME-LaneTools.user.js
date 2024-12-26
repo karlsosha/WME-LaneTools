@@ -36,28 +36,30 @@ function ltInit() {
         Direction[Direction["FORWARD"] = 1] = "FORWARD";
     })(Direction || (Direction = {}));
     ;
-    const LT_ROAD_TYPE = {
+    let LT_ROAD_TYPE;
+    (function (LT_ROAD_TYPE) {
         // Streets
-        NARROW_STREET: 22,
-        STREET: 1,
-        PRIMARY_STREET: 2,
+        LT_ROAD_TYPE[LT_ROAD_TYPE["NARROW_STREET"] = 22] = "NARROW_STREET";
+        LT_ROAD_TYPE[LT_ROAD_TYPE["STREET"] = 1] = "STREET";
+        LT_ROAD_TYPE[LT_ROAD_TYPE["PRIMARY_STREET"] = 2] = "PRIMARY_STREET";
         // Highways
-        RAMP: 4,
-        FREEWAY: 3,
-        MAJOR_HIGHWAY: 6,
-        MINOR_HIGHWAY: 7,
+        LT_ROAD_TYPE[LT_ROAD_TYPE["RAMP"] = 4] = "RAMP";
+        LT_ROAD_TYPE[LT_ROAD_TYPE["FREEWAY"] = 3] = "FREEWAY";
+        LT_ROAD_TYPE[LT_ROAD_TYPE["MAJOR_HIGHWAY"] = 6] = "MAJOR_HIGHWAY";
+        LT_ROAD_TYPE[LT_ROAD_TYPE["MINOR_HIGHWAY"] = 7] = "MINOR_HIGHWAY";
         // Other drivable
-        DIRT_ROAD: 8,
-        FERRY: 14,
-        PRIVATE_ROAD: 17,
-        PARKING_LOT_ROAD: 20,
+        LT_ROAD_TYPE[LT_ROAD_TYPE["DIRT_ROAD"] = 8] = "DIRT_ROAD";
+        LT_ROAD_TYPE[LT_ROAD_TYPE["FERRY"] = 14] = "FERRY";
+        LT_ROAD_TYPE[LT_ROAD_TYPE["PRIVATE_ROAD"] = 17] = "PRIVATE_ROAD";
+        LT_ROAD_TYPE[LT_ROAD_TYPE["PARKING_LOT_ROAD"] = 20] = "PARKING_LOT_ROAD";
         // Non-drivable
-        WALKING_TRAIL: 5,
-        PEDESTRIAN_BOARDWALK: 10,
-        STAIRWAY: 16,
-        RAILROAD: 18,
-        RUNWAY: 19,
-    };
+        LT_ROAD_TYPE[LT_ROAD_TYPE["WALKING_TRAIL"] = 5] = "WALKING_TRAIL";
+        LT_ROAD_TYPE[LT_ROAD_TYPE["PEDESTRIAN_BOARDWALK"] = 10] = "PEDESTRIAN_BOARDWALK";
+        LT_ROAD_TYPE[LT_ROAD_TYPE["STAIRWAY"] = 16] = "STAIRWAY";
+        LT_ROAD_TYPE[LT_ROAD_TYPE["RAILROAD"] = 18] = "RAILROAD";
+        LT_ROAD_TYPE[LT_ROAD_TYPE["RUNWAY"] = 19] = "RUNWAY";
+    })(LT_ROAD_TYPE || (LT_ROAD_TYPE = {}));
+    ;
     const MIN_DISPLAY_LEVEL = 14;
     const MIN_ZOOM_NON_FREEWAY = 17;
     // const DisplayLevels = {

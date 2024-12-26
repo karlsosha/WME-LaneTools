@@ -125,27 +125,27 @@ function ltInit() {
         direction: Direction;
     }
 
-    const LT_ROAD_TYPE: RoadTypes = {
+    enum LT_ROAD_TYPE {
         // Streets
-        NARROW_STREET: 22,
-        STREET: 1,
-        PRIMARY_STREET: 2,
+        NARROW_STREET=22,
+        STREET=1,
+        PRIMARY_STREET=2,
         // Highways
-        RAMP: 4,
-        FREEWAY: 3,
-        MAJOR_HIGHWAY: 6,
-        MINOR_HIGHWAY: 7,
+        RAMP=4,
+        FREEWAY=3,
+        MAJOR_HIGHWAY=6,
+        MINOR_HIGHWAY=7,
         // Other drivable
-        DIRT_ROAD: 8,
-        FERRY: 14,
-        PRIVATE_ROAD: 17,
-        PARKING_LOT_ROAD: 20,
+        DIRT_ROAD=8,
+        FERRY=14,
+        PRIVATE_ROAD=17,
+        PARKING_LOT_ROAD=20,
         // Non-drivable
-        WALKING_TRAIL: 5,
-        PEDESTRIAN_BOARDWALK: 10,
-        STAIRWAY: 16,
-        RAILROAD: 18,
-        RUNWAY: 19,
+        WALKING_TRAIL=5,
+        PEDESTRIAN_BOARDWALK=10,
+        STAIRWAY=16,
+        RAILROAD=18,
+        RUNWAY=19,
     };
     const MIN_DISPLAY_LEVEL = 14;
     const MIN_ZOOM_NON_FREEWAY = 17;
