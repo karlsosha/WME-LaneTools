@@ -2812,10 +2812,10 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
                 scanSegments(sdk.DataModel.Segments.getAll(), false);
             }
 
-            if (isEnabled) {
+            if (isEnabled && heurChecks) {
                 // const selFeat = W.selectionManager.getSelectedWMEFeatures();
                 const selectedFeat = sdk.Editing.getSelection();
-                scanHeuristicsCandidates(selectedFeat);
+                if(selectedFeat?.objectType === "segment") scanHeuristicsCandidates(selectedFeat);
             }
         } //jm6087
     }
@@ -2928,7 +2928,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
                 }
 
                 // 1/1/21: Only check for heuristics on segments <50m. IMPORTANT because now we're checking segments regardless of lanes
-                if (segLength <= MAX_LEN_HEUR) {
+                if (heurChecks && segLength <= MAX_LEN_HEUR) {
                     // Check Heuristics regardless of heurChecks, because we want to report Errors even if Heur highlights are off
                     heurCand = isHeuristicsCandidate(seg, node, nodeSegs, oppNode, laneCount, segLength, entrySegRef);
                     if (heurCand === HeuristicsCandidate.ERROR) {
