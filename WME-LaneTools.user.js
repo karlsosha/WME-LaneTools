@@ -1583,7 +1583,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
                     updateUI();
                 });
             }
-            waitForElementLoaded(".fwd-lanes > div.lane-instruction.lane-instruction- > div.instruction > div.lane-edit > .edit-lane-guidance").then((elem) => {
+            waitForElementLoaded(".fwd-lanes > div.lane-instruction.lane-instruction-to > div.instruction > div.lane-edit > .edit-lane-guidance").then((elem) => {
                 $(elem).off();
                 $(elem).on("click", function () {
                     showAddLaneGuidance("fwd");
