@@ -35,7 +35,6 @@ function ltInit() {
         Direction[Direction["ANY"] = 0] = "ANY";
         Direction[Direction["FORWARD"] = 1] = "FORWARD";
     })(Direction || (Direction = {}));
-    ;
     let LT_ROAD_TYPE;
     (function (LT_ROAD_TYPE) {
         // Streets
@@ -59,7 +58,6 @@ function ltInit() {
         LT_ROAD_TYPE[LT_ROAD_TYPE["RAILROAD"] = 18] = "RAILROAD";
         LT_ROAD_TYPE[LT_ROAD_TYPE["RUNWAY"] = 19] = "RUNWAY";
     })(LT_ROAD_TYPE || (LT_ROAD_TYPE = {}));
-    ;
     const MIN_DISPLAY_LEVEL = 14;
     const MIN_ZOOM_NON_FREEWAY = 17;
     // const DisplayLevels = {
@@ -73,7 +71,6 @@ function ltInit() {
         HeuristicsCandidate[HeuristicsCandidate["NONE"] = 0] = "NONE";
         HeuristicsCandidate[HeuristicsCandidate["PASS"] = 1] = "PASS";
     })(HeuristicsCandidate || (HeuristicsCandidate = {}));
-    ;
     if (!unsafeWindow.getWmeSdk) {
         throw new Error("SDK is not installed");
     }
@@ -265,31 +262,136 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
     function applyIconStyle(properties) {
         return properties.styleName === "iconStyle" && properties.layerName === LTLaneGraphics.name;
     }
-    let styleRules = {
-        namesStyle: {
-            predicate: applyNamesStyle,
-            style: {},
+    let styleConfig = {
+        styleContext: {
+            nameStyleLabelColor: (context) => {
+                return LtSettings.LabelColor;
+            },
+            nameStyleLaneNum: (context) => {
+                return context?.feature?.properties?.style?.laneNumLabel;
+            },
+            highlightStrokeColor: (context) => {
+                return context?.feature?.properties?.style?.stroke;
+            },
+            hightlightStrokeWidth: (context) => {
+                return context?.feature?.properties?.style?.strokeWidth;
+            },
+            hightlightStrokeOpacity: (context) => {
+                return context?.feature?.properties?.style?.strokeOpacity;
+            },
+            hightlightStrokeDashStyle: (context) => {
+                return context?.feature?.properties?.style?.strokeDashstyle;
+            },
+            highlightFillColor: (context) => {
+                return context?.feature?.properties?.style?.fillColor;
+            },
+            highlightPointRadius: (context) => {
+                return context?.feature?.properties?.style?.pointRadius;
+            },
+            externalGraphic: (context) => {
+                return context?.feature?.properties?.style?.externalGraphic;
+            },
+            graphicHeight: (context) => {
+                return context?.feature?.properties?.style?.graphicHeight;
+            },
+            graphicWidth: (context) => {
+                return context?.feature?.properties?.style?.graphicWidth;
+            },
+            rotation: (context) => {
+                return context?.feature?.properties?.style?.rotation;
+            },
+            backgroundGraphic: (context) => {
+                return context?.feature?.properties?.style?.backgroundGraphic;
+            },
+            backgroundHeight: (context) => {
+                return context?.feature?.properties?.style?.backgroundHeight;
+            },
+            backgroundWidth: (context) => {
+                return context?.feature?.properties?.style?.backgroundWidth;
+            },
+            backgroundXOffset: (context) => {
+                return context?.feature?.properties?.style?.backgroundXOffset;
+            },
+            backgroundYOffset: (context) => {
+                return context?.feature?.properties?.style?.backgroundYOffset;
+            },
         },
-        nodeHighlightStyle: {
-            predicate: applyNodeHightlightStyle,
-            style: {},
-        },
-        vectorHighlightStyle: {
-            predicate: applyVectorHightlightStyle,
-            style: {},
-        },
-        boxStyle: {
-            predicate: applyBoxStyle,
-            style: {},
-        },
-        iconBoxStyle: {
-            predicate: applyIconBoxStyle,
-            style: {},
-        },
-        iconStyle: {
-            predicate: applyIconStyle,
-            style: {},
-        },
+        styleRules: [
+            {
+                predicate: applyNamesStyle,
+                style: {
+                    fontFamily: "Open Sans, Alef, helvetica, sans-serif, monospace",
+                    labelColor: "${nameStyleLabelColor}",
+                    labelText: "${nameStyleLaneNum}",
+                    labelOutlineColor: "black",
+                    fontColor: "${nameStyleLabelColor}",
+                    fontSize: "16",
+                    labelXOffset: 15,
+                    labelYOffset: -15,
+                    labelOutlineWidth: "3",
+                    label: "${nameStyleLaneNum}",
+                    angle: "",
+                    labelAlign: "cm",
+                    strokeWidth: 0,
+                    pointRadius: 0,
+                },
+            },
+            {
+                predicate: applyNodeHightlightStyle,
+                style: {
+                    fillColor: "${highlightFillColor}",
+                    pointRadius: "${highlightPointRadius}",
+                    fillOpacity: 0.9,
+                    strokeWidth: 0,
+                },
+            },
+            {
+                predicate: applyVectorHightlightStyle,
+                style: {
+                    strokeColor: "${highlightStrokeColor}",
+                    stroke: "${highlightStrokeColor}",
+                    strokeWidth: "${hightlightStrokeWidth}",
+                    strokeOpacity: "${hightlightStrokeOpacity}",
+                    strokeDashstyle: "${hightlightStrokeDashStyle}",
+                },
+            },
+            {
+                predicate: applyBoxStyle,
+                style: {
+                    strokeColor: "#ffffff",
+                    strokeOpacity: 1,
+                    strokeWidth: 8,
+                    fillColor: "#ffffff",
+                },
+            },
+            {
+                predicate: applyIconBoxStyle,
+                style: {
+                    strokeColor: "#000000",
+                    strokeOpacity: 1,
+                    strokeWidth: 1,
+                    fillColor: "#26bae8",
+                },
+            },
+            {
+                predicate: applyIconStyle,
+                style: {
+                    externalGraphic: "${externalGraphic}",
+                    graphicHeight: "${graphicHeight}",
+                    graphicWidth: "${graphicWidth}",
+                    fillColor: "#26bae8",
+                    fillOpacity: 1,
+                    backgroundColor: "#26bae8",
+                    strokeColor: "#26bae8",
+                    rotation: "${rotation}",
+                    backgroundGraphic: "${backgroundGraphic}",
+                    backgroundHeight: "${backgroundHeight}",
+                    backgroundWidth: "${backgroundWidth}",
+                    backgroundXOffset: "${backgroundXOffset}",
+                    backgroundYOffset: "${backgroundYOffset}",
+                },
+            },
+        ],
     };
     console.log("LaneTools: initializing...");
     function laneToolsBootstrap(tries = 0) {
@@ -655,7 +757,12 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
         await loadSpreadsheet();
         initLaneGuidanceClickSaver();
         // Layer for highlights
-        sdk.Map.addLayer({ layerName: LTHighlightLayer.name, styleRules: Object.values(styleRules), zIndexing: true });
+        sdk.Map.addLayer({
+            layerName: LTHighlightLayer.name,
+            styleRules: styleConfig.styleRules,
+            zIndexing: true,
+            styleContext: styleConfig.styleContext,
+        });
         sdk.LayerSwitcher.addLayerCheckbox(LTHighlightLayer);
         sdk.Map.setLayerVisibility({
             layerName: LTHighlightLayer.name,
@@ -668,7 +775,12 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
         // LTLaneGraphics = new OpenLayers.Layer.Vector("LTLaneGraphics", { uniqueName: "LTLaneGraphics" });
         // W.map.addLayer(LTLaneGraphics);
         // LTLaneGraphics.setVisibility(true);
-        sdk.Map.addLayer({ layerName: LTLaneGraphics.name, styleRules: Object.values(styleRules), zIndexing: true });
+        sdk.Map.addLayer({
+            layerName: LTLaneGraphics.name,
+            styleRules: styleConfig.styleRules,
+            zIndexing: true,
+            styleContext: styleConfig.styleContext,
+        });
         sdk.LayerSwitcher.addLayerCheckbox(LTLaneGraphics);
         sdk.Map.setLayerVisibility({
             layerName: LTLaneGraphics.name,
@@ -695,7 +807,20 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
                     scanArea();
             },
         });
-        sdk.Map.addLayer({ layerName: LTNamesLayer.name, styleRules: Object.values(styleRules), zIndexing: true });
+        sdk.Events.on({
+            eventName: "wme-save-finished",
+            eventHandler: (payload) => {
+                if (payload.success &&
+                    (LtSettings.ltGraphicsVisible || LtSettings.highlightsVisible || LtSettings.ltNamesVisible))
+                    scanArea();
+            },
+        });
+        sdk.Map.addLayer({
+            layerName: LTNamesLayer.name,
+            styleRules: styleConfig.styleRules,
+            zIndexing: true,
+            styleContext: styleConfig.styleContext,
+        });
         // Layer for lane text
         sdk.LayerSwitcher.addLayerCheckbox(LTNamesLayer);
         sdk.Map.setLayerVisibility({
@@ -2100,23 +2225,23 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
         if (!revLnsCount)
             revLnsCount = 0;
         let laneNum = `${fwdLnsCount} / ${revLnsCount}`;
-        const namesStyle = {
-            fontFamily: "Open Sans, Alef, helvetica, sans-serif, monospace",
-            labelColor: LtSettings.LabelColor,
-            labelText: laneNum,
-            labelOutlineColor: "black",
-            fontColor: LtSettings.LabelColor,
-            fontSize: "16",
-            labelXOffset: 15,
-            labelYOffset: -15,
-            labelOutlineWidth: "3",
-            label: laneNum,
-            angle: "",
-            labelAlign: "cm",
-            strokeWidth: 0,
-            pointRadius: 0,
-        };
-        Object.assign(styleRules.namesStyle.style, namesStyle);
+        // const namesStyle = {
+        //     fontFamily: "Open Sans, Alef, helvetica, sans-serif, monospace",
+        //     labelColor: LtSettings.LabelColor,
+        //     labelText: laneNum,
+        //     labelOutlineColor: "black",
+        //     fontColor: LtSettings.LabelColor,
+        //     fontSize: "16",
+        //     labelXOffset: 15,
+        //     labelYOffset: -15,
+        //     labelOutlineWidth: "3",
+        //     label: laneNum,
+        //     angle: "",
+        //     labelAlign: "cm",
+        //     strokeWidth: 0,
+        //     pointRadius: 0,
+        // };
+        // Object.assign(styleRules.namesStyle.style, namesStyle);
         let lnLabel = {
             id: "point_" + geo.toString(),
             geometry: {
@@ -2124,7 +2249,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
                 coordinates: geo,
             },
             type: "Feature",
-            properties: { styleName: "nameStyle", layerName: LTNamesLayer.name },
+            properties: { styleName: "nameStyle", layerName: LTNamesLayer.name, style: { laneNumLabel: laneNum } },
         };
         // let lnLabel = new OpenLayers.Feature.Vector(nameGeo, {
         //     labelText: laneNum,
@@ -2335,13 +2460,20 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
                 default:
                     break;
             }
-            Object.assign(styleRules.vectorHighlightStyle.style, {
+            // Object.assign(styleConfig.styleRules.vectorHighlightStyle.style, {
+            //     strokeColor: stroke,
+            //     stroke: stroke,
+            //     strokeWidth: strokeWidth,
+            //     strokeOpacity: strokeOpacity,
+            //     strokeDashstyle: strokeDashArray.join(" "),
+            // });
+            geoCom.properties.style = {
                 strokeColor: stroke,
                 stroke: stroke,
                 strokeWidth: strokeWidth,
                 strokeOpacity: strokeOpacity,
                 strokeDashstyle: strokeDashArray.join(" "),
-            });
+            };
             // const line = document.getElementById(geoCom.id);
             // if (line) {
             //     line.setAttribute("stroke", `${lineColor}`);
@@ -2378,15 +2510,22 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
                 coordinates: objGeo,
             },
             type: "Feature",
-            properties: { styleName: "nodeStyle", layerName: LTHighlightLayer.name },
+            properties: {
+                styleName: "nodeStyle",
+                layerName: LTHighlightLayer.name,
+                style: {
+                    fillColor: color,
+                    pointRadius: overSized ? 18 : 10,
+                },
+            },
         };
-        let nodeStyle = {
-            fillColor: color,
-            pointRadius: overSized ? 18 : 10,
-            fillOpacity: 0.9,
-            strokeWidth: 0,
-        };
-        Object.assign(styleRules.nodeHighlightStyle.style, nodeStyle);
+        // let nodeStyle = {
+        //     fillColor: color,
+        //     pointRadius: overSized ? 18 : 10,
+        //     fillOpacity: 0.9,
+        //     strokeWidth: 0,
+        // };
+        // Object.assign(styleRules.nodeHighlightStyle.style, nodeStyle);
         // LTHighlightLayer.addFeatures([highlight]);
         sdk.Map.addFeatureToLayer({ feature: newString, layerName: LTHighlightLayer.name });
         // const node = document.getElementById(geo.id);
@@ -2510,6 +2649,8 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
         function scanSegment_Inner(seg, direction, segLength, tryRedo) {
             const fwdLaneCount = seg.fromNodeLanesCount;
             const revLaneCount = seg.toNodeLanesCount;
+            if (fwdLaneCount + revLaneCount === 0)
+                return;
             let node = getNodeObj(seg.toNodeId);
             let oppNode = getNodeObj(seg.fromNodeId);
             let laneCount = fwdLaneCount;
@@ -3017,7 +3158,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
             if (!inSegRef) {
                 let newSegRef = {
                     seg: 0,
-                    direction: Direction.ANY
+                    direction: Direction.ANY,
                 };
                 inSegRef = newSegRef;
             }
@@ -3737,13 +3878,13 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
         boxPoint3 = epsg3857toEpsg4326(boxPoint3);
         var boxPoint4 = startPoint;
         points.push(boxPoint1, boxPoint2, boxPoint3, boxPoint4, boxPoint1);
-        Object.assign(styleRules.boxStyle.style, {
-            strokeColor: "#ffffff",
-            strokeOpacity: 1,
-            strokeWidth: 8,
-            fillColor: "#ffffff",
-            // rotate: boxRotate
-        });
+        // Object.assign(styleRules.boxStyle.style, {
+        //     strokeColor: "#ffffff",
+        //     strokeOpacity: 1,
+        //     strokeWidth: 8,
+        //     fillColor: "#ffffff",
+        //     // rotate: boxRotate
+        // });
         // let boxRing = new OpenLayers.Geometry.LinearRing(points);
         // centerPoint = boxRing.getCentroid();
         // boxRing.rotate(boxRotate, centerPoint);
@@ -3808,13 +3949,13 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
             iconPoint4[1] += !featDis || !featDis.iconbordermargin ? 0 : featDis.iconbordermargin;
             iconPoint4 = epsg3857toEpsg4326(iconPoint4);
             iconPoints.push(iconPoint1, iconPoint2, iconPoint3, iconPoint4, iconPoint1);
-            Object.assign(styleRules.iconBoxStyle.style, {
-                strokeColor: "#000000",
-                strokeOpacity: 1,
-                strokeWidth: 1,
-                fillColor: "#26bae8",
-                // rotate: boxRotate
-            });
+            // Object.assign(styleRules.iconBoxStyle.style, {
+            //     strokeColor: "#000000",
+            //     strokeOpacity: 1,
+            //     strokeWidth: 1,
+            //     fillColor: "#26bae8",
+            //     // rotate: boxRotate
+            // });
             // let iconBoxRing = new OpenLayers.Geometry.LinearRing(iconPoints);
             let turfIconBoxRing = turf.polygon([iconPoints]);
             turfIconBoxRing = turf.transformRotate(turfIconBoxRing, -1 * boxRotate, { pivot: centerPoint.geometry });
@@ -3831,12 +3972,6 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
             // Icon coords
             let arrowOrigin = turf.centroid(turfIconBoxRing);
             // let iconStart = new OpenLayers.Geometry.Point(arrowOrigin.x, arrowOrigin.y);
-            let iconStart = {
-                id: "point_" + iconPoints.toString(),
-                geometry: arrowOrigin.geometry,
-                type: "Feature",
-                properties: { styleName: "iconStyle", layerName: LTLaneGraphics.name },
-            };
             let ulabel = "";
             let usize = {
                 x: undefined,
@@ -3860,21 +3995,49 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
                 uoffset.x = -8;
                 uoffset.y = 4;
             }
-            Object.assign(styleRules.iconStyle.style, {
-                externalGraphic: img["svg"],
-                graphicHeight: featDis.graphicHeight,
-                graphicWidth: featDis.graphicWidth,
-                fillColor: "#26bae8",
-                fillOpacity: 1,
-                backgroundColor: "#26bae8",
-                strokeColor: "#26bae8",
-                rotation: iconRotate,
-                backgroundGraphic: ulabel,
-                backgroundHeight: !featDis || !featDis.graphicHeight || !usize.y ? undefined : featDis.graphicHeight * usize.y,
-                backgroundWidth: !featDis || !featDis.graphicWidth || !usize.x ? undefined : featDis.graphicWidth * usize.x,
-                backgroundXOffset: uoffset.x,
-                backgroundYOffset: uoffset.y,
-            });
+            let iconStart = {
+                id: "point_" + iconPoints.toString(),
+                geometry: arrowOrigin.geometry,
+                type: "Feature",
+                properties: {
+                    styleName: "iconStyle",
+                    layerName: LTLaneGraphics.name,
+                    style: {
+                        externalGraphic: img["svg"],
+                        graphicHeight: featDis.graphicHeight,
+                        graphicWidth: featDis.graphicWidth,
+                        fillColor: "#26bae8",
+                        fillOpacity: 1,
+                        backgroundColor: "#26bae8",
+                        strokeColor: "#26bae8",
+                        rotation: iconRotate,
+                        backgroundGraphic: ulabel,
+                        backgroundHeight: !featDis || !featDis.graphicHeight || !usize.y
+                            ? undefined
+                            : featDis.graphicHeight * usize.y,
+                        backgroundWidth: !featDis || !featDis.graphicWidth || !usize.x ? undefined : featDis.graphicWidth * usize.x,
+                        backgroundXOffset: uoffset.x,
+                        backgroundYOffset: uoffset.y,
+                    },
+                },
+            };
+            // Object.assign(styleRules.iconStyle.style, {
+            //     externalGraphic: img["svg"],
+            //     graphicHeight: featDis.graphicHeight,
+            //     graphicWidth: featDis.graphicWidth,
+            //     fillColor: "#26bae8",
+            //     fillOpacity: 1,
+            //     backgroundColor: "#26bae8",
+            //     strokeColor: "#26bae8",
+            //     rotation: iconRotate,
+            //     backgroundGraphic: ulabel,
+            //     backgroundHeight:
+            //         !featDis || !featDis.graphicHeight || !usize.y ? undefined : featDis.graphicHeight * usize.y,
+            //     backgroundWidth:
+            //         !featDis || !featDis.graphicWidth || !usize.x ? undefined : featDis.graphicWidth * usize.x,
+            //     backgroundXOffset: uoffset.x,
+            //     backgroundYOffset: uoffset.y,
+            // });
             // Add icon to map
             // let iconFeature = new OpenLayers.Feature.Vector(iconStart, null, iconStyle);
             // LTLaneGraphics.addFeatures([iconFeature]);
