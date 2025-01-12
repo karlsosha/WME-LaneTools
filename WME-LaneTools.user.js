@@ -1,4 +1,3 @@
-"use strict";
 // ==UserScript==
 // @name         WME LaneTools
 // @namespace    https://github.com/SkiDooGuy/WME-LaneTools
@@ -19,14 +18,10 @@
 // @connect      raw.githubusercontent.com
 // @contributionURL https://github.com/WazeDev/Thank-The-Authors
 // ==/UserScript==
-/* global W */
-/* global WazeWrap */
-// import { KeyboardShortcut, Node, Segment, Selection, Turn, UserSession, WmeSDK } from "wme-sdk";
-// import { Position } from "geojson";
-// import _ from "underscore";
-// import $ from "jquery";
-// import * as turf from "@turf/turf";
-// import WazeWrap from "https://greasyfork.org/scripts/24851-wazewrap/code/WazeWrap.js";
+import _ from "underscore";
+import $ from "jquery";
+import * as turf from "@turf/turf";
+import WazeWrap from "https://greasyfork.org/scripts/24851-wazewrap/code/WazeWrap.js";
 unsafeWindow.SDK_INITIALIZED.then(ltInit);
 function ltInit() {
     let Direction;
@@ -2268,7 +2263,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
         fwdLnsCount = !fwdLnsCount ? 0 : fwdLnsCount;
         revLnsCount = !revLnsCount ? 0 : revLnsCount;
         // const geo = objGeo.clone();
-        const applyCSHighlight = getId("lt-CSEnable").checked;
+        const applyCSHighlight = getId("lt-CSEnable")?.checked;
         // Need to rework this to account for segment length, cause of geo adjustment and such
         if (objGeo.length > 2) {
             let geoLength = objGeo.length;
@@ -2290,7 +2285,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
                 drawHighlight(newString, applyLioHighlight, isBad, heur, heurOverHighlight);
             }
             // Add the label only on the forward pass, or reverse if there are no forward lanes
-            if (applyLabels && (Direction.FORWARD || fwdLnsCount === 0)) {
+            if (applyLabels && (direction === Direction.FORWARD || fwdLnsCount === 0)) {
                 if (geoLength % 2) {
                     applyName(objGeo[fwdPoint], fwdLnsCount, revLnsCount);
                 }
@@ -2391,7 +2386,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
                 drawHighlight(newString, applyLioHighlight, isBad, heur, heurOverHighlight);
             }
             // Add the label only on the forward pass, or reverse if there are no forward lanes
-            if (applyLabels && (Direction.FORWARD || fwdLnsCount === 0)) {
+            if (applyLabels && (direction === Direction.FORWARD || fwdLnsCount === 0)) {
                 applyName(p1C, fwdLnsCount, revLnsCount);
             }
         }
@@ -2562,12 +2557,12 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
         scanArea_real();
     }
     function scanArea_real() {
-        const isEnabled = getId("lt-ScriptEnabled").checked;
-        const mapHighlights = getId("lt-HighlightsEnable").checked;
-        const heurChecks = getId("lt-LaneHeuristicsChecks").checked;
+        const isEnabled = getId("lt-ScriptEnabled")?.checked;
+        const mapHighlights = getId("lt-HighlightsEnable")?.checked;
+        const heurChecks = getId("lt-LaneHeuristicsChecks")?.checked;
         // const zoomLevel = W.map.getZoom() != null ? W.map.getZoom() : 16;
         const zoomLevel = sdk.Map.getZoomLevel();
-        const highOverride = getId("lt-highlightOverride").checked; // jm6087
+        const highOverride = getId("lt-highlightOverride")?.checked; // jm6087
         const layerCheck = W.layerSwitcherController.getTogglerState("ITEM_ROAD") ||
             W.layerSwitcherController.getTogglerState("ITEM_ROAD_V2"); //jm6087
         removeHighlights();
@@ -2612,12 +2607,12 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
     }
     // Check all given segments for heuristics qualification
     function scanSegments(segments, selectedSegsOverride = false) {
-        const heurChecks = getId("lt-LaneHeuristicsChecks").checked;
-        const heurScan_PosHighlight = heurChecks && getId("lt-LaneHeurPosHighlight").checked;
-        const heurScan_NegHighlight = heurChecks && getId("lt-LaneHeurNegHighlight").checked;
-        const mapHighlights = getId("lt-HighlightsEnable").checked;
-        const applyLioHighlight = mapHighlights && getId("lt-LIOEnable").checked;
-        const applyLabels = mapHighlights && getId("lt-LabelsEnable").checked;
+        const heurChecks = getId("lt-LaneHeuristicsChecks")?.checked;
+        const heurScan_PosHighlight = heurChecks && getId("lt-LaneHeurPosHighlight")?.checked;
+        const heurScan_NegHighlight = heurChecks && getId("lt-LaneHeurNegHighlight")?.checked;
+        const mapHighlights = getId("lt-HighlightsEnable")?.checked;
+        const applyLioHighlight = mapHighlights && getId("lt-LIOEnable")?.checked;
+        const applyLabels = mapHighlights && getId("lt-LabelsEnable")?.checked;
         const zoomLevel = sdk.Map.getZoomLevel();
         // const turnGraph = W.model.getTurnGraph();
         // console.log(zoomLevel);
@@ -2703,17 +2698,16 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
             // HIGHLIGHTS
             if (!selectedSegsOverride) {
                 // Full scan highlights
-                let heur = null;
+                let heur = HeuristicsCandidate.NONE;
                 if ((heurScan_PosHighlight && heurCand === HeuristicsCandidate.PASS) ||
                     (heurScan_NegHighlight && heurCand === HeuristicsCandidate.FAIL)) {
                     heur = heurCand;
                 }
                 if (laneCount && (laneCount > 0 || heur !== null || badLn)) {
                     highlightSegment(seg.geometry.coordinates, direction, mapHighlights, applyLabels, fwdLaneCount, revLaneCount, lio && applyLioHighlight, csMode, badLn, heur, false);
-                    //                highlightSegment(seg.geometry, direction, mapHighlights, applyLabels, fwdLaneCount, revLaneCount, lio && applyLioHighlight, csMode, badLn, heur, false);
                 }
                 // Nodes highlights
-                if (mapHighlights && getId("lt-NodesEnable").checked) {
+                if (mapHighlights && getId("lt-NodesEnable")?.checked) {
                     if (tlns) {
                         highlightNode(node?.geometry.coordinates, LtSettings.NodeColor);
                         //                    highlightNode(node.geometry, `${LtSettings.NodeColor}`);
@@ -2737,10 +2731,6 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
                         }
                         highlightNode(node?.geometry.coordinates, nodeColor, true);
                         highlightNode(oppNode?.geometry.coordinates, nodeColor, true);
-                        //                    highlightSegment(seg.geometry, direction, false, false, 0, 0, false, csMode, badLn, heurCand, true);
-                        //                    highlightSegment(entrySeg.seg.geometry, entrySeg.direction, false, false, 0, 0, false, 0, false, heurCand, true);
-                        //                    highlightNode(node.geometry, nodeColor, true);
-                        //                    highlightNode(oppNode.geometry, nodeColor, true);
                     }
                 }
             }
@@ -2854,7 +2844,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
     }
     function setTurns(direction) {
         let clickSaveEnabled = getId("lt-ClickSaveEnable");
-        if (!clickSaveEnabled || !clickSaveEnabled.checked) {
+        if (!clickSaveEnabled?.checked) {
             return;
         }
         let lanesPane = document.getElementsByClassName(direction)[0];
@@ -2885,7 +2875,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
                 // Check if the lanes are already set. If already set, don't change anything.
                 let laneCheckboxes = turnSection.getElementsByTagName("wz-checkbox");
                 if (laneCheckboxes && laneCheckboxes.length > 0) {
-                    if (getId("lt-ClickSaveTurns").checked) {
+                    if (getId("lt-ClickSaveTurns")?.checked) {
                         if (turnSection.getElementsByClassName(left).length > 0 &&
                             laneCheckboxes[0].checked !== undefined &&
                             laneCheckboxes[0].checked === false) {
@@ -2934,11 +2924,11 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
                         waitForElementLoaded("input[type='checkbox']", laneCheckboxes[j].shadowRoot);
                         {
                             if (laneCheckboxes[j].checked === false) {
-                                if (j === 0 && (getId("lt-ClickSaveStraight").checked || setLeft === false)) {
+                                if (j === 0 && (getId("lt-ClickSaveStraight")?.checked || setLeft === false)) {
                                     laneCheckboxes[j].click();
                                 }
                                 else if (j === laneCheckboxes.length - 1 &&
-                                    (getId("lt-ClickSaveStraight").checked || setRight === false)) {
+                                    (getId("lt-ClickSaveStraight")?.checked || setRight === false)) {
                                     laneCheckboxes[j].click();
                                 }
                                 else if (j !== 0 && j !== laneCheckboxes.length - 1) {
@@ -2951,7 +2941,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
             }
         }
     }
-    function waitForElementLoaded(selector, root) {
+    function waitForElementLoaded(selector, root = undefined) {
         return new Promise((resolve) => {
             if (!root) {
                 if (document.querySelector(selector)) {
@@ -3006,7 +2996,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
             //     getId("lt-ScriptEnabled").checked
             // )
             let selection = sdk.Editing.getSelection();
-            if (selection?.objectType === "segment" && getId("lt-ScriptEnabled").checked) {
+            if (selection?.objectType === "segment" && getId("lt-ScriptEnabled")?.checked) {
                 let laneCountElement = document.getElementsByName("laneCount");
                 for (let idx = 0; idx < laneCountElement.length; idx++) {
                     laneCountElement[idx].addEventListener("keyup", processLaneNumberChange, false);
@@ -3145,7 +3135,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
             // Only one segment allowed  // TBD ???    For now, don't allow more than one.
             if (inSeg !== null && thisTimeFail >= inSegIsHeurFail) {
                 if (inSegIsHeurFail === 0 && thisTimeFail === 0) {
-                    lt_log(`Error: >1 qualifying entry segment for ${segCandidate.id}: ${inSeg.id},${is.id}`, 2);
+                    lt_log(`Error: >1 qualifying entry segment for ${segCandidate.id}: ${inSeg.id},${is?.id}`, 2);
                     lt_log("==================================================================================", 2);
                     return 0; // just stop here
                 }
@@ -3204,7 +3194,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
             // Only one segment allowed  // TBD ???    For now, don't allow more than one.
             if (outSeg2 !== null && thisTimeFail >= outSeg2IsHeurFail) {
                 if (outSeg2IsHeurFail === 0 && thisTimeFail === 0) {
-                    lt_log(`Error: >1 qualifying exit2 segment for ${segCandidate.id}: ${outSeg2.id},${os.id}`, 2);
+                    lt_log(`Error: >1 qualifying exit2 segment for ${segCandidate.id}: ${outSeg2.id},${os?.id}`, 2);
                     lt_log("==================================================================================", 2);
                     return 0; // just stop here
                 }
@@ -3256,7 +3246,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
                 }
                 // If they both are good, then error
                 if (altInIsHeurFail === 0 && thisTimeFail === 0) {
-                    lt_log(`Error: >1 qualifying segment for ${segCandidate.id}: ${altIncomingSeg.id},${ai1.id}`, 2);
+                    lt_log(`Error: >1 qualifying segment for ${segCandidate.id}: ${altIncomingSeg.id},${ai1?.id}`, 2);
                     lt_log("==================================================================================", 2);
                     return HeuristicsCandidate.FAIL;
                 }
