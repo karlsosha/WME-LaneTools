@@ -22,12 +22,12 @@
 /* global W */
 /* global WazeWrap */
 
-import { KeyboardShortcut, Node, Segment, Selection, Turn, UserSession, WmeSDK } from "wme-sdk";
-import { Position } from "geojson";
-import _ from "underscore";
-import $ from "jquery";
-import * as turf from "@turf/turf";
-import WazeWrap from "https://greasyfork.org/scripts/24851-wazewrap/code/WazeWrap.js";
+// import { KeyboardShortcut, Node, Segment, Selection, Turn, UserSession, WmeSDK } from "wme-sdk";
+// import { Position } from "geojson";
+// import _ from "underscore";
+// import $ from "jquery";
+// import * as turf from "@turf/turf";
+// import WazeWrap from "https://greasyfork.org/scripts/24851-wazewrap/code/WazeWrap.js";
 
 unsafeWindow.SDK_INITIALIZED.then(ltInit);
 
