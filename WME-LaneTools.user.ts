@@ -4609,8 +4609,8 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
         const selection = sdk.Editing.getSelection();
 
         if (
-            !getId("lt-ScriptEnabled").checked ||
-            !getId("lt-IconsEnable").checked ||
+            !getId("lt-ScriptEnabled")?.checked ||
+            !getId("lt-IconsEnable")?.checked ||
             selection == null ||
             selection?.objectType !== "segment" ||
             (selection.ids && selection.ids.length !== 1)
