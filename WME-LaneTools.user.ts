@@ -29,7 +29,19 @@
 // import * as turf from "@turf/turf";
 // import WazeWrap from "https://greasyfork.org/scripts/24851-wazewrap/code/WazeWrap.js";
 
-unsafeWindow.SDK_INITIALIZED.then(ltInit);
+var sdk: WmeSDK;
+unsafeWindow.SDK_INITIALIZED.then(() => {
+    if (!unsafeWindow.getWmeSdk) {
+        throw new Error("SDK is not installed");
+    }
+    sdk = unsafeWindow.getWmeSdk({
+        scriptId: "wme-lane-tools",
+        scriptName: "WME LaneTools",
+    });
+
+    console.log(`SDK v ${sdk.getSDKVersion()} on ${sdk.getWMEVersion()} initialized`);
+    sdk.Events.once({ eventName: "wme-ready" }).then(ltInit);
+});
 
 function ltInit() {
     type LaneDirection = "fwd" | "rev";
@@ -161,21 +173,12 @@ function ltInit() {
         PASS = 1,
     }
 
-    if (!unsafeWindow.getWmeSdk) {
-        throw new Error("SDK is not installed");
-    }
     if (!WazeWrap.Ready) {
         setTimeout(() => {
             ltInit();
         }, 100);
         return;
     }
-    const sdk: WmeSDK = unsafeWindow.getWmeSdk({
-        scriptId: "wme-lane-tools",
-        scriptName: "WME LaneTools",
-    });
-
-    console.log(`SDK v ${sdk.getSDKVersion()} on ${sdk.getWMEVersion()} initialized`);
 
     const LANETOOLS_VERSION = `${GM_info.script.version}`;
     const GF_LINK = "https://github.com/SkiDooGuy/WME-LaneTools/blob/master/WME-LaneTools.user.js";
