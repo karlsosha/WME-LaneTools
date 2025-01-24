@@ -27,7 +27,18 @@
 // import $ from "jquery";
 // import * as turf from "@turf/turf";
 // import WazeWrap from "https://greasyfork.org/scripts/24851-wazewrap/code/WazeWrap.js";
-unsafeWindow.SDK_INITIALIZED.then(ltInit);
+var sdk;
+unsafeWindow.SDK_INITIALIZED.then(() => {
+    if (!unsafeWindow.getWmeSdk) {
+        throw new Error("SDK is not installed");
+    }
+    sdk = unsafeWindow.getWmeSdk({
+        scriptId: "wme-lane-tools",
+        scriptName: "WME LaneTools",
+    });
+    console.log(`SDK v ${sdk.getSDKVersion()} on ${sdk.getWMEVersion()} initialized`);
+    sdk.Events.once({ eventName: "wme-ready" }).then(ltInit);
+});
 function ltInit() {
     let Direction;
     (function (Direction) {
@@ -71,20 +82,12 @@ function ltInit() {
         HeuristicsCandidate[HeuristicsCandidate["NONE"] = 0] = "NONE";
         HeuristicsCandidate[HeuristicsCandidate["PASS"] = 1] = "PASS";
     })(HeuristicsCandidate || (HeuristicsCandidate = {}));
-    if (!unsafeWindow.getWmeSdk) {
-        throw new Error("SDK is not installed");
-    }
     if (!WazeWrap.Ready) {
         setTimeout(() => {
             ltInit();
         }, 100);
         return;
     }
-    const sdk = unsafeWindow.getWmeSdk({
-        scriptId: "wme-lane-tools",
-        scriptName: "WME LaneTools",
-    });
-    console.log(`SDK v ${sdk.getSDKVersion()} on ${sdk.getWMEVersion()} initialized`);
     const LANETOOLS_VERSION = `${GM_info.script.version}`;
     const GF_LINK = "https://github.com/SkiDooGuy/WME-LaneTools/blob/master/WME-LaneTools.user.js";
     const DOWNLOAD_URL = "https://raw.githubusercontent.com/SkiDooGuy/WME-LaneTools/master/WME-LaneTools.user.js";
