@@ -22,12 +22,12 @@
 /* global W */
 /* global WazeWrap */
 
-// import { KeyboardShortcut, Node, Segment, Selection, Turn, UserSession, WmeSDK } from "wme-sdk";
-// import { Position } from "geojson";
-// import _ from "underscore";
-// import $ from "jquery";
-// import * as turf from "@turf/turf";
-// import WazeWrap from "https://greasyfork.org/scripts/24851-wazewrap/code/WazeWrap.js";
+import { KeyboardShortcut, Node, Segment, Selection, Turn, UserSession, WmeSDK } from "wme-sdk-typings";
+import { Position } from "geojson";
+import _ from "underscore";
+import $ from "jquery";
+import * as turf from "@turf/turf";
+import WazeWrap from "https://greasyfork.org/scripts/24851-wazewrap/code/WazeWrap.js";
 
 var sdk: WmeSDK;
 unsafeWindow.SDK_INITIALIZED.then(() => {
@@ -125,7 +125,7 @@ function ltInit() {
         graphicWidth: number | undefined;
     }
 
-    type RoadTypes = Record<string, number>;
+    // type RoadTypes = Record<string, number>;
     enum Direction {
         REVERSE = -1,
         ANY = 0,
@@ -863,23 +863,23 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
             setValue("lt-HeurColor", LtSettings.HeurColor);
             setValue("lt-HeurFailColor", LtSettings.HeurFailColor);
 
-            if (!getId("lt-ClickSaveEnable").checked) {
+            if (!getId("lt-ClickSaveEnable")?.checked) {
                 $(".lt-option-container.clk-svr").hide();
             }
 
-            if (!getId("lt-UIEnable").checked) {
+            if (!getId("lt-UIEnable")?.checked) {
                 $("#lt-UI-wrapper").hide();
             }
 
-            if (!getId("lt-HighlightsEnable").checked) {
+            if (!getId("lt-HighlightsEnable")?.checked) {
                 $("#lt-highlights-wrapper").hide();
             }
 
-            if (!getId("lt-LaneHeuristicsChecks").checked) {
+            if (!getId("lt-LaneHeuristicsChecks")?.checked) {
                 $("#lt-heur-wrapper").hide();
             }
 
-            function setChecked(checkboxId, checked) {
+            function setChecked(checkboxId: string, checked: boolean) {
                 $(`#${checkboxId}`).prop("checked", checked);
             }
 
@@ -1184,7 +1184,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
             scanArea();
         });
         $("#lt-ScriptEnabled").on("click", () => {
-            if (getId("lt-ScriptEnabled").checked) {
+            if (getId("lt-ScriptEnabled")?.checked) {
                 scanArea();
             } else {
                 removeHighlights();
@@ -1192,7 +1192,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
             }
         });
         highlights.on("click", () => {
-            if (getId("lt-HighlightsEnable").checked) {
+            if (getId("lt-HighlightsEnable")?.checked) {
                 scanArea();
             } else {
                 removeHighlights();
@@ -1200,7 +1200,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
             scanArea();
         });
         $("#lt-LabelsEnable").on("click", () => {
-            if (getId("lt-LabelsEnable").checked) {
+            if (getId("lt-LabelsEnable")?.checked) {
                 scanArea();
             } else {
                 removeHighlights();
@@ -1208,7 +1208,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
             }
         });
         $("#lt-NodesEnable").on("click", () => {
-            if (getId("lt-NodesEnable").checked) {
+            if (getId("lt-NodesEnable")?.checked) {
                 scanArea();
             } else {
                 removeHighlights();
@@ -1216,7 +1216,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
             }
         });
         $("#lt-LIOEnable").on("click", () => {
-            if (getId("lt-LIOEnable").checked) {
+            if (getId("lt-LIOEnable")?.checked) {
                 scanArea();
             } else {
                 removeHighlights();
@@ -1224,14 +1224,14 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
             }
         });
         $("#lt-IconsEnable").on("click", () => {
-            if (getId("lt-IconsEnable").checked) {
+            if (getId("lt-IconsEnable")?.checked) {
                 displayLaneGraphics();
             } else {
                 removeLaneGraphics();
             }
         });
         $("#lt-highlightOverride").on("click", () => {
-            if (getId("lt-highlightOverride").checked) {
+            if (getId("lt-highlightOverride")?.checked) {
                 scanArea();
             } else {
                 removeHighlights();
@@ -1255,7 +1255,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
             $("#lt-heur-wrapper").toggle();
         });
         heurChecks.on("click", () => {
-            if (getId("lt-LaneHeuristicsChecks").checked) {
+            if (getId("lt-LaneHeuristicsChecks")?.checked) {
                 scanArea();
             } else {
                 removeHighlights();
@@ -1263,7 +1263,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
             }
         });
         $("#lt-LaneHeurPosHighlight").on("click", () => {
-            if (getId("lt-LaneHeurPosHighlight").checked) {
+            if (getId("lt-LaneHeurPosHighlight")?.checked) {
                 scanArea();
             } else {
                 removeHighlights();
@@ -1271,7 +1271,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
             }
         });
         $("#lt-LaneHeurNegHighlight").on("click", () => {
-            if (getId("lt-LaneHeurNegHighlight").checked) {
+            if (getId("lt-LaneHeurNegHighlight")?.checked) {
                 scanArea();
             } else {
                 removeHighlights();
@@ -2262,9 +2262,10 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
         }
 
         function colorCSDir() {
-            const selSeg: Segment | null = isSegmentSelected(selection)
-                ? sdk.DataModel.Segments.getById({ segmentId: selection.ids[0] })
-                : null;
+            const selSeg: Segment | null =
+                isSegmentSelected(selection) && selection?.objectType === "segment"
+                    ? sdk.DataModel.Segments.getById({ segmentId: selection.ids[0] })
+                    : null;
 
             if (!selSeg) return;
             const fwdNode = getNodeObj(selSeg?.toNodeId);
@@ -3035,7 +3036,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
             const fwdLaneCount: number = seg.fromNodeLanesCount;
             const revLaneCount: number = seg.toNodeLanesCount;
 
-            if(fwdLaneCount + revLaneCount === 0) return;
+            if (fwdLaneCount + revLaneCount === 0) return;
 
             let node: Node | null = getNodeObj(seg.toNodeId);
             let oppNode: Node | null = getNodeObj(seg.fromNodeId);

@@ -12,7 +12,8 @@
     "outDir": "./",
     "types": [
       "jquery",
-      "wme-sdk-typings"
+      "wme-sdk-typings",
+      "tampermonkey"
     ]
   },
   "exclude": ["node_modules", "releases"],
