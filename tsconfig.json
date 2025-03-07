@@ -12,6 +12,7 @@
     "outDir": "./",
     "types": [
       "jquery",
+      "tampermonkey",
       "wme-sdk-typings"
     ]
   },

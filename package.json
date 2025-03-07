@@ -3,8 +3,9 @@
   "devDependencies": {
     "@turf/turf": "^7.2.0",
     "@types/jquery": "^3.5.32",
+    "@types/tampermonkey": "^5.0.4",
     "@types/underscore": "^1.13.0",
-    "typescript": "^5.7.3",
+    "typescript": "^5.8.2",
     "underscore": "^1.13.7",
     "wme-sdk-typings": "https://web-assets.waze.com/wme_sdk_docs/beta/latest/wme-sdk-typings.tgz"
   },

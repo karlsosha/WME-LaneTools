@@ -1255,7 +1255,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
             $("#lt-heur-wrapper").toggle();
         });
         heurChecks.on("click", () => {
-            if (getId("lt-LaneHeuristicsChecks").checked) {
+            if (getId("lt-LaneHeuristicsChecks")?.checked) {
                 scanArea();
             } else {
                 removeHighlights();
@@ -1263,7 +1263,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
             }
         });
         $("#lt-LaneHeurPosHighlight").on("click", () => {
-            if (getId("lt-LaneHeurPosHighlight").checked) {
+            if (getId("lt-LaneHeurPosHighlight")?.checked) {
                 scanArea();
             } else {
                 removeHighlights();
@@ -1271,7 +1271,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
             }
         });
         $("#lt-LaneHeurNegHighlight").on("click", () => {
-            if (getId("lt-LaneHeurNegHighlight").checked) {
+            if (getId("lt-LaneHeurNegHighlight")?.checked) {
                 scanArea();
             } else {
                 removeHighlights();
