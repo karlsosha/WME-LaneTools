@@ -25,7 +25,6 @@
 import { KeyboardShortcut, Node, Segment, Selection, Turn, UserSession, WmeSDK } from "wme-sdk-typings";
 import { Position } from "geojson";
 import _ from "underscore";
-import $ from "jquery";
 import * as turf from "@turf/turf";
 import WazeWrap from "https://greasyfork.org/scripts/24851-wazewrap/code/WazeWrap.js";
 
@@ -1838,7 +1837,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
             //            rotateArrows();
             //        }
 
-            if (getId("lt-highlightCSIcons").checked) {
+            if (getId("lt-highlightCSIcons")?.checked) {
                 colorCSDir();
             }
 
@@ -1960,7 +1959,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
 
             waitForElementLoaded(
                 ".fwd-lanes > div.lane-instruction.lane-instruction-to > div.instruction > div.lane-edit > .edit-lane-guidance"
-            ).then((elem) => {
+            ).then((elem: HTMLElement) => {
                 $(elem).off();
                 $(elem).on("click", function () {
                     showAddLaneGuidance("fwd");
@@ -2394,11 +2393,18 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
     }
 
     function displayToolbar() {
-        const objSelected = sdk.Editing.getSelection();
-        let scriptEnabled = getId("lt-ScriptEnabled");
-        let copyEnable = getId("lt-CopyEnable");
-        if (scriptEnabled && scriptEnabled.checked && copyEnable && copyEnable.checked && objSelected.length === 1) {
-            if (objSelected && objSelected?.objectType === "segment") {
+        const objSelected: Selection | null = sdk.Editing.getSelection();
+        let scriptEnabled: HTMLInputElement | null = getId("lt-ScriptEnabled");
+        let copyEnable: HTMLInputElement | null = getId("lt-CopyEnable");
+        if (
+            scriptEnabled &&
+            scriptEnabled.checked &&
+            copyEnable &&
+            copyEnable.checked &&
+            objSelected &&
+            objSelected.ids.length === 1
+        ) {
+            if (objSelected.objectType === "segment") {
                 const map = sdk.Map.getMapViewportElement();
                 $("#lt-toolbar-container").css({
                     display: "block",
@@ -2411,8 +2417,8 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
         }
     }
 
-    function getId(ele: string): HTMLElement | null {
-        return document.getElementById(ele);
+    function getId(ele: string): HTMLInputElement | null {
+        return document.getElementById(ele) as HTMLInputElement;
     }
 
     function isSegment(obj: any): obj is Segment {
@@ -2440,17 +2446,23 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
     }
 
     // borrowed from JAI
-    function getCardinalAngle(nodeId: number | null, segment: Segment) {
+    function getCardinalAngle(nodeId: number | null, segment: Segment): number | null {
         if (nodeId == null || segment == null) {
             return null;
         }
-        let ja_dx, ja_dy;
+        let ja_dx: number | undefined, ja_dy: number | undefined;
         if (segment.fromNodeId === nodeId) {
-            ja_dx = lt_get_second_point(segment)[0] - lt_get_first_point(segment)[0];
-            ja_dy = lt_get_second_point(segment)[1] - lt_get_first_point(segment)[1];
+            let sp: Position | undefined = lt_get_second_point(segment);
+            let fp: Position | undefined = lt_get_first_point(segment);
+            if (!sp || !fp) return null;
+            ja_dx = sp[0] - fp[0];
+            ja_dy = sp[1] - fp[1];
         } else {
-            ja_dx = lt_get_next_to_last_point(segment)[0] - lt_get_last_point(segment)[0];
-            ja_dy = lt_get_next_to_last_point(segment)[1] - lt_get_last_point(segment)[1];
+            let next_to_last: Position | undefined = lt_get_next_to_last_point(segment);
+            let last_point: Position | undefined = lt_get_last_point(segment);
+            if (!next_to_last || !last_point) return null;
+            ja_dx = next_to_last[0] - last_point[0];
+            ja_dy = next_to_last[1] - last_point[1];
         }
 
         let angle_rad = Math.atan2(ja_dy, ja_dx);
@@ -2461,26 +2473,25 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
     }
 
     // borrowed from JAI
-    function lt_get_first_point(segment: Segment | null) {
-        if (segment === null) return null;
-        return segment.geometry.coordinates[0];
+    function lt_get_first_point(segment: Segment | null): Position | undefined {
+        return segment?.geometry.coordinates[0];
         //    return segment.geometry.components[0];
     }
 
     // borrowed from JAI
-    function lt_get_last_point(segment: Segment | null) {
+    function lt_get_last_point(segment: Segment | null): Position | undefined {
         return segment?.geometry.coordinates.at(-1);
         //    return segment.geometry.components[segment.geometry.components.length - 1];
     }
 
     // borrowed from JAI
-    function lt_get_second_point(segment: Segment | null) {
+    function lt_get_second_point(segment: Segment | null): Position | undefined {
         return segment?.geometry.coordinates[1];
         //    return segment.geometry.components[1];
     }
 
     // borrowed from JAI
-    function lt_get_next_to_last_point(segment: Segment | null) {
+    function lt_get_next_to_last_point(segment: Segment | null): Position | undefined {
         return segment?.geometry.coordinates.at(-2);
         //    return segment.geometry.components[segment.geometry.components.length - 2];
     }
@@ -2565,37 +2576,11 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
         if (!fwdLnsCount) fwdLnsCount = 0;
         if (!revLnsCount) revLnsCount = 0;
         let laneNum = `${fwdLnsCount} / ${revLnsCount}`;
-        // const namesStyle = {
-        //     fontFamily: "Open Sans, Alef, helvetica, sans-serif, monospace",
-        //     labelColor: LtSettings.LabelColor,
-        //     labelText: laneNum,
-        //     labelOutlineColor: "black",
-        //     fontColor: LtSettings.LabelColor,
-        //     fontSize: "16",
-        //     labelXOffset: 15,
-        //     labelYOffset: -15,
-        //     labelOutlineWidth: "3",
-        //     label: laneNum,
-        //     angle: "",
-        //     labelAlign: "cm",
-        //     strokeWidth: 0,
-        //     pointRadius: 0,
-        // };
-        // Object.assign(styleRules.namesStyle.style, namesStyle);
-        let lnLabel = {
-            id: "point_" + geo.toString(),
-            geometry: {
-                type: "Point",
-                coordinates: geo,
-            },
-            type: "Feature",
-            properties: { styleName: "nameStyle", layerName: LTNamesLayer.name, style: { laneNumLabel: laneNum } },
-        };
-        // let lnLabel = new OpenLayers.Feature.Vector(nameGeo, {
-        //     labelText: laneNum,
-        //     labelColor: LtSettings.LabelColor,
-        // });
-        // LTNamesLayer.addFeatures([lnLabel]);
+        let lnLabel: GeoJSON.Feature = turf.point(
+            geo,
+            { styleName: "nameStyle", layerName: LTNamesLayer.name, style: { laneNumLabel: laneNum } },
+            { id: "point_" + geo.toString() }
+        );
         sdk.Map.addFeatureToLayer({ feature: lnLabel, layerName: LTNamesLayer.name });
     }
 
@@ -2685,60 +2670,25 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
             //     properties: { styleName: "vectorStyle", layerName: LTHighlightLayer.name },
             // };
             if (direction === Direction.FORWARD) {
-                //            let point2 = new OpenLayers.getOLGeometry().Point(geo.components[1].clone().x, geo.components[1].clone().y);
-                //            let newString = new OpenLayers.getOLGeometry().LineString([point1, point2], {});
-                // let point2 = new OpenLayers.Geometry.Point(geo.components[1].clone().x, geo.components[1].clone().y);
-                // let point2 = {
-                //     id: "pointNode_" + objGeo[1][0] + " " + objGeo[1][1],
-                //     geometry: {
-                //         coordinates: [objGeo[1][0], objGeo[1][1]],
-                //         type: "Point",
-                //     },
-                //     type: "Feature",
-                //     properties: { styleName: "vectorStyle", layerName: LTHighlightLayer.name },
-                // };
-                // let newString = new OpenLayers.Geometry.LineString([point1, point2], {});
                 let p2C = [objGeo[1][0], objGeo[1][1]];
                 pVector.push(p2C);
-                let newString = {
-                    id: "line_" + pVector.toString(),
-                    geometry: {
-                        type: "LineString",
-                        coordinates: pVector,
-                    },
-                    type: "Feature",
-                    properties: { styleName: "vectorStyle", layerName: LTHighlightLayer.name },
-                };
+                let newString: GeoJSON.Feature = turf.lineString(
+                    pVector,
+                    { styleName: "vectorStyle", layerName: LTHighlightLayer.name },
+                    { id: "line_" + pVector.toString() }
+                );
                 if (applyDash) {
                     createVector(newString, LtSettings.ABColor, VectorStyle.DASH_THIN);
                 }
                 drawHighlight(newString, applyLioHighlight, isBad, heur, heurOverHighlight);
             } else if (direction === Direction.REVERSE) {
-                //            let point2 = new OpenLayers.getOLGeometry().Point(geo.components[0].clone().x, geo.components[0].clone().y);
-                //            let newString = new OpenLayers.getOLGeometry().LineString([point1, point2], {});
-                // let point2 = new OpenLayers.Geometry.Point(geo.components[0].clone().x, geo.components[0].clone().y);
-                // let newString = new OpenLayers.Geometry.LineString([point1, point2], {});
-                // let point2 = {
-                //     id: "pointNode_" + objGeo[0][0] + " " + objGeo[0][0],
-                //     geometry: {
-                //         coordinates: [objGeo[0][0], objGeo[0][1]],
-                //         type: "Point",
-                //     },
-                //     type: "Feature",
-                //     properties: { styleName: "vectorStyle", layerName: LTHighlightLayer.name },
-                // };
-                // let newString = new OpenLayers.Geometry.LineString([point1, point2], {});
                 let p2C = [objGeo[0][0], objGeo[0][1]];
                 pVector.push(p2C);
-                let newString = {
-                    id: "line_" + pVector.toString(),
-                    geometry: {
-                        type: "LineString",
-                        coordinates: pVector,
-                    },
-                    type: "Feature",
-                    properties: { styleName: "vectorStyle", layerName: LTHighlightLayer.name },
-                };
+                let newString: GeoJSON.Feature = turf.lineString(
+                    pVector,
+                    { styleName: "vectorStyle", layerName: LTHighlightLayer.name },
+                    { id: "line_" + pVector.toString() }
+                );
 
                 if (applyDash) {
                     createVector(newString, LtSettings.BAColor, VectorStyle.DASH_THIN);
@@ -2752,25 +2702,26 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
             }
         }
 
-        function buildGeoComponentString(geometry: Position[], from: number, to: number) {
+        function buildGeoComponentString(geometry: Position[], from: number, to: number): GeoJSON.Feature {
             let components: Position[] = [];
             let cIdx: number = 0;
             for (let i = from; i < to; i++) {
                 components[cIdx++] = geometry[i];
             }
-            // return new OpenLayers.Geometry.LineString(components, {});
-            return {
-                id: "line_" + components.toString(),
-                geometry: {
-                    type: "LineString",
-                    coordinates: components,
-                },
-                type: "Feature",
-                properties: { styleName: "vectorStyle", layerName: LTHighlightLayer.name },
-            };
+            return turf.lineString(
+                components,
+                { styleName: "vectorStyle", layerName: LTHighlightLayer.name },
+                { id: "line_" + components.toString() }
+            );
         }
 
-        function drawHighlight(newString: any, lio: boolean, bad: boolean, heurNom: number, heurOverHighlight = false) {
+        function drawHighlight(
+            newString: GeoJSON.Feature,
+            lio: boolean,
+            bad: boolean,
+            heurNom: number,
+            heurOverHighlight = false
+        ) {
             if (bad) {
                 createVector(newString, LtSettings.ErrorColor, VectorStyle.OVER_HIGHLIGHT);
                 return;
@@ -2799,7 +2750,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
             }
         }
 
-        function createVector(geoCom: any, lineColor: string, style: number) {
+        function createVector(geoCom: GeoJSON.Feature, lineColor: string, style: number) {
             // let newVector = new OpenLayers.Feature.Vector(geoCom, {}, {});
             // LTHighlightLayer.addFeatures([newVector]);
             let stroke: string = lineColor;
@@ -2826,13 +2777,8 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
                 default:
                     break;
             }
-            // Object.assign(styleConfig.styleRules.vectorHighlightStyle.style, {
-            //     strokeColor: stroke,
-            //     stroke: stroke,
-            //     strokeWidth: strokeWidth,
-            //     strokeOpacity: strokeOpacity,
-            //     strokeDashstyle: strokeDashArray.join(" "),
-            // });
+
+            geoCom.properties = geoCom.properties ? geoCom.properties : {};
             geoCom.properties.style = {
                 strokeColor: stroke,
                 stroke: stroke,
@@ -2840,28 +2786,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
                 strokeOpacity: strokeOpacity,
                 strokeDashstyle: strokeDashArray.join(" "),
             };
-            // const line = document.getElementById(geoCom.id);
 
-            // if (line) {
-            //     line.setAttribute("stroke", `${lineColor}`);
-
-            //     if (style === VectorStyle.HIGHLIGHT) {
-            //         line.setAttribute("stroke-width", "15");
-            //         line.setAttribute("stroke-opacity", ".6");
-            //     } else if (style === VectorStyle.OVER_HIGHLIGHT) {
-            //         line.setAttribute("stroke-width", "18");
-            //         line.setAttribute("stroke-opacity", ".85");
-            //     } else {
-            //         line.setAttribute("stroke-opacity", "1");
-            //         if (style === VectorStyle.DASH_THICK) {
-            //             line.setAttribute("stroke-width", "8");
-            //             line.setAttribute("stroke-dasharray", "8 10");
-            //         } else if (style === VectorStyle.DASH_THIN) {
-            //             line.setAttribute("stroke-width", "4");
-            //             line.setAttribute("stroke-dasharray", "10 10");
-            //         }
-            //     }
-            // }
             sdk.Map.addFeatureToLayer({ feature: geoCom, layerName: LTHighlightLayer.name });
         }
 
@@ -2908,6 +2833,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
     }
 
     let lt_scanArea_timer = {
+        timeoutID: -1,
         start: function () {
             this.cancel();
             let lt_scanArea_timer_self = this;
@@ -2918,13 +2844,13 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
 
         calculate: function () {
             scanArea_real();
-            delete this.timeoutID;
+            this.timeoutID = -1;
         },
 
         cancel: function () {
             if (typeof this.timeoutID === "number") {
                 window.clearTimeout(this.timeoutID);
-                delete this.timeoutID;
+                this.timeoutID = -1;
                 lt_scanArea_recursive = 0;
             }
         },
@@ -2992,12 +2918,12 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
 
     // Check all given segments for heuristics qualification
     function scanSegments(segments: Segment[], selectedSegsOverride: boolean = false) {
-        const heurChecks = getId("lt-LaneHeuristicsChecks")?.checked;
-        const heurScan_PosHighlight = heurChecks && getId("lt-LaneHeurPosHighlight")?.checked;
-        const heurScan_NegHighlight = heurChecks && getId("lt-LaneHeurNegHighlight")?.checked;
-        const mapHighlights = getId("lt-HighlightsEnable")?.checked;
-        const applyLioHighlight = mapHighlights && getId("lt-LIOEnable")?.checked;
-        const applyLabels = mapHighlights && getId("lt-LabelsEnable")?.checked;
+        const heurChecks: boolean = getId("lt-LaneHeuristicsChecks")?.checked ?? false;
+        const heurScan_PosHighlight: boolean = heurChecks && (getId("lt-LaneHeurPosHighlight")?.checked ?? false);
+        const heurScan_NegHighlight: boolean = heurChecks && (getId("lt-LaneHeurNegHighlight")?.checked ?? false);
+        const mapHighlights: boolean = getId("lt-HighlightsEnable")?.checked ?? false;
+        const applyLioHighlight: boolean = mapHighlights && (getId("lt-LIOEnable")?.checked ?? false);
+        const applyLabels: boolean = mapHighlights && (getId("lt-LabelsEnable")?.checked ?? false);
         const zoomLevel = sdk.Map.getZoomLevel();
         // const turnGraph = W.model.getTurnGraph();
 
@@ -3325,23 +3251,23 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
                 const turnSection = turnSections[i];
 
                 // Check if the lanes are already set. If already set, don't change anything.
-                let laneCheckboxes = turnSection.getElementsByTagName("wz-checkbox");
+                let laneCheckboxes: HTMLCollectionOf<Element> = turnSection.getElementsByTagName("wz-checkbox");
                 if (laneCheckboxes && laneCheckboxes.length > 0) {
                     if (getId("lt-ClickSaveTurns")?.checked) {
                         if (
                             turnSection.getElementsByClassName(left).length > 0 &&
-                            laneCheckboxes[0].checked !== undefined &&
-                            laneCheckboxes[0].checked === false
+                            (laneCheckboxes[0] as HTMLInputElement).checked !== undefined &&
+                            (laneCheckboxes[0] as HTMLInputElement).checked === false
                         ) {
                             setLeft = true;
-                            laneCheckboxes[0].click();
+                            (laneCheckboxes[0] as HTMLInputElement).click();
                         } else if (
                             turnSection.getElementsByClassName(right).length > 0 &&
-                            laneCheckboxes[laneCheckboxes.length - 1].checked !== undefined &&
-                            laneCheckboxes[laneCheckboxes.length - 1].checked === false
+                            (laneCheckboxes[laneCheckboxes.length - 1] as HTMLInputElement).checked !== undefined &&
+                            (laneCheckboxes[laneCheckboxes.length - 1] as HTMLInputElement).checked === false
                         ) {
                             setRight = true;
-                            laneCheckboxes[laneCheckboxes.length - 1].click();
+                            (laneCheckboxes[laneCheckboxes.length - 1] as HTMLInputElement).click();
                         }
                     }
                 }
@@ -3357,7 +3283,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
                         for (let j = 0; j < laneCheckboxes.length - 1; ++j) {
                             waitForElementLoaded("input[type='checkbox']", laneCheckboxes[j].shadowRoot);
                             {
-                                if (laneCheckboxes[j].checked) laneCheckboxes[j].click();
+                                if ((laneCheckboxes[j] as HTMLInputElement).checked) (laneCheckboxes[j] as HTMLInputElement).click();
                             }
                         }
                     }
@@ -3368,7 +3294,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
                         for (let j = 1; j < laneCheckboxes.length; ++j) {
                             waitForElementLoaded("input[type='checkbox']", laneCheckboxes[j].shadowRoot);
                             {
-                                if (laneCheckboxes[j].checked) laneCheckboxes[j].click();
+                                if ((laneCheckboxes[j] as HTMLInputElement).checked) (laneCheckboxes[j] as HTMLInputElement).click();
                             }
                         }
                     }
@@ -3378,16 +3304,16 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
                     for (let j = 0; j < laneCheckboxes.length; j++) {
                         waitForElementLoaded("input[type='checkbox']", laneCheckboxes[j].shadowRoot);
                         {
-                            if (laneCheckboxes[j].checked === false) {
+                            if ((laneCheckboxes[j] as HTMLInputElement).checked === false) {
                                 if (j === 0 && (getId("lt-ClickSaveStraight")?.checked || setLeft === false)) {
-                                    laneCheckboxes[j].click();
+                                    (laneCheckboxes[j] as HTMLInputElement).click();
                                 } else if (
                                     j === laneCheckboxes.length - 1 &&
                                     (getId("lt-ClickSaveStraight")?.checked || setRight === false)
                                 ) {
-                                    laneCheckboxes[j].click();
+                                    (laneCheckboxes[j] as HTMLInputElement).click();
                                 } else if (j !== 0 && j !== laneCheckboxes.length - 1) {
-                                    laneCheckboxes[j].click();
+                                    (laneCheckboxes[j] as HTMLInputElement).click();
                                 }
                             }
                         }
@@ -3466,18 +3392,6 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
                     laneCountElement[idx].addEventListener("keyup", processLaneNumberChange, false);
                     laneCountElement[idx].addEventListener("change", processLaneNumberChange, false);
                 }
-
-                // let laneToolsButtons = document.getElementsByClassName('lt-add-lanes');
-                // for (let i = 0; i < laneToolsButtons.length; i++) {
-                //     laneToolsButtons[i].addEventListener('click', function () {
-                //         // wait for the input to appear
-                //         let parent = $(this).parents().eq(8);
-                //         let direction = parent[0].className;
-                //         waitForElementLoaded('.turn-lane-edit-container').then((elem) => {
-                //             setTurns(direction);
-                //         })
-                //     }, false);
-                // }
             }
         });
 
@@ -3805,16 +3719,16 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
             }
             let ja_dx, ja_dy;
             if (segment.fromNodeId === nodeId) {
-                let secondPoint = lt_get_second_point(segment);
-                let firstPoint = lt_get_first_point(segment);
+                let secondPoint: Position | undefined = lt_get_second_point(segment);
+                let firstPoint: Position | undefined = lt_get_first_point(segment);
                 if (!secondPoint || !firstPoint) {
                     throw new Error("Missing Start and end Point of the Segment");
                 }
                 ja_dx = secondPoint[0] - firstPoint[0];
                 ja_dy = secondPoint[1] - firstPoint[1];
             } else {
-                let nextToLastPoint = lt_get_next_to_last_point(segment);
-                let lastPoint = lt_get_last_point(segment);
+                let nextToLastPoint: Position | undefined = lt_get_next_to_last_point(segment);
+                let lastPoint: Position | undefined = lt_get_last_point(segment);
                 if (!nextToLastPoint || !lastPoint) {
                     throw new Error("Missing Points at the End of the Segment");
                 }
@@ -4345,7 +4259,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
         let numIcons = Object.getOwnPropertyNames(imgs).length;
 
         // Orient all icons straight up if the rotate option isn't enabled
-        if (!getId("lt-IconsRotate").checked) deg = -90;
+        if (!getId("lt-IconsRotate")?.checked) deg = -90;
 
         // Rotate in the style is clockwise, the rotate() func is counterclockwise
         if (deg === 0) {
@@ -4552,11 +4466,9 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
                 uoffset.x = -8;
                 uoffset.y = 4;
             }
-            let iconStart = {
-                id: "point_" + iconPoints.toString(),
-                geometry: arrowOrigin.geometry,
-                type: "Feature",
-                properties: {
+            let iconStart: GeoJSON.Feature = turf.point(
+                arrowOrigin.geometry.coordinates,
+                {
                     styleName: "iconStyle",
                     layerName: LTLaneGraphics.name,
                     style: {
@@ -4579,29 +4491,9 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
                         backgroundYOffset: uoffset.y,
                     },
                 },
-            };
+                { id: "point_" + iconPoints.toString() }
+            );
 
-            // Object.assign(styleRules.iconStyle.style, {
-            //     externalGraphic: img["svg"],
-            //     graphicHeight: featDis.graphicHeight,
-            //     graphicWidth: featDis.graphicWidth,
-            //     fillColor: "#26bae8",
-            //     fillOpacity: 1,
-            //     backgroundColor: "#26bae8",
-            //     strokeColor: "#26bae8",
-            //     rotation: iconRotate,
-            //     backgroundGraphic: ulabel,
-            //     backgroundHeight:
-            //         !featDis || !featDis.graphicHeight || !usize.y ? undefined : featDis.graphicHeight * usize.y,
-            //     backgroundWidth:
-            //         !featDis || !featDis.graphicWidth || !usize.x ? undefined : featDis.graphicWidth * usize.x,
-            //     backgroundXOffset: uoffset.x,
-            //     backgroundYOffset: uoffset.y,
-            // });
-
-            // Add icon to map
-            // let iconFeature = new OpenLayers.Feature.Vector(iconStart, null, iconStyle);
-            // LTLaneGraphics.addFeatures([iconFeature]);
             sdk.Map.addFeatureToLayer({ layerName: LTLaneGraphics.name, feature: iconStart });
             num++;
         });
@@ -4621,7 +4513,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
         )
             return;
 
-        const seg = sdk.DataModel.Segments.getById({ segmentId: selection.ids[0] });
+        const seg: Segment | null = sdk.DataModel.Segments.getById({ segmentId: selection.ids[0] });
         if (!seg) return;
         const zoomLevel = sdk.Map.getZoomLevel();
 
@@ -4654,9 +4546,6 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
                           .get()
                   )
                 : false;
-
-        //let fwdEle = seg.attributes.fwdLaneCount > 0 ? getIcons($('.fwd-lanes').find('svg').map(function() { return this }).get()) : false;
-        //let revEle = seg.attributes.revLaneCount > 0 ? getIcons($('.rev-lanes').find('svg').map(function() { return this }).get()) : false;
 
         let fwdImgs = fwdEle !== false ? convertToBase64(fwdEle) : false;
         let revImgs = revEle !== false ? convertToBase64(revEle) : false;
