@@ -1,3 +1,4 @@
+"use strict";
 // ==UserScript==
 // @name         WME LaneTools
 // @namespace    https://github.com/SkiDooGuy/WME-LaneTools
@@ -18,9 +19,13 @@
 // @connect      raw.githubusercontent.com
 // @contributionURL https://github.com/WazeDev/Thank-The-Authors
 // ==/UserScript==
-import _ from "underscore";
-import * as turf from "@turf/turf";
-import WazeWrap from "https://greasyfork.org/scripts/24851-wazewrap/code/WazeWrap.js";
+/* global W */
+/* global WazeWrap */
+// import type { KeyboardShortcut, Node, Segment, Selection, Turn, UserSession, WmeSDK } from "wme-sdk-typings";
+// import type { Position } from "geojson";
+// import _ from "underscore";
+// import * as turf from "@turf/turf";
+// import WazeWrap from "https://greasyfork.org/scripts/24851-wazewrap/code/WazeWrap.js";
 let sdk;
 unsafeWindow.SDK_INITIALIZED.then(() => {
     if (!unsafeWindow.getWmeSdk) {
@@ -3847,7 +3852,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
             let turfIconBoxRing = turf.polygon([iconPoints]);
             turfIconBoxRing = turf.transformRotate(turfIconBoxRing, -1 * boxRotate, { pivot: centerPoint.geometry });
             let iconBoxRing = {
-                id: "polygon_" + iconPoints.toString(),
+                id: `polygon_${iconPoints.toString()}`,
                 geometry: turfIconBoxRing.geometry,
                 type: "Feature",
                 properties: { styleName: "iconBoxStyle", layerName: LTLaneGraphics.name },
@@ -3868,14 +3873,14 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
                 x: undefined,
                 y: undefined,
             };
-            if (img["uturn"] === true) {
+            if (img.uturn === true) {
                 ulabel = `https://web-assets.waze.com/webapps/wme/${sdk.getWMEVersion()}-${env}/font/989fe58ac11ed7d3/u-turn-small.svg`;
                 usize.x = 0.6;
                 usize.y = 0.6;
                 uoffset.x = -7;
                 uoffset.y = -12;
             }
-            if (img["miniuturn"] === true) {
+            if (img.miniuturn === true) {
                 ulabel = `https://web-assets.waze.com/webapps/wme/${sdk.getWMEVersion()}-${env}/font/989fe58ac11ed7d3/u-turn-small.svg`;
                 usize.x = 0.3;
                 usize.y = 0.25;
@@ -3902,7 +3907,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
                     backgroundXOffset: uoffset.x,
                     backgroundYOffset: uoffset.y,
                 },
-            }, { id: "point_" + iconPoints.toString() });
+            }, { id: `point_${iconPoints.toString()}` });
             sdk.Map.addFeatureToLayer({ layerName: LTLaneGraphics.name, feature: iconStart });
             num++;
         });
