@@ -22,13 +22,13 @@
 /* global W */
 /* global WazeWrap */
 
-import { KeyboardShortcut, Node, Segment, Selection, Turn, UserSession, WmeSDK } from "wme-sdk-typings";
-import { Position } from "geojson";
+import type { KeyboardShortcut, Node, Segment, Selection, Turn, UserSession, WmeSDK } from "wme-sdk-typings";
+import type { Position } from "geojson";
 import _ from "underscore";
 import * as turf from "@turf/turf";
 import WazeWrap from "https://greasyfork.org/scripts/24851-wazewrap/code/WazeWrap.js";
 
-var sdk: WmeSDK;
+let sdk: WmeSDK;
 unsafeWindow.SDK_INITIALIZED.then(() => {
     if (!unsafeWindow.getWmeSdk) {
         throw new Error("SDK is not installed");
@@ -1930,22 +1930,22 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
                     );
                 }
 
-                $("#li-del-fwd-btn").on("click", function () {
+                $("#li-del-fwd-btn").on("click", () => {
                     delLanes("fwd");
                     fwdDone = true;
-                    setTimeout(function () {
+                    setTimeout(() => {
                         updateUI();
                     }, 200);
                 });
-                $("#li-del-rev-btn").on("click", function () {
+                $("#li-del-rev-btn").on("click", () => {
                     delLanes("rev");
                     revDone = true;
-                    setTimeout(function () {
+                    setTimeout(() => {
                         updateUI();
                     }, 200);
                 });
                 $("#li-del-opp-btn").on("click", function () {
-                    let dir = $(this).prop("title");
+                    const dir = $(this).prop("title");
                     delLanes(dir);
                     if (dir === "rev") {
                         revDone = true;
@@ -2006,13 +2006,13 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
 
         function expandEdit() {
             expandEditTriggered = true;
-            if (getId("lt-AutoExpandLanes").checked) {
+            if (getId("lt-AutoExpandLanes")?.checked) {
                 if (!fwdDone) {
                 }
                 if (!revDone) {
                 }
             }
-            if (getId("lt-AutoOpenWidth").checked) {
+            if (getId("lt-AutoOpenWidth")?.checked) {
                 if (!fwdDone) {
                     $(".fwd-lanes").find(".set-road-width > wz-button").trigger("click"); // ADDED
                 }
@@ -2040,14 +2040,14 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
         }
 
         function getLaneItems(count: number, class_names_list: string[]) {
-            let itemsList = [],
+            const itemsList = [],
                 classString = class_names_list.join(" "),
                 idStringBase = class_names_list.join("-");
             for (let i = 1; i <= count; ++i) {
-                let idString = idStringBase + "-" + i.toString();
-                let selectorString =
+                const idString = idStringBase + "-" + i.toString();
+                const selectorString =
                     '<div class="' + classString + '" id="' + idString + '">' + i.toString() + "</div>";
-                let newItem = $(selectorString).css({
+                const newItem = $(selectorString).css({
                     padding: "1px 1px 1px 1px",
                     margin: "0 3px 0 3px",
                     border: "1px solid black",
@@ -2083,24 +2083,21 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
             if (laneDir !== "fwd" && laneDir !== "rev") {
                 throw new Error(`Direction ${laneDir} is not supported`);
             }
-            const dirLanesClass = "." + laneDir + "-lanes",
-                addLanesTag = "lt-" + laneDir + "-add-lanes",
-                addWidthTag = "lt-" + laneDir + "-add-Width";
-            let lanes = $(dirLanesClass);
+            const dirLanesClass: string = `.${laneDir}-lanes`;
+            const addLanesTag = `lt-${laneDir}-add-lanes`;
+            const addWidthTag = `lt-${laneDir}-add-Width`;
+            const lanes = $(dirLanesClass);
             if (lanes.find(".lane-instruction-to").children().length > 0x0 && !getId(addLanesTag)) {
-                let addLanesItem = $(
-                        '<div style="display:inline-flex;flex-direction:row;justify-content:space-around;margin-top:4px;position:relative;" id="' +
-                            addLanesTag +
-                            '" />'
-                    ),
-                    classNamesList = ["lt-add-lanes", laneDir],
-                    laneCountsToAppend = getLaneItems(10, classNamesList);
+                const addLanesItem = $(
+                        `<div style="display:inline-flex;flex-direction:row;justify-content:space-around;margin-top:4px;position:relative;" id="${addLanesTag}" />`
+                    );
+                const classNamesList = ["lt-add-lanes", laneDir];
+                const laneCountsToAppend = getLaneItems(10, classNamesList);
                 for (let idx = 0; idx < laneCountsToAppend.length; ++idx) {
                     addLanesItem.append(laneCountsToAppend[idx]);
                 }
-                let prependSelector =
-                    dirLanesClass +
-                    " > div.lane-instruction.lane-instruction-to > div.instruction > div.edit-region > div";
+                const prependSelector =
+                    `${dirLanesClass} > div.lane-instruction.lane-instruction-to > div.instruction > div.edit-region > div`;
                 // let prependSelector = dirLanesClass + "> div > div > div.lane-instruction.lane-instruction-to > div.instruction > div.edit-region > div.controls.direction-lanes-edit > div.form-group > div.controls-container";
                 waitForElementLoaded(prependSelector).then((elm) => {
                     let prependElement = $(prependSelector);

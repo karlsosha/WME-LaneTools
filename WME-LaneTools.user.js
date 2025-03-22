@@ -1,4 +1,3 @@
-"use strict";
 // ==UserScript==
 // @name         WME LaneTools
 // @namespace    https://github.com/SkiDooGuy/WME-LaneTools
@@ -19,15 +18,10 @@
 // @connect      raw.githubusercontent.com
 // @contributionURL https://github.com/WazeDev/Thank-The-Authors
 // ==/UserScript==
-/* global W */
-/* global WazeWrap */
-// import { KeyboardShortcut, Node, Segment, Selection, Turn, UserSession, WmeSDK } from "wme-sdk";
-// import { Position } from "geojson";
-// import _ from "underscore";
-// import $ from "jquery";
-// import * as turf from "@turf/turf";
-// import WazeWrap from "https://greasyfork.org/scripts/24851-wazewrap/code/WazeWrap.js";
-var sdk;
+import _ from "underscore";
+import * as turf from "@turf/turf";
+import WazeWrap from "https://greasyfork.org/scripts/24851-wazewrap/code/WazeWrap.js";
+let sdk;
 unsafeWindow.SDK_INITIALIZED.then(() => {
     if (!unsafeWindow.getWmeSdk) {
         throw new Error("SDK is not installed");
@@ -1116,7 +1110,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
             $("#lt-heur-wrapper").toggle();
         });
         heurChecks.on("click", () => {
-            if (getId("lt-LaneHeuristicsChecks").checked) {
+            if (getId("lt-LaneHeuristicsChecks")?.checked) {
                 scanArea();
             }
             else {
@@ -1125,7 +1119,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
             }
         });
         $("#lt-LaneHeurPosHighlight").on("click", () => {
-            if (getId("lt-LaneHeurPosHighlight").checked) {
+            if (getId("lt-LaneHeurPosHighlight")?.checked) {
                 scanArea();
             }
             else {
@@ -1134,7 +1128,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
             }
         });
         $("#lt-LaneHeurNegHighlight").on("click", () => {
-            if (getId("lt-LaneHeurNegHighlight").checked) {
+            if (getId("lt-LaneHeurNegHighlight")?.checked) {
                 scanArea();
             }
             else {
@@ -1624,7 +1618,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
             //        if (getId('lt-ReverseLanesIcon').checked && !isRotated) {
             //            rotateArrows();
             //        }
-            if (getId("lt-highlightCSIcons").checked) {
+            if (getId("lt-highlightCSIcons")?.checked) {
                 colorCSDir();
             }
             // Add delete buttons and preselected lane number buttons to UI
@@ -1685,22 +1679,22 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
                 else {
                     $(".fwd-lanes > div.lane-instruction.lane-instruction-from > div.instruction").css("border-bottom", `4px dashed ${LtSettings.ABColor}`);
                 }
-                $("#li-del-fwd-btn").on("click", function () {
+                $("#li-del-fwd-btn").on("click", () => {
                     delLanes("fwd");
                     fwdDone = true;
-                    setTimeout(function () {
+                    setTimeout(() => {
                         updateUI();
                     }, 200);
                 });
-                $("#li-del-rev-btn").on("click", function () {
+                $("#li-del-rev-btn").on("click", () => {
                     delLanes("rev");
                     revDone = true;
-                    setTimeout(function () {
+                    setTimeout(() => {
                         updateUI();
                     }, 200);
                 });
                 $("#li-del-opp-btn").on("click", function () {
-                    let dir = $(this).prop("title");
+                    const dir = $(this).prop("title");
                     delLanes(dir);
                     if (dir === "rev") {
                         revDone = true;
@@ -1752,13 +1746,13 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
         }
         function expandEdit() {
             expandEditTriggered = true;
-            if (getId("lt-AutoExpandLanes").checked) {
+            if (getId("lt-AutoExpandLanes")?.checked) {
                 if (!fwdDone) {
                 }
                 if (!revDone) {
                 }
             }
-            if (getId("lt-AutoOpenWidth").checked) {
+            if (getId("lt-AutoOpenWidth")?.checked) {
                 if (!fwdDone) {
                     $(".fwd-lanes").find(".set-road-width > wz-button").trigger("click"); // ADDED
                 }
@@ -1776,11 +1770,11 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
             $(".rev-lanes > div.lane-instruction.lane-instruction-to > div.instruction > div.edit-region > div > div > div:nth-child(1)").css("margin-bottom", "4px");
         }
         function getLaneItems(count, class_names_list) {
-            let itemsList = [], classString = class_names_list.join(" "), idStringBase = class_names_list.join("-");
+            const itemsList = [], classString = class_names_list.join(" "), idStringBase = class_names_list.join("-");
             for (let i = 1; i <= count; ++i) {
-                let idString = idStringBase + "-" + i.toString();
-                let selectorString = '<div class="' + classString + '" id="' + idString + '">' + i.toString() + "</div>";
-                let newItem = $(selectorString).css({
+                const idString = idStringBase + "-" + i.toString();
+                const selectorString = '<div class="' + classString + '" id="' + idString + '">' + i.toString() + "</div>";
+                const newItem = $(selectorString).css({
                     padding: "1px 1px 1px 1px",
                     margin: "0 3px 0 3px",
                     border: "1px solid black",
@@ -1816,17 +1810,18 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
             if (laneDir !== "fwd" && laneDir !== "rev") {
                 throw new Error(`Direction ${laneDir} is not supported`);
             }
-            const dirLanesClass = "." + laneDir + "-lanes", addLanesTag = "lt-" + laneDir + "-add-lanes", addWidthTag = "lt-" + laneDir + "-add-Width";
-            let lanes = $(dirLanesClass);
+            const dirLanesClass = `.${laneDir}-lanes`;
+            const addLanesTag = `lt-${laneDir}-add-lanes`;
+            const addWidthTag = `lt-${laneDir}-add-Width`;
+            const lanes = $(dirLanesClass);
             if (lanes.find(".lane-instruction-to").children().length > 0x0 && !getId(addLanesTag)) {
-                let addLanesItem = $('<div style="display:inline-flex;flex-direction:row;justify-content:space-around;margin-top:4px;position:relative;" id="' +
-                    addLanesTag +
-                    '" />'), classNamesList = ["lt-add-lanes", laneDir], laneCountsToAppend = getLaneItems(10, classNamesList);
+                const addLanesItem = $(`<div style="display:inline-flex;flex-direction:row;justify-content:space-around;margin-top:4px;position:relative;" id="${addLanesTag}" />`);
+                const classNamesList = ["lt-add-lanes", laneDir];
+                const laneCountsToAppend = getLaneItems(10, classNamesList);
                 for (let idx = 0; idx < laneCountsToAppend.length; ++idx) {
                     addLanesItem.append(laneCountsToAppend[idx]);
                 }
-                let prependSelector = dirLanesClass +
-                    " > div.lane-instruction.lane-instruction-to > div.instruction > div.edit-region > div";
+                const prependSelector = `${dirLanesClass} > div.lane-instruction.lane-instruction-to > div.instruction > div.edit-region > div`;
                 // let prependSelector = dirLanesClass + "> div > div > div.lane-instruction.lane-instruction-to > div.instruction > div.edit-region > div.controls.direction-lanes-edit > div.form-group > div.controls-container";
                 waitForElementLoaded(prependSelector).then((elm) => {
                     let prependElement = $(prependSelector);
@@ -2076,8 +2071,13 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
         const objSelected = sdk.Editing.getSelection();
         let scriptEnabled = getId("lt-ScriptEnabled");
         let copyEnable = getId("lt-CopyEnable");
-        if (scriptEnabled && scriptEnabled.checked && copyEnable && copyEnable.checked && objSelected.length === 1) {
-            if (objSelected && objSelected?.objectType === "segment") {
+        if (scriptEnabled &&
+            scriptEnabled.checked &&
+            copyEnable &&
+            copyEnable.checked &&
+            objSelected &&
+            objSelected.ids.length === 1) {
+            if (objSelected.objectType === "segment") {
                 const map = sdk.Map.getMapViewportElement();
                 $("#lt-toolbar-container").css({
                     display: "block",
@@ -2119,12 +2119,20 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
         }
         let ja_dx, ja_dy;
         if (segment.fromNodeId === nodeId) {
-            ja_dx = lt_get_second_point(segment)[0] - lt_get_first_point(segment)[0];
-            ja_dy = lt_get_second_point(segment)[1] - lt_get_first_point(segment)[1];
+            let sp = lt_get_second_point(segment);
+            let fp = lt_get_first_point(segment);
+            if (!sp || !fp)
+                return null;
+            ja_dx = sp[0] - fp[0];
+            ja_dy = sp[1] - fp[1];
         }
         else {
-            ja_dx = lt_get_next_to_last_point(segment)[0] - lt_get_last_point(segment)[0];
-            ja_dy = lt_get_next_to_last_point(segment)[1] - lt_get_last_point(segment)[1];
+            let next_to_last = lt_get_next_to_last_point(segment);
+            let last_point = lt_get_last_point(segment);
+            if (!next_to_last || !last_point)
+                return null;
+            ja_dx = next_to_last[0] - last_point[0];
+            ja_dy = next_to_last[1] - last_point[1];
         }
         let angle_rad = Math.atan2(ja_dy, ja_dx);
         let angle_deg = ((angle_rad * 180) / Math.PI) % 360;
@@ -2135,9 +2143,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
     }
     // borrowed from JAI
     function lt_get_first_point(segment) {
-        if (segment === null)
-            return null;
-        return segment.geometry.coordinates[0];
+        return segment?.geometry.coordinates[0];
         //    return segment.geometry.components[0];
     }
     // borrowed from JAI
@@ -2228,37 +2234,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
         if (!revLnsCount)
             revLnsCount = 0;
         let laneNum = `${fwdLnsCount} / ${revLnsCount}`;
-        // const namesStyle = {
-        //     fontFamily: "Open Sans, Alef, helvetica, sans-serif, monospace",
-        //     labelColor: LtSettings.LabelColor,
-        //     labelText: laneNum,
-        //     labelOutlineColor: "black",
-        //     fontColor: LtSettings.LabelColor,
-        //     fontSize: "16",
-        //     labelXOffset: 15,
-        //     labelYOffset: -15,
-        //     labelOutlineWidth: "3",
-        //     label: laneNum,
-        //     angle: "",
-        //     labelAlign: "cm",
-        //     strokeWidth: 0,
-        //     pointRadius: 0,
-        // };
-        // Object.assign(styleRules.namesStyle.style, namesStyle);
-        let lnLabel = {
-            id: "point_" + geo.toString(),
-            geometry: {
-                type: "Point",
-                coordinates: geo,
-            },
-            type: "Feature",
-            properties: { styleName: "nameStyle", layerName: LTNamesLayer.name, style: { laneNumLabel: laneNum } },
-        };
-        // let lnLabel = new OpenLayers.Feature.Vector(nameGeo, {
-        //     labelText: laneNum,
-        //     labelColor: LtSettings.LabelColor,
-        // });
-        // LTNamesLayer.addFeatures([lnLabel]);
+        let lnLabel = turf.point(geo, { styleName: "nameStyle", layerName: LTNamesLayer.name, style: { laneNumLabel: laneNum } }, { id: "point_" + geo.toString() });
         sdk.Map.addFeatureToLayer({ feature: lnLabel, layerName: LTNamesLayer.name });
     }
     function highlightSegment(objGeo, direction, applyDash, applyLabels, fwdLnsCount, revLnsCount, applyLioHighlight, csMode, isBad, heur, heurOverHighlight) {
@@ -2333,61 +2309,18 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
             //     properties: { styleName: "vectorStyle", layerName: LTHighlightLayer.name },
             // };
             if (direction === Direction.FORWARD) {
-                //            let point2 = new OpenLayers.getOLGeometry().Point(geo.components[1].clone().x, geo.components[1].clone().y);
-                //            let newString = new OpenLayers.getOLGeometry().LineString([point1, point2], {});
-                // let point2 = new OpenLayers.Geometry.Point(geo.components[1].clone().x, geo.components[1].clone().y);
-                // let point2 = {
-                //     id: "pointNode_" + objGeo[1][0] + " " + objGeo[1][1],
-                //     geometry: {
-                //         coordinates: [objGeo[1][0], objGeo[1][1]],
-                //         type: "Point",
-                //     },
-                //     type: "Feature",
-                //     properties: { styleName: "vectorStyle", layerName: LTHighlightLayer.name },
-                // };
-                // let newString = new OpenLayers.Geometry.LineString([point1, point2], {});
                 let p2C = [objGeo[1][0], objGeo[1][1]];
                 pVector.push(p2C);
-                let newString = {
-                    id: "line_" + pVector.toString(),
-                    geometry: {
-                        type: "LineString",
-                        coordinates: pVector,
-                    },
-                    type: "Feature",
-                    properties: { styleName: "vectorStyle", layerName: LTHighlightLayer.name },
-                };
+                let newString = turf.lineString(pVector, { styleName: "vectorStyle", layerName: LTHighlightLayer.name }, { id: "line_" + pVector.toString() });
                 if (applyDash) {
                     createVector(newString, LtSettings.ABColor, VectorStyle.DASH_THIN);
                 }
                 drawHighlight(newString, applyLioHighlight, isBad, heur, heurOverHighlight);
             }
             else if (direction === Direction.REVERSE) {
-                //            let point2 = new OpenLayers.getOLGeometry().Point(geo.components[0].clone().x, geo.components[0].clone().y);
-                //            let newString = new OpenLayers.getOLGeometry().LineString([point1, point2], {});
-                // let point2 = new OpenLayers.Geometry.Point(geo.components[0].clone().x, geo.components[0].clone().y);
-                // let newString = new OpenLayers.Geometry.LineString([point1, point2], {});
-                // let point2 = {
-                //     id: "pointNode_" + objGeo[0][0] + " " + objGeo[0][0],
-                //     geometry: {
-                //         coordinates: [objGeo[0][0], objGeo[0][1]],
-                //         type: "Point",
-                //     },
-                //     type: "Feature",
-                //     properties: { styleName: "vectorStyle", layerName: LTHighlightLayer.name },
-                // };
-                // let newString = new OpenLayers.Geometry.LineString([point1, point2], {});
                 let p2C = [objGeo[0][0], objGeo[0][1]];
                 pVector.push(p2C);
-                let newString = {
-                    id: "line_" + pVector.toString(),
-                    geometry: {
-                        type: "LineString",
-                        coordinates: pVector,
-                    },
-                    type: "Feature",
-                    properties: { styleName: "vectorStyle", layerName: LTHighlightLayer.name },
-                };
+                let newString = turf.lineString(pVector, { styleName: "vectorStyle", layerName: LTHighlightLayer.name }, { id: "line_" + pVector.toString() });
                 if (applyDash) {
                     createVector(newString, LtSettings.BAColor, VectorStyle.DASH_THIN);
                 }
@@ -2404,16 +2337,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
             for (let i = from; i < to; i++) {
                 components[cIdx++] = geometry[i];
             }
-            // return new OpenLayers.Geometry.LineString(components, {});
-            return {
-                id: "line_" + components.toString(),
-                geometry: {
-                    type: "LineString",
-                    coordinates: components,
-                },
-                type: "Feature",
-                properties: { styleName: "vectorStyle", layerName: LTHighlightLayer.name },
-            };
+            return turf.lineString(components, { styleName: "vectorStyle", layerName: LTHighlightLayer.name }, { id: "line_" + components.toString() });
         }
         function drawHighlight(newString, lio, bad, heurNom, heurOverHighlight = false) {
             if (bad) {
@@ -2463,13 +2387,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
                 default:
                     break;
             }
-            // Object.assign(styleConfig.styleRules.vectorHighlightStyle.style, {
-            //     strokeColor: stroke,
-            //     stroke: stroke,
-            //     strokeWidth: strokeWidth,
-            //     strokeOpacity: strokeOpacity,
-            //     strokeDashstyle: strokeDashArray.join(" "),
-            // });
+            geoCom.properties = geoCom.properties ? geoCom.properties : {};
             geoCom.properties.style = {
                 strokeColor: stroke,
                 stroke: stroke,
@@ -2477,26 +2395,6 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
                 strokeOpacity: strokeOpacity,
                 strokeDashstyle: strokeDashArray.join(" "),
             };
-            // const line = document.getElementById(geoCom.id);
-            // if (line) {
-            //     line.setAttribute("stroke", `${lineColor}`);
-            //     if (style === VectorStyle.HIGHLIGHT) {
-            //         line.setAttribute("stroke-width", "15");
-            //         line.setAttribute("stroke-opacity", ".6");
-            //     } else if (style === VectorStyle.OVER_HIGHLIGHT) {
-            //         line.setAttribute("stroke-width", "18");
-            //         line.setAttribute("stroke-opacity", ".85");
-            //     } else {
-            //         line.setAttribute("stroke-opacity", "1");
-            //         if (style === VectorStyle.DASH_THICK) {
-            //             line.setAttribute("stroke-width", "8");
-            //             line.setAttribute("stroke-dasharray", "8 10");
-            //         } else if (style === VectorStyle.DASH_THIN) {
-            //             line.setAttribute("stroke-width", "4");
-            //             line.setAttribute("stroke-dasharray", "10 10");
-            //         }
-            //     }
-            // }
             sdk.Map.addFeatureToLayer({ feature: geoCom, layerName: LTHighlightLayer.name });
         }
         // LTHighlightLayer.setZIndex(2880);
@@ -2540,6 +2438,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
         // }
     }
     let lt_scanArea_timer = {
+        timeoutID: -1,
         start: function () {
             this.cancel();
             let lt_scanArea_timer_self = this;
@@ -2549,12 +2448,12 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
         },
         calculate: function () {
             scanArea_real();
-            delete this.timeoutID;
+            this.timeoutID = -1;
         },
         cancel: function () {
             if (typeof this.timeoutID === "number") {
                 window.clearTimeout(this.timeoutID);
-                delete this.timeoutID;
+                this.timeoutID = -1;
                 lt_scanArea_recursive = 0;
             }
         },
@@ -2615,12 +2514,12 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
     }
     // Check all given segments for heuristics qualification
     function scanSegments(segments, selectedSegsOverride = false) {
-        const heurChecks = getId("lt-LaneHeuristicsChecks")?.checked;
-        const heurScan_PosHighlight = heurChecks && getId("lt-LaneHeurPosHighlight")?.checked;
-        const heurScan_NegHighlight = heurChecks && getId("lt-LaneHeurNegHighlight")?.checked;
-        const mapHighlights = getId("lt-HighlightsEnable")?.checked;
-        const applyLioHighlight = mapHighlights && getId("lt-LIOEnable")?.checked;
-        const applyLabels = mapHighlights && getId("lt-LabelsEnable")?.checked;
+        const heurChecks = getId("lt-LaneHeuristicsChecks")?.checked ?? false;
+        const heurScan_PosHighlight = heurChecks && (getId("lt-LaneHeurPosHighlight")?.checked ?? false);
+        const heurScan_NegHighlight = heurChecks && (getId("lt-LaneHeurNegHighlight")?.checked ?? false);
+        const mapHighlights = getId("lt-HighlightsEnable")?.checked ?? false;
+        const applyLioHighlight = mapHighlights && (getId("lt-LIOEnable")?.checked ?? false);
+        const applyLabels = mapHighlights && (getId("lt-LabelsEnable")?.checked ?? false);
         const zoomLevel = sdk.Map.getZoomLevel();
         // const turnGraph = W.model.getTurnGraph();
         // console.log(zoomLevel);
@@ -3010,17 +2909,6 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
                     laneCountElement[idx].addEventListener("keyup", processLaneNumberChange, false);
                     laneCountElement[idx].addEventListener("change", processLaneNumberChange, false);
                 }
-                // let laneToolsButtons = document.getElementsByClassName('lt-add-lanes');
-                // for (let i = 0; i < laneToolsButtons.length; i++) {
-                //     laneToolsButtons[i].addEventListener('click', function () {
-                //         // wait for the input to appear
-                //         let parent = $(this).parents().eq(8);
-                //         let direction = parent[0].className;
-                //         waitForElementLoaded('.turn-lane-edit-container').then((elem) => {
-                //             setTurns(direction);
-                //         })
-                //     }, false);
-                // }
             }
         });
         laneObserver.observe(document.getElementById("edit-panel"), {
@@ -3792,7 +3680,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
         let operatorSign = 0;
         let numIcons = Object.getOwnPropertyNames(imgs).length;
         // Orient all icons straight up if the rotate option isn't enabled
-        if (!getId("lt-IconsRotate").checked)
+        if (!getId("lt-IconsRotate")?.checked)
             deg = -90;
         // Rotate in the style is clockwise, the rotate() func is counterclockwise
         if (deg === 0) {
@@ -3993,52 +3881,27 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
                 uoffset.x = -8;
                 uoffset.y = 4;
             }
-            let iconStart = {
-                id: "point_" + iconPoints.toString(),
-                geometry: arrowOrigin.geometry,
-                type: "Feature",
-                properties: {
-                    styleName: "iconStyle",
-                    layerName: LTLaneGraphics.name,
-                    style: {
-                        externalGraphic: img["svg"],
-                        graphicHeight: featDis.graphicHeight,
-                        graphicWidth: featDis.graphicWidth,
-                        fillColor: "#26bae8",
-                        fillOpacity: 1,
-                        backgroundColor: "#26bae8",
-                        strokeColor: "#26bae8",
-                        rotation: iconRotate,
-                        backgroundGraphic: ulabel,
-                        backgroundHeight: !featDis || !featDis.graphicHeight || !usize.y
-                            ? undefined
-                            : featDis.graphicHeight * usize.y,
-                        backgroundWidth: !featDis || !featDis.graphicWidth || !usize.x ? undefined : featDis.graphicWidth * usize.x,
-                        backgroundXOffset: uoffset.x,
-                        backgroundYOffset: uoffset.y,
-                    },
+            let iconStart = turf.point(arrowOrigin.geometry.coordinates, {
+                styleName: "iconStyle",
+                layerName: LTLaneGraphics.name,
+                style: {
+                    externalGraphic: img["svg"],
+                    graphicHeight: featDis.graphicHeight,
+                    graphicWidth: featDis.graphicWidth,
+                    fillColor: "#26bae8",
+                    fillOpacity: 1,
+                    backgroundColor: "#26bae8",
+                    strokeColor: "#26bae8",
+                    rotation: iconRotate,
+                    backgroundGraphic: ulabel,
+                    backgroundHeight: !featDis || !featDis.graphicHeight || !usize.y
+                        ? undefined
+                        : featDis.graphicHeight * usize.y,
+                    backgroundWidth: !featDis || !featDis.graphicWidth || !usize.x ? undefined : featDis.graphicWidth * usize.x,
+                    backgroundXOffset: uoffset.x,
+                    backgroundYOffset: uoffset.y,
                 },
-            };
-            // Object.assign(styleRules.iconStyle.style, {
-            //     externalGraphic: img["svg"],
-            //     graphicHeight: featDis.graphicHeight,
-            //     graphicWidth: featDis.graphicWidth,
-            //     fillColor: "#26bae8",
-            //     fillOpacity: 1,
-            //     backgroundColor: "#26bae8",
-            //     strokeColor: "#26bae8",
-            //     rotation: iconRotate,
-            //     backgroundGraphic: ulabel,
-            //     backgroundHeight:
-            //         !featDis || !featDis.graphicHeight || !usize.y ? undefined : featDis.graphicHeight * usize.y,
-            //     backgroundWidth:
-            //         !featDis || !featDis.graphicWidth || !usize.x ? undefined : featDis.graphicWidth * usize.x,
-            //     backgroundXOffset: uoffset.x,
-            //     backgroundYOffset: uoffset.y,
-            // });
-            // Add icon to map
-            // let iconFeature = new OpenLayers.Feature.Vector(iconStart, null, iconStyle);
-            // LTLaneGraphics.addFeatures([iconFeature]);
+            }, { id: "point_" + iconPoints.toString() });
             sdk.Map.addFeatureToLayer({ layerName: LTLaneGraphics.name, feature: iconStart });
             num++;
         });
@@ -4077,8 +3940,6 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
             })
                 .get())
             : false;
-        //let fwdEle = seg.attributes.fwdLaneCount > 0 ? getIcons($('.fwd-lanes').find('svg').map(function() { return this }).get()) : false;
-        //let revEle = seg.attributes.revLaneCount > 0 ? getIcons($('.rev-lanes').find('svg').map(function() { return this }).get()) : false;
         let fwdImgs = fwdEle !== false ? convertToBase64(fwdEle) : false;
         let revImgs = revEle !== false ? convertToBase64(revEle) : false;
         if (fwdEle) {
