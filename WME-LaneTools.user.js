@@ -34,6 +34,7 @@ unsafeWindow.SDK_INITIALIZED.then(() => {
     sdk.Events.once({ eventName: "wme-ready" }).then(ltInit);
 });
 function ltInit() {
+    // type RoadTypes = Record<string, number>;
     let Direction;
     (function (Direction) {
         Direction[Direction["REVERSE"] = -1] = "REVERSE";
@@ -729,16 +730,16 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
             setValue("lt-CS2Color", LtSettings.CS2Color);
             setValue("lt-HeurColor", LtSettings.HeurColor);
             setValue("lt-HeurFailColor", LtSettings.HeurFailColor);
-            if (!getId("lt-ClickSaveEnable").checked) {
+            if (!getId("lt-ClickSaveEnable")?.checked) {
                 $(".lt-option-container.clk-svr").hide();
             }
-            if (!getId("lt-UIEnable").checked) {
+            if (!getId("lt-UIEnable")?.checked) {
                 $("#lt-UI-wrapper").hide();
             }
-            if (!getId("lt-HighlightsEnable").checked) {
+            if (!getId("lt-HighlightsEnable")?.checked) {
                 $("#lt-highlights-wrapper").hide();
             }
-            if (!getId("lt-LaneHeuristicsChecks").checked) {
+            if (!getId("lt-LaneHeuristicsChecks")?.checked) {
                 $("#lt-heur-wrapper").hide();
             }
             function setChecked(checkboxId, checked) {
@@ -1032,7 +1033,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
             scanArea();
         });
         $("#lt-ScriptEnabled").on("click", () => {
-            if (getId("lt-ScriptEnabled").checked) {
+            if (getId("lt-ScriptEnabled")?.checked) {
                 scanArea();
             }
             else {
@@ -1041,7 +1042,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
             }
         });
         highlights.on("click", () => {
-            if (getId("lt-HighlightsEnable").checked) {
+            if (getId("lt-HighlightsEnable")?.checked) {
                 scanArea();
             }
             else {
@@ -1050,7 +1051,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
             scanArea();
         });
         $("#lt-LabelsEnable").on("click", () => {
-            if (getId("lt-LabelsEnable").checked) {
+            if (getId("lt-LabelsEnable")?.checked) {
                 scanArea();
             }
             else {
@@ -1059,7 +1060,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
             }
         });
         $("#lt-NodesEnable").on("click", () => {
-            if (getId("lt-NodesEnable").checked) {
+            if (getId("lt-NodesEnable")?.checked) {
                 scanArea();
             }
             else {
@@ -1068,7 +1069,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
             }
         });
         $("#lt-LIOEnable").on("click", () => {
-            if (getId("lt-LIOEnable").checked) {
+            if (getId("lt-LIOEnable")?.checked) {
                 scanArea();
             }
             else {
@@ -1077,7 +1078,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
             }
         });
         $("#lt-IconsEnable").on("click", () => {
-            if (getId("lt-IconsEnable").checked) {
+            if (getId("lt-IconsEnable")?.checked) {
                 displayLaneGraphics();
             }
             else {
@@ -1085,7 +1086,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
             }
         });
         $("#lt-highlightOverride").on("click", () => {
-            if (getId("lt-highlightOverride").checked) {
+            if (getId("lt-highlightOverride")?.checked) {
                 scanArea();
             }
             else {
@@ -1967,7 +1968,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
             }
         }
         function colorCSDir() {
-            const selSeg = isSegmentSelected(selection)
+            const selSeg = isSegmentSelected(selection) && selection?.objectType === "segment"
                 ? sdk.DataModel.Segments.getById({ segmentId: selection.ids[0] })
                 : null;
             if (!selSeg)
