@@ -13,6 +13,7 @@
 // @exclude      https://www.waze.com/user/editor*
 // @require      https://greasyfork.org/scripts/24851-wazewrap/code/WazeWrap.js
 // @require      https://cdn.jsdelivr.net/npm/@turf/turf@7/turf.min.js
+// @require      https://cdnjs.cloudflare.com/ajax/libs/proj4js/2.15.0/proj4.js
 // @grant        GM_xmlhttpRequest
 // @grant        unsafeWindow
 // @connect      raw.githubusercontent.com
@@ -21,6 +22,7 @@
 import _ from "underscore";
 import * as turf from "@turf/turf";
 import WazeWrap from "https://greasyfork.org/scripts/24851-wazewrap/code/WazeWrap.js";
+import proj4 from "proj4";
 let sdk;
 unsafeWindow.SDK_INITIALIZED.then(() => {
     if (!unsafeWindow.getWmeSdk) {
@@ -2230,12 +2232,10 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
         sdk.Map.removeAllFeaturesFromLayer({ layerName: LTLaneGraphics.name });
     }
     function applyName(geo, fwdLnsCount, revLnsCount) {
-        if (!fwdLnsCount)
-            fwdLnsCount = 0;
-        if (!revLnsCount)
-            revLnsCount = 0;
-        let laneNum = `${fwdLnsCount} / ${revLnsCount}`;
-        let lnLabel = turf.point(geo, { styleName: "nameStyle", layerName: LTNamesLayer.name, style: { laneNumLabel: laneNum } }, { id: "point_" + geo.toString() });
+        // if (!fwdLnsCount) fwdLnsCount = 0;
+        // if (!revLnsCount) revLnsCount = 0;
+        const laneNum = `${fwdLnsCount} / ${revLnsCount}`;
+        const lnLabel = turf.point(geo, { styleName: "nameStyle", layerName: LTNamesLayer.name, style: { laneNumLabel: laneNum } }, { id: `point_${geo.toString()}` });
         sdk.Map.addFeatureToLayer({ feature: lnLabel, layerName: LTNamesLayer.name });
     }
     function highlightSegment(objGeo, direction, applyDash, applyLabels, fwdLnsCount, revLnsCount, applyLioHighlight, csMode, isBad, heur, heurOverHighlight) {
@@ -2245,8 +2245,8 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
             HIGHLIGHT: 10,
             OVER_HIGHLIGHT: 20,
         };
-        fwdLnsCount = !fwdLnsCount ? 0 : fwdLnsCount;
-        revLnsCount = !revLnsCount ? 0 : revLnsCount;
+        // fwdLnsCount = !fwdLnsCount ? 0 : fwdLnsCount;
+        // revLnsCount = !revLnsCount ? 0 : revLnsCount;
         // const geo = objGeo.clone();
         const applyCSHighlight = getId("lt-CSEnable")?.checked;
         // Need to rework this to account for segment length, cause of geo adjustment and such
@@ -2631,9 +2631,9 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
                 lt_log(`candidate(f):${heurCand}`);
                 if (heurCand !== HeuristicsCandidate.NONE) {
                     if (entrySeg && segments.findIndex((element) => element.id === entrySeg.seg) > -1) {
-                        let nodeColor = heurCand === HeuristicsCandidate.PASS ? LtSettings.NodeColor : LtSettings.HeurFailColor;
+                        const nodeColor = heurCand === HeuristicsCandidate.PASS ? LtSettings.NodeColor : LtSettings.HeurFailColor;
                         highlightSegment(seg.geometry.coordinates, direction, false, false, 0, 0, false, csMode, badLn, heurCand, true);
-                        let eSeg = sdk.DataModel.Segments.getById({ segmentId: entrySeg.seg });
+                        const eSeg = sdk.DataModel.Segments.getById({ segmentId: entrySeg.seg });
                         if (eSeg) {
                             highlightSegment(eSeg?.geometry.coordinates, entrySeg.direction, false, false, 0, 0, false, 0, false, heurCand, true);
                         }
@@ -2646,7 +2646,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
         }
     }
     function checkLanesConfiguration(s, node, segs, numLanes) {
-        let laneConfig = {
+        const laneConfig = {
             tlns: false,
             tio: false,
             badLn: false,
@@ -2654,14 +2654,14 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
             csMode: 0,
             csStreet: null,
         };
-        let turnLanes = [];
+        const turnLanes = [];
         // const turnGraph = W.model.getTurnGraph();
         // const pturns = turnGraph.getAllPathTurns();
-        let fromTurns = sdk.DataModel.Turns.getTurnsFromSegment({ segmentId: s.id });
-        let toTurns = sdk.DataModel.Turns.getTurnsToSegment({ segmentId: s.id });
-        let pturns = fromTurns.filter((t) => t.isPathTurn);
+        const fromTurns = sdk.DataModel.Turns.getTurnsFromSegment({ segmentId: s.id });
+        const toTurns = sdk.DataModel.Turns.getTurnsToSegment({ segmentId: s.id });
+        const pturns = fromTurns.filter((t) => t.isPathTurn);
         pturns.push(...toTurns.filter((t) => t.isPathTurn));
-        let jpturns = fromTurns.filter((t) => t.isJunctionBoxTurn);
+        const jpturns = fromTurns.filter((t) => t.isJunctionBoxTurn);
         jpturns.push(...toTurns.filter((t) => t.isJunctionBoxTurn));
         const zoomLevel = sdk.Map.getZoomLevel();
         function addTurns(fromLns, toLns) {
@@ -2681,9 +2681,9 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
         }
         for (let i = 0; i < segs.length; i++) {
             const seg2 = getSegObj(segs[i]);
-            let turnsThrough = !node ? [] : sdk.DataModel.Turns.getTurnsThroughNode({ nodeId: node?.id });
+            const turnsThrough = !node ? [] : sdk.DataModel.Turns.getTurnsThroughNode({ nodeId: node?.id });
             for (let idx = 0; idx < turnsThrough.length; ++idx) {
-                let t = turnsThrough[idx];
+                const t = turnsThrough[idx];
                 if (t.isUTurn || (t.fromSegmentId !== s.id && t.toSegmentId !== segs[i]))
                     continue;
                 // const turnData = turnGraph.getTurnThroughNode(node, s, seg2).getTurnData();
@@ -2751,27 +2751,27 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
         return laneConfig;
     }
     function setTurns(direction) {
-        let clickSaveEnabled = getId("lt-ClickSaveEnable");
+        const clickSaveEnabled = getId("lt-ClickSaveEnable");
         if (!clickSaveEnabled?.checked) {
             return;
         }
-        let lanesPane = document.getElementsByClassName(direction)[0];
+        const lanesPane = document.getElementsByClassName(direction)[0];
         if (!lanesPane)
             return;
-        let left = lanesPane.getElementsByClassName("angle--135").length > 0
+        const left = lanesPane.getElementsByClassName("angle--135").length > 0
             ? "angle--135"
             : lanesPane.getElementsByClassName("angle--90").length > 0
                 ? "angle--90"
                 : "angle--45";
-        let right = lanesPane.getElementsByClassName("angle-135").length > 0
+        const right = lanesPane.getElementsByClassName("angle-135").length > 0
             ? "angle-135"
             : lanesPane.getElementsByClassName("angle-90").length > 0
                 ? "angle-90"
                 : "angle-45";
-        let turnSections = lanesPane.getElementsByClassName("turn-lane-edit-container");
+        const turnSections = lanesPane.getElementsByClassName("turn-lane-edit-container");
         let setLeft = false;
         let setRight = false;
-        let alreadySet = [].slice
+        const alreadySet = [].slice
             .call(turnSections)
             .reduce((acc, turn) => acc +
             [].slice
@@ -2781,7 +2781,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
             for (let i = 0; i < turnSections.length; i++) {
                 const turnSection = turnSections[i];
                 // Check if the lanes are already set. If already set, don't change anything.
-                let laneCheckboxes = turnSection.getElementsByTagName("wz-checkbox");
+                const laneCheckboxes = turnSection.getElementsByTagName("wz-checkbox");
                 if (laneCheckboxes && laneCheckboxes.length > 0) {
                     if (getId("lt-ClickSaveTurns")?.checked) {
                         if (turnSection.getElementsByClassName(left).length > 0 &&
@@ -2801,7 +2801,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
             }
             for (let i = 0; i < turnSections.length; i++) {
                 const turnSection = turnSections[i];
-                let laneCheckboxes = turnSection.getElementsByTagName("wz-checkbox");
+                const laneCheckboxes = turnSection.getElementsByTagName("wz-checkbox");
                 if (setRight) {
                     // Clear All Lanes Except the Right most for right turn
                     if (turnSection.getElementsByClassName(right).length > 0) {
@@ -2884,28 +2884,32 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
         });
     }
     function processLaneNumberChange() {
-        let parent = $(this).parents().eq(8), elem = parent[0], className = elem.className, numLanes = parseInt($(this).val(), 10);
+        const parent = $(this).parents().eq(8);
+        const elem = parent[0];
+        const className = elem.className;
+        const numLanes = Number.parseInt($(this).val(), 10);
         waitForElementLoaded(".turn-lane-checkbox").then((elem) => {
             setTurns(className, numLanes);
         });
-        let laneCountNums = $(this).parents().find(".lt-add-lanes");
+        const laneCountNums = $(this).parents().find(".lt-add-lanes");
         if (laneCountNums.length > 0) {
-            let counterClassName = laneCountNums[0].className, selectorClassName = "." + counterClassName.replace(" ", ".");
-            let counterClassToSelectName = "#" + counterClassName.replace(" ", "-") + "-" + numLanes.toString();
+            const counterClassName = laneCountNums[0].className;
+            const selectorClassName = `.${counterClassName.replace(" ", ".")}`;
+            const counterClassToSelectName = `#${counterClassName.replace(" ", "-")}-${numLanes.toString()}`;
             $(selectorClassName).css({ "background-color": "transparent", color: "black" });
             $(counterClassToSelectName).css({ "background-color": "navy", color: "white" });
         }
     }
     function initLaneGuidanceClickSaver() {
-        let laneObserver = new MutationObserver((mutations) => {
+        const laneObserver = new MutationObserver((mutations) => {
             // if (
             //     W.selectionManager.getSelectedWMEFeatures()[0] &&
             //     W.selectionManager.getSelectedWMEFeatures()[0].featureType === "segment" &&
             //     getId("lt-ScriptEnabled").checked
             // )
-            let selection = sdk.Editing.getSelection();
+            const selection = sdk.Editing.getSelection();
             if (selection?.objectType === "segment" && getId("lt-ScriptEnabled")?.checked) {
-                let laneCountElement = document.getElementsByName("laneCount");
+                const laneCountElement = document.getElementsByName("laneCount");
                 for (let idx = 0; idx < laneCountElement.length; idx++) {
                     laneCountElement[idx].addEventListener("keyup", processLaneNumberChange, false);
                     laneCountElement[idx].addEventListener("change", processLaneNumberChange, false);
@@ -2952,25 +2956,25 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
         }
         // Get current segment heading at the node
         const segId = segCandidate.id;
-        let segEndAzm = lt_getMathAzimuth_to_node(curNodeExit.id, segCandidate);
-        let segBeginAzm = lt_getMathAzimuth_from_node(curNodeEntry.id, segCandidate);
+        const segEndAzm = lt_getMathAzimuth_to_node(curNodeExit.id, segCandidate);
+        const segBeginAzm = lt_getMathAzimuth_from_node(curNodeEntry.id, segCandidate);
         let out1TargetAngle = -90.0; // For right-hand side of the road countries  (right-turn)
         let out2TargetAngle = 90.0; // (left-turn)
         if (segCandidate.primaryStreetId === null) {
             lt_log(`Unable to process Heuristics on Segment: ${segCandidate.id} as it has no Primary Street Set`, 1);
             return HeuristicsCandidate.NONE;
         }
-        let street = sdk.DataModel.Streets.getById({ streetId: segCandidate.primaryStreetId });
+        const street = sdk.DataModel.Streets.getById({ streetId: segCandidate.primaryStreetId });
         if (!street) {
             lt_log(`Unable to Process Heuristics on Street: ${segCandidate.primaryStreetId} as street with this id doesn't exist`, 1);
             return HeuristicsCandidate.NONE;
         }
-        let city = street && street.cityId ? sdk.DataModel.Cities.getById({ cityId: street.cityId }) : null;
+        const city = street?.cityId ? sdk.DataModel.Cities.getById({ cityId: street.cityId }) : null;
         if (!city) {
             lt_log(`Unable to Process Heuristics on City ${street?.cityId} as it doesn't exist`, 1);
             return HeuristicsCandidate.NONE;
         }
-        let segmentCountry = city.countryId ? sdk.DataModel.Countries.getById({ countryId: city?.countryId }) : null;
+        const segmentCountry = city.countryId ? sdk.DataModel.Countries.getById({ countryId: city?.countryId }) : null;
         if (!segmentCountry) {
             lt_log(`Unable to Process Heuristics on Country ${city.countryId}`, 1);
         }
@@ -2981,7 +2985,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
         lt_log("==================================================================================", 2);
         lt_log(`Checking heuristics candidate: seg ${segId} node ${curNodeExit.id} azm ${segEndAzm} nodeExitSegIds:${nodeExitSegIds.length}`, 2);
         // Find the incoming segment, and validate angle to cursegment
-        let nodeEntrySegIds = curNodeEntry.connectedSegmentIds;
+        const nodeEntrySegIds = curNodeEntry.connectedSegmentIds;
         for (let ii = 0; ii < nodeEntrySegIds.length; ii++) {
             let thisTimeFail = 0;
             if (nodeEntrySegIds[ii] === segId) {
@@ -2992,8 +2996,8 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
             if (is !== null && !lt_is_turn_allowed(is, curNodeEntry, segCandidate)) {
                 continue;
             }
-            let ia = lt_getMathAzimuth_to_node(curNodeEntry.id, is); // absolute math azimuth
-            let ita = lt_turn_angle(ia, segBeginAzm); // turn angle
+            const ia = lt_getMathAzimuth_to_node(curNodeEntry.id, is); // absolute math azimuth
+            const ita = lt_turn_angle(ia, segBeginAzm); // turn angle
             lt_log(`Turn angle from inseg ${nodeEntrySegIds[ii]}: ${ita}(${ia},${segBeginAzm})`, 3);
             if (ita !== null && Math.abs(ita) > MAX_STRAIGHT_DIF) {
                 // tolerance met?
@@ -3008,7 +3012,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
             // const turnsThrough = sdk.DataModel.Turns.getTurnsThroughNode({ nodeId: curNodeEntry.id });
             // let turnData = turnsThrough[tidx];
             function getMatchingTurn(node, from, to) {
-                let turns = sdk.DataModel.Turns.getTurnsThroughNode({ nodeId: node.id });
+                const turns = sdk.DataModel.Turns.getTurnsThroughNode({ nodeId: node.id });
                 if (from !== null) {
                     for (let idx = 0; idx < turns.length; ++idx) {
                         if (turns[idx].fromSegmentId === from.id && turns[idx].toSegmentId === to.id)
@@ -3017,14 +3021,14 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
                 }
                 return null;
             }
-            let turnData = getMatchingTurn(curNodeEntry, is, segCandidate);
+            const turnData = getMatchingTurn(curNodeEntry, is, segCandidate);
             if (turnData === null || !turnData.lanes) {
                 lt_log(`Straight turn has no lanes:${nodeEntrySegIds[ii]} to ${segId}`, 3);
                 continue; // No lanes? Don't even think about it. (Not a candidate)
             }
             // #5 Ensure this (straight) turn motion has lanes, and lane count matches; otherwise ERROR
             //  1/1/21: One exception. If laneCount is 0, and there is exactly 1 straight incoming lane, then treat it as equal. (Conversation with @jm6087)
-            let nl = turnData.lanes.toLaneIndex - turnData.lanes.fromLaneIndex + 1;
+            const nl = turnData.lanes.toLaneIndex - turnData.lanes.fromLaneIndex + 1;
             if (nl !== laneCount && !(laneCount === 0 && nl === 1)) {
                 lt_log("Straight turn lane count does not match", 2);
                 thisTimeFail = HeuristicsCandidate.ERROR; // Failed lane match should give us an ERROR
@@ -3043,7 +3047,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
             inNumLanesThrough = nl;
             inSegIsHeurFail = thisTimeFail;
             if (!inSegRef) {
-                let newSegRef = {
+                const newSegRef = {
                     seg: 0,
                     direction: Direction.ANY,
                 };
@@ -3057,9 +3061,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
             lt_log("== No inseg found ==================================================================", 2);
             return 0; // otherwise wait for later
         }
-        else {
-            lt_log(`Found inseg candidate: ${inSeg.id} ${inSegIsHeurFail === 0 ? "" : "(failed)"}`, 2);
-        }
+        lt_log(`Found inseg candidate: ${inSeg.id} ${inSegIsHeurFail === 0 ? "" : "(failed)"}`, 2);
         // #3(a) Determine the outgoing segment 2 (the 2nd turn) and validate turn angle
         for (let ii = 0; ii < nodeExitSegIds.length; ii++) {
             let thisTimeFail = 0;
@@ -3071,8 +3073,8 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
             if (!lt_is_turn_allowed(segCandidate, curNodeExit, os)) {
                 continue;
             }
-            let oa = lt_getMathAzimuth_from_node(curNodeExit.id, os); // absolute math azimuth
-            let ota = lt_turn_angle(segEndAzm, oa); // turn angle
+            const oa = lt_getMathAzimuth_from_node(curNodeExit.id, os); // absolute math azimuth
+            const ota = lt_turn_angle(segEndAzm, oa); // turn angle
             lt_log(`Turn angle to outseg2 ${nodeExitSegIds[ii]}: ${ota}(${segEndAzm},${oa})`, 2);
             // Just to be sure, we can't do Heuristics if there's a chance to turn right (RH)
             if (ota !== null && Math.abs(out1TargetAngle - ota) < MAX_PERP_TO_CONSIDER) {
@@ -3104,9 +3106,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
             lt_log("== No Outseg2 found ==================================================================", 2);
             return 0;
         }
-        else {
-            lt_log(`Found outseg2 candidate: ${outSeg2.id} ${outSeg2IsHeurFail === 0 ? "" : "(failed)"}`, 2);
-        }
+        lt_log(`Found outseg2 candidate: ${outSeg2.id} ${outSeg2IsHeurFail === 0 ? "" : "(failed)"}`, 2);
         // #11 & 12: The Segment 1 that matters is the incoming (parallel to outgoing seg2)
         for (let ii = 0; ii < nodeEntrySegIds.length; ii++) {
             if (nodeEntrySegIds[ii] === segId || nodeEntrySegIds[ii] === inSeg.id) {
@@ -3121,10 +3121,10 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
                 continue;
             }
             // Check turn from this seg to our segment
-            let ia = lt_getMathAzimuth_to_node(curNodeEntry.id, ai1); // absolute math azimuth
+            const ia = lt_getMathAzimuth_to_node(curNodeEntry.id, ai1); // absolute math azimuth
             // 12. Check angle from inseg to this seg (se)
             //  Since we already have azm of this seg TOWARD the node, just check the supplementary turn angle. Must also be within tolerance. (See Geometry proof :)
-            let tta = lt_turn_angle(inAzm, ia);
+            const tta = lt_turn_angle(inAzm, ia);
             lt_log(`Turn angle from inseg (supplementary) ${nodeEntrySegIds[ii]}: ${tta}(${inAzm},${ia})`, 3);
             if (tta !== null && Math.abs(out1TargetAngle - tta) > MAX_PERP_DIF_ALT) {
                 // tolerance met?
@@ -3156,9 +3156,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
             lt_log("== No alt incoming-1 segment found ==================================================================", 2);
             return 0;
         }
-        else {
-            lt_log(`Alt incoming-1 segment found: ${altIncomingSeg.id} ${altInIsHeurFail === 0 ? "" : "(failed)"}`, 2);
-        }
+        lt_log(`Alt incoming-1 segment found: ${altIncomingSeg.id} ${altInIsHeurFail === 0 ? "" : "(failed)"}`, 2);
         // Have we found a failure candidate?
         if (inSegIsHeurFail < 0 || altInIsHeurFail < 0 || outSeg2IsHeurFail < 0) {
             lt_log(`Found a failed candidate for ${segId} ( ${Math.min(inSegIsHeurFail, altInIsHeurFail, outSeg2IsHeurFail)})`, 2);
@@ -3168,9 +3166,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
                 outSeg2IsHeurFail === HeuristicsCandidate.FAIL) {
                 return HeuristicsCandidate.FAIL;
             }
-            else {
-                return HeuristicsCandidate.ERROR;
-            }
+            return HeuristicsCandidate.ERROR;
         }
         // We have a winner!!!
         lt_log(`Found a heuristics candidate! ${segId} to ${outSeg2.id} at ${outTurnAngle2}`, 2);
@@ -3181,10 +3177,11 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
             if (nodeId === null || segment === null) {
                 return null;
             }
-            let ja_dx, ja_dy;
+            let ja_dx;
+            let ja_dy;
             if (segment.fromNodeId === nodeId) {
-                let secondPoint = lt_get_second_point(segment);
-                let firstPoint = lt_get_first_point(segment);
+                const secondPoint = lt_get_second_point(segment);
+                const firstPoint = lt_get_first_point(segment);
                 if (!secondPoint || !firstPoint) {
                     throw new Error("Missing Start and end Point of the Segment");
                 }
@@ -3192,23 +3189,23 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
                 ja_dy = secondPoint[1] - firstPoint[1];
             }
             else {
-                let nextToLastPoint = lt_get_next_to_last_point(segment);
-                let lastPoint = lt_get_last_point(segment);
+                const nextToLastPoint = lt_get_next_to_last_point(segment);
+                const lastPoint = lt_get_last_point(segment);
                 if (!nextToLastPoint || !lastPoint) {
                     throw new Error("Missing Points at the End of the Segment");
                 }
                 ja_dx = nextToLastPoint[0] - lastPoint[0];
                 ja_dy = nextToLastPoint[1] - lastPoint[1];
             }
-            let angle_rad = Math.atan2(ja_dy, ja_dx);
-            let angle_deg = ((angle_rad * 180) / Math.PI) % 360;
+            const angle_rad = Math.atan2(ja_dy, ja_dx);
+            const angle_deg = ((angle_rad * 180) / Math.PI) % 360;
             lt_log(`Azm from node ${nodeId} / ${segment.id}: ${angle_deg}`, 3);
             return angle_deg;
         }
         function lt_getMathAzimuth_to_node(nodeId, segment) {
             if (!nodeId || !segment)
                 return null;
-            let fromAzm = lt_getMathAzimuth_from_node(nodeId, segment);
+            const fromAzm = lt_getMathAzimuth_from_node(nodeId, segment);
             if (fromAzm === null)
                 return null;
             let toAzm = fromAzm + 180.0;
@@ -3246,9 +3243,9 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
             return a;
         }
         function lt_is_turn_allowed(s_from, via_node, s_to) {
-            let turnsThrough = sdk.DataModel.Turns.getTurnsThroughNode({ nodeId: via_node.id });
+            const turnsThrough = sdk.DataModel.Turns.getTurnsThroughNode({ nodeId: via_node.id });
             function isTurnAllowedBySegDirections(from, to) {
-                let result = {
+                const result = {
                     allowedBySegDirections: false,
                     allowed: false,
                 };
@@ -3263,7 +3260,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
                 }
                 return result;
             }
-            let permissions = isTurnAllowedBySegDirections(s_from, s_to);
+            const permissions = isTurnAllowedBySegDirections(s_from, s_to);
             lt_log(`Allow from ${s_from.id} to ${s_to !== null ? s_to.id : 0} via ${via_node.id}? ${permissions.allowedBySegDirections} | ${permissions.allowed}`, 3);
             // Is there a driving direction restriction?
             if (!permissions.allowedBySegDirections) {
@@ -3326,14 +3323,14 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
         let ja_dx = geoPoint1.x - node.geometry.x;
         let ja_dy = geoPoint1.y - node.geometry.y;
         let angleRad = Math.atan2(ja_dy, ja_dx);
-        let angleDeg = ((angleRad * 180) / Math.PI) % 360;
+        const angleDeg = ((angleRad * 180) / Math.PI) % 360;
         for (let i = 0; i < conSegs.length; i++) {
             const seg2 = getSegObj(conSegs[i]);
-            let seg2Att = seg2.getFeatureAttributes();
-            let seg2Geo = seg2.geometry.components;
+            const seg2Att = seg2?.getFeatureAttributes();
+            const seg2Geo = seg2?.geometry.components;
             let geoPoint2;
             let seg2Dir;
-            let turnInfo = turnGraph.getTurnThroughNode(node, seg, seg2).getTurnData();
+            const turnInfo = turnGraph.getTurnThroughNode(node, seg, seg2).getTurnData();
             if (turnInfo.state === 1 && turnInfo.lanes) {
                 if (seg2Att.fromNodeID === nodeID) {
                     seg2Dir = "A";
@@ -3459,15 +3456,16 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
         }
     }
     function getIcons(dir) {
-        let tempEle = {};
+        const tempEle = {};
         let svgcount = 0;
         for (let i = 0; i < dir.length; i++) {
             //if (dir[i].id !== "") {
-            let temp = {};
-            let uTurnDisplay = $(dir[i]).find(".uturn").css("display"), miniUturnDisplay = $(dir[i]).find(".small-uturn").css("display");
+            const temp = {};
+            const uTurnDisplay = $(dir[i]).find(".uturn").css("display");
+            const miniUturnDisplay = $(dir[i]).find(".small-uturn").css("display");
             temp.uturn = uTurnDisplay && uTurnDisplay !== "none";
             temp.miniuturn = miniUturnDisplay && miniUturnDisplay !== "none";
-            temp["svg"] = $(dir[i])
+            temp.svg = $(dir[i])
                 .find("svg")
                 .map(function () {
                 return this;
@@ -3484,9 +3482,9 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
         const serial = new XMLSerializer();
         _.each(svgs, (obj) => {
             try {
-                let svg = obj.svg[0];
-                let tmp = serial.serializeToString(svg);
-                obj["svg"] = "data:image/svg+xml;base64," + window.btoa(tmp);
+                const svg = obj.svg[0];
+                const tmp = serial.serializeToString(svg);
+                obj.svg = `data:image/svg+xml;base64,${window.btoa(tmp)}`;
             }
             catch (e) {
                 // console.log(e);
@@ -3494,24 +3492,10 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
         });
         return svgs;
     }
-    function epsg4326toEpsg3857(coordinates) {
-        let x = (coordinates[0] * 20037508.34) / 180;
-        let y = Math.log(Math.tan(((90 + coordinates[1]) * Math.PI) / 360)) / (Math.PI / 180);
-        y = (y * 20037508.34) / 180;
-        return [x, y];
-    }
-    function epsg3857toEpsg4326(pos) {
-        let x = pos[0];
-        let y = pos[1];
-        x = (x * 180) / 20037508.34;
-        y = (y * 180) / 20037508.34;
-        y = (Math.atan(Math.pow(Math.E, y * (Math.PI / 180))) * 360) / Math.PI - 90;
-        return [x, y];
-    }
     function getStartPoints(node, featDis, numIcons, sign) {
-        let start = !featDis || !featDis.start ? 0 : featDis.start;
-        let boxheight = !featDis || !featDis.boxheight ? 0 : featDis.boxheight;
-        let boxincwidth = !featDis || !featDis.boxincwidth ? 0 : featDis.boxincwidth;
+        const start = !featDis || !featDis.start ? 0 : featDis.start;
+        const boxheight = !featDis || !featDis.boxheight ? 0 : featDis.boxheight;
+        const boxincwidth = !featDis || !featDis.boxincwidth ? 0 : featDis.boxincwidth;
         const nodePos = epsg4326toEpsg3857(node.geometry.coordinates);
         switch (sign) {
             case 0:
@@ -3736,13 +3720,13 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
         else {
             console.log("LT: icon angle is out of bounds");
         }
-        let iconRotate = deg > 315 ? deg : deg + 90;
-        let boxRotate = 360 - iconRotate;
+        const iconRotate = deg > 315 ? deg : deg + 90;
+        const boxRotate = 360 - iconRotate;
         // console.log(deg);
         // console.log(operatorSign);
         // Determine start point respective to node based on segment angle
         // let boxRotate = deg * -1;
-        let startPoint = getStartPoints(node, featDis, numIcons, operatorSign);
+        const startPoint = getStartPoints(node, featDis, numIcons, operatorSign);
         if (!startPoint[0] || !startPoint[1])
             return;
         // Box coords
@@ -3753,17 +3737,17 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
         // );
         // var boxPoint3 = new OpenLayers.Geometry.Point(startPoint.x + featDis.boxincwidth * numIcons, startPoint.y);
         // var boxPoint4 = new OpenLayers.Geometry.Point(startPoint.x, startPoint.y);
-        var boxPoint1 = epsg4326toEpsg3857(startPoint);
+        let boxPoint1 = proj4("EPSG:4326", "EPSG:3857", startPoint);
         boxPoint1[1] += !featDis || !featDis.boxheight ? 0 : featDis.boxheight;
-        boxPoint1 = epsg3857toEpsg4326(boxPoint1);
-        var boxPoint2 = epsg4326toEpsg3857(startPoint);
+        boxPoint1 = proj4("EPSG:3857", "EPSG:4326", boxPoint1);
+        let boxPoint2 = proj4("EPSG:4326", "EPSG:3857", startPoint);
         boxPoint2[0] += !featDis || !featDis.boxincwidth ? 0 : featDis.boxincwidth * numIcons;
         boxPoint2[1] += !featDis || !featDis.boxheight ? 0 : featDis.boxheight;
-        boxPoint2 = epsg3857toEpsg4326(boxPoint2);
-        var boxPoint3 = epsg4326toEpsg3857(startPoint);
+        boxPoint2 = proj4("EPSG:3857", "EPSG:4326", boxPoint2);
+        let boxPoint3 = proj4("EPSG:4326", "EPSG:3857", startPoint);
         boxPoint3[0] += !featDis || !featDis.boxincwidth ? 0 : featDis.boxincwidth * numIcons;
-        boxPoint3 = epsg3857toEpsg4326(boxPoint3);
-        var boxPoint4 = startPoint;
+        boxPoint3 = proj4("EPSG:3857", "EPSG:4326", boxPoint3);
+        const boxPoint4 = startPoint;
         points.push(boxPoint1, boxPoint2, boxPoint3, boxPoint4, boxPoint1);
         // Object.assign(styleRules.boxStyle.style, {
         //     strokeColor: "#ffffff",
@@ -3779,62 +3763,57 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
         let turfBoxRing = turf.polygon([points]);
         turfBoxRing = turf.transformRotate(turfBoxRing, -1 * boxRotate);
         centerPoint = turf.centroid(turfBoxRing);
-        let boxRing = {
-            id: "polygon_" + points.toString(),
-            geometry: turfBoxRing.geometry,
-            type: "Feature",
-            properties: { styleName: "boxStyle", layerName: LTLaneGraphics.name },
-        };
+        const boxRing = turf.polygon(turfBoxRing.geometry.coordinates, { styleName: "boxStyle", layerName: LTLaneGraphics.name }, { id: `polygon_${points.toString()}` });
         // LTLaneGraphics.addFeatures([boxVector]);
         sdk.Map.addFeatureToLayer({ feature: boxRing, layerName: LTLaneGraphics.name });
         let num = 0;
         _.each(imgs, (img) => {
-            let iconPoints = [];
+            const iconPoints = [];
             // Icon Background
             // var iconPoint1 = new OpenLayers.Geometry.Point(
             //     startPoint.x + featDis.boxincwidth * num + featDis.iconbordermargin,
             //     startPoint.y + featDis.iconborderheight
             // );
-            var iconPoint1 = epsg4326toEpsg3857(startPoint);
+            let iconPoint1 = proj4("EPSG:4326", "EPSG:3857", startPoint);
             iconPoint1[0] += !featDis
                 ? 0
                 : (!featDis.boxincwidth ? 0 : featDis.boxincwidth) * num +
                     (!featDis.iconbordermargin ? 0 : featDis.iconbordermargin);
             iconPoint1[1] += !featDis || !featDis.iconborderheight ? 0 : featDis.iconborderheight;
-            iconPoint1 = epsg3857toEpsg4326(iconPoint1);
+            iconPoint1 = proj4("EPSG:3857", "EPSG:4326", iconPoint1);
             // var iconPoint2 = new OpenLayers.Geometry.Point(
             //     startPoint.x + featDis.boxincwidth * num + featDis.iconborderwidth,
             //     startPoint.y + featDis.iconborderheight
             // );
-            var iconPoint2 = epsg4326toEpsg3857(startPoint);
+            let iconPoint2 = proj4("EPSG:4326", "EPSG:3857", startPoint);
             iconPoint2[0] += !featDis
                 ? 0
                 : (!featDis.boxincwidth ? 0 : featDis.boxincwidth) * num +
                     (!featDis.iconborderwidth ? 0 : featDis.iconborderwidth);
             iconPoint2[1] += !featDis || !featDis.iconborderheight ? 0 : featDis.iconborderheight;
-            iconPoint2 = epsg3857toEpsg4326(iconPoint2);
+            iconPoint2 = proj4("EPSG:3857", "EPSG:4326", iconPoint2);
             // var iconPoint3 = new OpenLayers.Geometry.Point(
             //     startPoint.x + featDis.boxincwidth * num + featDis.iconborderwidth,
             //     startPoint.y + featDis.iconbordermargin
             // );
-            var iconPoint3 = epsg4326toEpsg3857(startPoint);
+            let iconPoint3 = proj4("EPSG:4326", "EPSG:3857", startPoint);
             iconPoint3[0] += !featDis
                 ? 0
                 : (!featDis.boxincwidth ? 0 : featDis.boxincwidth) * num +
                     (!featDis.iconborderwidth ? 0 : featDis.iconborderwidth);
             iconPoint3[1] += !featDis || !featDis.iconbordermargin ? 0 : featDis.iconbordermargin;
-            iconPoint3 = epsg3857toEpsg4326(iconPoint3);
+            iconPoint3 = proj4("EPSG:3857", "EPSG:4326", iconPoint3);
             // var iconPoint4 = new OpenLayers.Geometry.Point(
             //     startPoint.x + featDis.boxincwidth * num + featDis.iconbordermargin,
             //     startPoint.y + featDis.iconbordermargin
             // );
-            var iconPoint4 = epsg4326toEpsg3857(startPoint);
+            let iconPoint4 = proj4("EPSG:4326", "EPSG:3857", startPoint);
             iconPoint4[0] += !featDis
                 ? 0
                 : (!featDis.boxincwidth ? 0 : featDis.boxincwidth) * num +
                     (!featDis.iconbordermargin ? 0 : featDis.iconbordermargin);
             iconPoint4[1] += !featDis || !featDis.iconbordermargin ? 0 : featDis.iconbordermargin;
-            iconPoint4 = epsg3857toEpsg4326(iconPoint4);
+            iconPoint4 = proj4("EPSG:3857", "EPSG:4326", iconPoint4);
             iconPoints.push(iconPoint1, iconPoint2, iconPoint3, iconPoint4, iconPoint1);
             // Object.assign(styleRules.iconBoxStyle.style, {
             //     strokeColor: "#000000",
@@ -3846,47 +3825,42 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
             // let iconBoxRing = new OpenLayers.Geometry.LinearRing(iconPoints);
             let turfIconBoxRing = turf.polygon([iconPoints]);
             turfIconBoxRing = turf.transformRotate(turfIconBoxRing, -1 * boxRotate, { pivot: centerPoint.geometry });
-            let iconBoxRing = {
-                id: "polygon_" + iconPoints.toString(),
-                geometry: turfIconBoxRing.geometry,
-                type: "Feature",
-                properties: { styleName: "iconBoxStyle", layerName: LTLaneGraphics.name },
-            };
+            const iconBoxRing = turf.polygon(turfIconBoxRing.geometry.coordinates, { styleName: "iconBoxStyle", layerName: LTLaneGraphics.name }, { id: `polygon_${iconPoints.toString()}` });
             // iconBoxRing.rotate(boxRotate, centerPoint);
             // let iconBoxVector = new OpenLayers.Feature.Vector(iconBoxRing, null, iconBoxStyle);
             // LTLaneGraphics.addFeatures([iconBoxVector]);
             sdk.Map.addFeatureToLayer({ feature: iconBoxRing, layerName: LTLaneGraphics.name });
             // Icon coords
-            let arrowOrigin = turf.centroid(turfIconBoxRing);
+            const arrowOrigin = turf.centroid(turfIconBoxRing);
             // let iconStart = new OpenLayers.Geometry.Point(arrowOrigin.x, arrowOrigin.y);
             let ulabel = "";
-            let usize = {
+            const usize = {
                 x: undefined,
                 y: undefined,
             };
-            let uoffset = {
+            const uoffset = {
                 x: undefined,
                 y: undefined,
             };
-            if (img["uturn"] === true) {
+            if (img.uturn === true) {
                 ulabel = `https://web-assets.waze.com/webapps/wme/${sdk.getWMEVersion()}-${env}/font/989fe58ac11ed7d3/u-turn-small.svg`;
                 usize.x = 0.6;
                 usize.y = 0.6;
                 uoffset.x = -7;
                 uoffset.y = -12;
             }
-            if (img["miniuturn"] === true) {
+            if (img.miniuturn === true) {
                 ulabel = `https://web-assets.waze.com/webapps/wme/${sdk.getWMEVersion()}-${env}/font/989fe58ac11ed7d3/u-turn-small.svg`;
                 usize.x = 0.3;
                 usize.y = 0.25;
                 uoffset.x = -8;
                 uoffset.y = 4;
             }
-            let iconStart = turf.point(arrowOrigin.geometry.coordinates, {
+            const iconStart = turf.point(arrowOrigin.geometry.coordinates, {
                 styleName: "iconStyle",
                 layerName: LTLaneGraphics.name,
                 style: {
-                    externalGraphic: img["svg"],
+                    externalGraphic: img.svg,
                     graphicHeight: featDis.graphicHeight,
                     graphicWidth: featDis.graphicWidth,
                     fillColor: "#26bae8",
@@ -3902,7 +3876,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
                     backgroundXOffset: uoffset.x,
                     backgroundYOffset: uoffset.y,
                 },
-            }, { id: "point_" + iconPoints.toString() });
+            }, { id: `point_${iconPoints.toString()}` });
             sdk.Map.addFeatureToLayer({ layerName: LTLaneGraphics.name, feature: iconStart });
             num++;
         });
@@ -3925,7 +3899,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
             (seg.roadType !== (LT_ROAD_TYPE.FREEWAY || LT_ROAD_TYPE.MAJOR_HIGHWAY || LT_ROAD_TYPE.MINOR_HIGHWAY) &&
                 zoomLevel < 16))
             return;
-        let fwdEle = seg && seg?.fromNodeLanesCount && seg.fromNodeLanesCount > 0
+        const fwdEle = seg?.fromNodeLanesCount && seg.fromNodeLanesCount > 0
             ? getIcons($(".fwd-lanes")
                 .find(".lane-arrow")
                 .map(function () {
@@ -3933,7 +3907,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
             })
                 .get())
             : false;
-        let revEle = seg && seg?.toNodeLanesCount && seg.toNodeLanesCount > 0
+        const revEle = seg?.toNodeLanesCount && seg.toNodeLanesCount > 0
             ? getIcons($(".rev-lanes")
                 .find(".lane-arrow")
                 .map(function () {
@@ -3941,8 +3915,8 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
             })
                 .get())
             : false;
-        let fwdImgs = fwdEle !== false ? convertToBase64(fwdEle) : false;
-        let revImgs = revEle !== false ? convertToBase64(revEle) : false;
+        const fwdImgs = fwdEle !== false ? convertToBase64(fwdEle) : false;
+        const revImgs = revEle !== false ? convertToBase64(revEle) : false;
         if (fwdEle) {
             if (Object.keys(fwdEle).length === 0) {
                 setTimeout(displayLaneGraphics, 200);
