@@ -13,7 +13,7 @@
 // @exclude      https://www.waze.com/user/editor*
 // @require      https://greasyfork.org/scripts/24851-wazewrap/code/WazeWrap.js
 // @require      https://cdn.jsdelivr.net/npm/@turf/turf@7/turf.min.js
-// @require      https://cdnjs.cloudflare.com/ajax/libs/proj4js/2.15.0/proj4.js
+// @require      https://cdn.jsdelivr.net/npm/proj4@2/dist/proj4.min.js
 // @grant        GM_xmlhttpRequest
 // @grant        unsafeWindow
 // @connect      raw.githubusercontent.com
@@ -126,7 +126,6 @@ function ltInit() {
         graphicWidth: number | undefined;
     }
 
-    // type RoadTypes = Record<string, number>;
     enum Direction {
         REVERSE = -1,
         ANY = 0,
@@ -138,28 +137,28 @@ function ltInit() {
         direction: Direction;
     }
 
-    enum LT_ROAD_TYPE {
-        // Streets
-        NARROW_STREET = 22,
-        STREET = 1,
-        PRIMARY_STREET = 2,
-        // Highways
-        RAMP = 4,
-        FREEWAY = 3,
-        MAJOR_HIGHWAY = 6,
-        MINOR_HIGHWAY = 7,
-        // Other drivable
-        DIRT_ROAD = 8,
-        FERRY = 14,
-        PRIVATE_ROAD = 17,
-        PARKING_LOT_ROAD = 20,
-        // Non-drivable
-        WALKING_TRAIL = 5,
-        PEDESTRIAN_BOARDWALK = 10,
-        STAIRWAY = 16,
-        RAILROAD = 18,
-        RUNWAY = 19,
-    }
+    // enum LT_ROAD_TYPE {
+    //     // Streets
+    //     NARROW_STREET = 22,
+    //     STREET = 1,
+    //     PRIMARY_STREET = 2,
+    //     // Highways
+    //     RAMP = 4,
+    //     FREEWAY = 3,
+    //     MAJOR_HIGHWAY = 6,
+    //     MINOR_HIGHWAY = 7,
+    //     // Other drivable
+    //     DIRT_ROAD = 8,
+    //     FERRY = 14,
+    //     PRIVATE_ROAD = 17,
+    //     PARKING_LOT_ROAD = 20,
+    //     // Non-drivable
+    //     WALKING_TRAIL = 5,
+    //     PEDESTRIAN_BOARDWALK = 10,
+    //     STAIRWAY = 16,
+    //     RAILROAD = 18,
+    //     RUNWAY = 19,
+    // }
     const MIN_DISPLAY_LEVEL = 14;
     const MIN_ZOOM_NON_FREEWAY = 17;
     // const DisplayLevels = {
@@ -2392,8 +2391,8 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
 
     function displayToolbar() {
         const objSelected: Selection | null = sdk.Editing.getSelection();
-        let scriptEnabled: HTMLInputElement | null = getId("lt-ScriptEnabled");
-        let copyEnable: HTMLInputElement | null = getId("lt-CopyEnable");
+        const scriptEnabled: HTMLInputElement | null = getId("lt-ScriptEnabled");
+        const copyEnable: HTMLInputElement | null = getId("lt-CopyEnable");
         if (
             scriptEnabled &&
             scriptEnabled.checked &&
@@ -2433,7 +2432,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
         }
 
         // Either FREEWAY or Zoom >=4
-        if (curZoomLevel >= MIN_ZOOM_NON_FREEWAY || (isSegment(obj) && obj.roadType === LT_ROAD_TYPE.FREEWAY)) {
+        if (curZoomLevel >= MIN_ZOOM_NON_FREEWAY || (isSegment(obj) && obj.roadType === RoadType.FREEWAY)) {
             // var ext = W.map.getOLExtent();
             var ext = sdk.Map.getMapExtent();
 
