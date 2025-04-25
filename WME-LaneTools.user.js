@@ -1,3 +1,4 @@
+"use strict";
 // ==UserScript==
 // @name         WME LaneTools
 // @namespace    https://github.com/SkiDooGuy/WME-LaneTools
@@ -12,17 +13,21 @@
 // @match        https://beta.waze.com/*/editor*
 // @exclude      https://www.waze.com/user/editor*
 // @require      https://greasyfork.org/scripts/24851-wazewrap/code/WazeWrap.js
-// @require      https://cdn.jsdelivr.net/npm/@turf/turf@7/turf.min.js
-// @require      https://cdnjs.cloudflare.com/ajax/libs/proj4js/2.15.0/proj4.js
+// @require      https://cdn.jsdelivr.net/npm/@turf/turf@7.2.0/turf.min.js
+// @require      https://cdn.jsdelivr.net/npm/proj4@2.15.0/dist/proj4.min.js
 // @grant        GM_xmlhttpRequest
 // @grant        unsafeWindow
 // @connect      raw.githubusercontent.com
 // @contributionURL https://github.com/WazeDev/Thank-The-Authors
 // ==/UserScript==
-import _ from "underscore";
-import * as turf from "@turf/turf";
-import WazeWrap from "https://greasyfork.org/scripts/24851-wazewrap/code/WazeWrap.js";
-import proj4 from "proj4";
+/* global W */
+/* global WazeWrap */
+// import type { KeyboardShortcut, Node, Segment, Selection, Turn, UserSession, WmeSDK } from "wme-sdk-typings";
+// import type { Position } from "geojson";
+// import _ from "underscore";
+// import * as turf from "@turf/turf";
+// import WazeWrap from "https://greasyfork.org/scripts/24851-wazewrap/code/WazeWrap.js";
+// import proj4 from "proj4";
 let sdk;
 unsafeWindow.SDK_INITIALIZED.then(() => {
     if (!unsafeWindow.getWmeSdk) {
@@ -36,36 +41,34 @@ unsafeWindow.SDK_INITIALIZED.then(() => {
     sdk.Events.once({ eventName: "wme-ready" }).then(ltInit);
 });
 function ltInit() {
-    // type RoadTypes = Record<string, number>;
     let Direction;
     (function (Direction) {
         Direction[Direction["REVERSE"] = -1] = "REVERSE";
         Direction[Direction["ANY"] = 0] = "ANY";
         Direction[Direction["FORWARD"] = 1] = "FORWARD";
     })(Direction || (Direction = {}));
-    let LT_ROAD_TYPE;
-    (function (LT_ROAD_TYPE) {
-        // Streets
-        LT_ROAD_TYPE[LT_ROAD_TYPE["NARROW_STREET"] = 22] = "NARROW_STREET";
-        LT_ROAD_TYPE[LT_ROAD_TYPE["STREET"] = 1] = "STREET";
-        LT_ROAD_TYPE[LT_ROAD_TYPE["PRIMARY_STREET"] = 2] = "PRIMARY_STREET";
-        // Highways
-        LT_ROAD_TYPE[LT_ROAD_TYPE["RAMP"] = 4] = "RAMP";
-        LT_ROAD_TYPE[LT_ROAD_TYPE["FREEWAY"] = 3] = "FREEWAY";
-        LT_ROAD_TYPE[LT_ROAD_TYPE["MAJOR_HIGHWAY"] = 6] = "MAJOR_HIGHWAY";
-        LT_ROAD_TYPE[LT_ROAD_TYPE["MINOR_HIGHWAY"] = 7] = "MINOR_HIGHWAY";
-        // Other drivable
-        LT_ROAD_TYPE[LT_ROAD_TYPE["DIRT_ROAD"] = 8] = "DIRT_ROAD";
-        LT_ROAD_TYPE[LT_ROAD_TYPE["FERRY"] = 14] = "FERRY";
-        LT_ROAD_TYPE[LT_ROAD_TYPE["PRIVATE_ROAD"] = 17] = "PRIVATE_ROAD";
-        LT_ROAD_TYPE[LT_ROAD_TYPE["PARKING_LOT_ROAD"] = 20] = "PARKING_LOT_ROAD";
-        // Non-drivable
-        LT_ROAD_TYPE[LT_ROAD_TYPE["WALKING_TRAIL"] = 5] = "WALKING_TRAIL";
-        LT_ROAD_TYPE[LT_ROAD_TYPE["PEDESTRIAN_BOARDWALK"] = 10] = "PEDESTRIAN_BOARDWALK";
-        LT_ROAD_TYPE[LT_ROAD_TYPE["STAIRWAY"] = 16] = "STAIRWAY";
-        LT_ROAD_TYPE[LT_ROAD_TYPE["RAILROAD"] = 18] = "RAILROAD";
-        LT_ROAD_TYPE[LT_ROAD_TYPE["RUNWAY"] = 19] = "RUNWAY";
-    })(LT_ROAD_TYPE || (LT_ROAD_TYPE = {}));
+    // enum LT_ROAD_TYPE {
+    //     // Streets
+    //     NARROW_STREET = 22,
+    //     STREET = 1,
+    //     PRIMARY_STREET = 2,
+    //     // Highways
+    //     RAMP = 4,
+    //     FREEWAY = 3,
+    //     MAJOR_HIGHWAY = 6,
+    //     MINOR_HIGHWAY = 7,
+    //     // Other drivable
+    //     DIRT_ROAD = 8,
+    //     FERRY = 14,
+    //     PRIVATE_ROAD = 17,
+    //     PARKING_LOT_ROAD = 20,
+    //     // Non-drivable
+    //     WALKING_TRAIL = 5,
+    //     PEDESTRIAN_BOARDWALK = 10,
+    //     STAIRWAY = 16,
+    //     RAILROAD = 18,
+    //     RUNWAY = 19,
+    // }
     const MIN_DISPLAY_LEVEL = 14;
     const MIN_ZOOM_NON_FREEWAY = 17;
     // const DisplayLevels = {
@@ -227,9 +230,9 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
     // let _turnInfo = [];
     let _turnData = {};
     let laneCount = 0;
-    let LTHighlightLayer = { name: "LT Highlights Layer" };
-    let LTNamesLayer = { name: "LT Names Layer" };
-    let LTLaneGraphics = { name: "LT Lane Graphics" };
+    const LTHighlightLayer = { name: "LT Highlights Layer" };
+    const LTNamesLayer = { name: "LT Names Layer" };
+    const LTLaneGraphics = { name: "LT Lane Graphics" };
     let _pickleColor;
     let UpdateObj;
     let MultiAction;
@@ -238,7 +241,6 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
     let isRBS = false;
     let allowCpyPst = false;
     let langLocality = "default";
-    let lt;
     let LANG;
     let seaPickle;
     function applyNamesStyle(properties) {
@@ -262,7 +264,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
     function applyIconStyle(properties) {
         return properties.styleName === "iconStyle" && properties.layerName === LTLaneGraphics.name;
     }
-    let styleConfig = {
+    const styleConfig = {
         styleContext: {
             nameStyleLabelColor: (context) => {
                 return LtSettings.LabelColor;
@@ -396,7 +398,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
     console.log("LaneTools: initializing...");
     function laneToolsBootstrap(tries = 0) {
         console.log("Lane Tools: Initializing...");
-        let locale = sdk.Settings.getLocale();
+        const locale = sdk.Settings.getLocale();
         LANG = locale.localeCode.toLowerCase();
         if (!(LANG in TAB_TRANSLATIONS))
             langLocality = "en-us";
@@ -660,7 +662,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
         </div>`,
         ].join(" "));
         _pickleColor = seaPickle?.rank;
-        let proceedReady = _pickleColor && _pickleColor >= 0;
+        const proceedReady = _pickleColor && _pickleColor >= 0;
         if (proceedReady) {
             // WazeWrap.Interface.Tab("LT", $ltTab.html, setupOptions, "LT");
             sdk.Sidebar.registerScriptTab().then((r) => {
@@ -682,9 +684,8 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
         }
     }
     function startScriptUpdateMonitor() {
-        let updateMonitor;
         try {
-            updateMonitor = new WazeWrap.Alerts.ScriptUpdateMonitor(GM_info.script.name, GM_info.script.version, DOWNLOAD_URL, GM_xmlhttpRequest, DOWNLOAD_URL);
+            const updateMonitor = new WazeWrap.Alerts.ScriptUpdateMonitor(GM_info.script.name, GM_info.script.version, DOWNLOAD_URL, GM_xmlhttpRequest, DOWNLOAD_URL);
             updateMonitor.start();
         }
         catch (ex) {
@@ -939,7 +940,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
             // ).add();
         }
         catch (e) {
-            console.log(`LT: Error creating shortcuts. This feature will be disabled.`);
+            console.log("LT: Error creating shortcuts. This feature will be disabled.");
             $("#lt-EnableShortcut").text(`${TAB_TRANSLATIONS[langLocality].disabled}`);
             $("#lt-HighlightShortcut").text(`${TAB_TRANSLATIONS[langLocality].disabled}`);
             $("#lt-UIEnhanceShortcut").text(`${TAB_TRANSLATIONS[langLocality].disabled}`);
@@ -959,7 +960,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
         if (_pickleColor && _pickleColor > 0) {
             let featureList = "LaneTools: The following special access features are enabled: ";
             $("#lt-adv-tools").css("display", "block");
-            let quickTog = $("#lt-trans-quickTog");
+            const quickTog = $("#lt-trans-quickTog");
             quickTog.attr("data-original-title", `${strings.selAllTooltip}`);
             quickTog.tooltip();
             _.each(RBSArray, (u) => {
@@ -981,7 +982,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
                     display: "block",
                     margin: "2px",
                 });
-                let ltSheetLinkAnchor = $("#lt-sheet-link > a");
+                const ltSheetLinkAnchor = $("#lt-sheet-link > a");
                 ltSheetLinkAnchor.css({
                     padding: "2px",
                     border: "2px solid black",
@@ -1022,12 +1023,12 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
             $("#lt-LaneTabFeatures").css("display", "none");
         }
         $(".lt-checkbox").on("click", function () {
-            let settingName = $(this)[0].id.substring(3);
+            const settingName = $(this)[0].id.substring(3);
             LtSettings[settingName] = this.checked;
             saveSettings();
         });
         $(".lt-color-input").on("change", function () {
-            let settingName = $(this)[0].id.substring(3);
+            const settingName = $(this)[0].id.substring(3);
             LtSettings[settingName] = this.value;
             saveSettings();
             $(`#lt-${settingName}`).css("border", `2px solid ${this.value}`);
@@ -1217,11 +1218,10 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
             // console.log('LaneTools: local settings used');
         }
         // If there is no value set in any of the stored settings then use the default
-        Object.keys(defaultSettings).forEach((funcProp) => {
-            if (!LtSettings.hasOwnProperty(funcProp)) {
-                LtSettings[funcProp] = defaultSettings[funcProp];
-            }
-        });
+        for (const funcProp of Object.keys(defaultSettings)) {
+            LtSettings[funcProp] = defaultSettings[funcProp];
+        }
+        ;
     }
     async function saveSettings() {
         const { ScriptEnabled, HighlightsEnable, LabelsEnable, NodesEnable, UIEnable, AutoLanesTab, AutoOpenWidth, AutoExpandLanes, ABColor, BAColor, LabelColor, ErrorColor, NodeColor, TIOColor, LIOColor, CS1Color, CS2Color, CopyEnable, SelAllEnable, serverSelect, LIOEnable, CSEnable, AutoFocusLanes, ReverseLanesIcon, ClickSaveEnable, ClickSaveStraight, ClickSaveTurns, enableScript, enableHighlights, enableUIEnhancements, enableHeuristics, HeurColor, HeurFailColor, LaneHeurPosHighlight, LaneHeurNegHighlight, LaneHeuristicsChecks, highlightCSIcons, highlightOverride, AddTIO, IconsEnable, IconsRotate, highlightsVisible, ltGraphicsVisible, ltNamesVisible, } = LtSettings;
@@ -1276,7 +1276,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
         // for (const name in W.accelerators.Actions) {
         //     const { shortcut, group } = W.accelerators.Actions[name];
         //     if (group === "wmelt") {
-        for (let shortcut in sdk.Shortcuts.getAllShortcuts()) {
+        for (const shortcut in sdk.Shortcuts.getAllShortcuts()) {
             localSettings[shortcut.shortcutId] = shortcut.shortcutKeys;
         }
         // Required for the instant update of changes to the keyboard shortcuts on the UI
@@ -1297,10 +1297,10 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
     async function loadSpreadsheet() {
         let connected = false;
         const apiKey = "AIzaSyDZjmkSx5xWc-86hsAIzedgDgRgy8vB7BQ";
-        const settingsFailFunc = (jqXHR, textStatus, errorThrown) => {
+        const settingsFailFunc = (jqXHR, _textStatus, errorThrown) => {
             console.error("LaneTools: Error loading settings:", errorThrown);
         };
-        const rbsFailFunc = (jqXHR, textStatus, errorThrown) => {
+        const rbsFailFunc = (_jqXHR, _textStatus, errorThrown) => {
             console.error("LaneTools: Error loading RBS:", errorThrown);
             if (!RBSArray.failed) {
                 WazeWrap.Alerts.error(GM_info.script.name, "Unable to load heuristics data for LG. This feature will not be available");
@@ -1371,7 +1371,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
             _.each(configArray, (serverKey) => {
                 for (const k in serverKey) {
                     if (serverKey.hasOwnProperty(k)) {
-                        let keyValue = serverKey[k];
+                        const keyValue = serverKey[k];
                         serverKey[k] = Number.parseFloat(keyValue);
                     }
                 }
@@ -1390,11 +1390,12 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
             strings = TAB_TRANSLATIONS[langLocality.split("-")[0]];
         }
         // If there is no value set in any of the translated strings then use the defaults
-        Object.keys(strings).forEach((transString) => {
-            if (!strings.hasOwnProperty(transString) || strings[transString] === "") {
+        for (const transString of Object.keys(strings)) {
+            if (strings[transString] === "") {
                 strings[transString] = TAB_TRANSLATIONS.default[transString];
             }
-        });
+        }
+        ;
         $(".lt-trans-enabled").text(strings.enabled);
         $(".lt-trans-tglshcut").text(strings.toggleShortcut);
         $("#lt-trans-uiEnhance").text(strings.UIEnhance);
@@ -1446,7 +1447,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
         if (RBSArray.failed) {
             return;
         }
-        let angles = isRBS && getId("lt-serverSelect").checked ? configArray.RBS : configArray.RPS;
+        const angles = isRBS && getId("lt-serverSelect").checked ? configArray.RBS : configArray.RPS;
         MAX_LEN_HEUR = angles.MAX_LEN_HEUR;
         MAX_PERP_DIF = angles.MAX_PERP_DIF;
         MAX_PERP_DIF_ALT = angles.MAX_PERP_DIF_ALT;
@@ -1631,12 +1632,12 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
                     : null;
                 if (getId("li-del-opp-btn"))
                     $("#li-del-opp-btn").remove();
-                let $fwdButton = $(`<button type="button" id="li-del-fwd-btn" style="height:20px;background-color:white;border:1px solid grey;border-radius:8px;">${strings.delFwd}</button>`);
-                let $revButton = $(`<button type="button" id="li-del-rev-btn" style="height:20px;background-color:white;border:1px solid grey;border-radius:8px;">${strings.delRev}</button>`);
-                let $oppButton = $(`<button type="button" id="li-del-opp-btn" style="height:auto;background-color:orange;border:1px solid grey;border-radius:8px; margin-bottom:5px;">${strings.delOpp}</button>`);
-                let $btnCont1 = $('<div style="display:inline-block;position:relative;" />');
-                let $btnCont2 = $('<div style="display:inline-block;position:relative;" />');
-                let $btnCont3 = $('<div style="display:inline-block;position:relative;" />');
+                const $fwdButton = $(`<button type="button" id="li-del-fwd-btn" style="height:20px;background-color:white;border:1px solid grey;border-radius:8px;">${strings.delFwd}</button>`);
+                const $revButton = $(`<button type="button" id="li-del-rev-btn" style="height:20px;background-color:white;border:1px solid grey;border-radius:8px;">${strings.delRev}</button>`);
+                const $oppButton = $(`<button type="button" id="li-del-opp-btn" style="height:auto;background-color:orange;border:1px solid grey;border-radius:8px; margin-bottom:5px;">${strings.delOpp}</button>`);
+                const $btnCont1 = $('<div style="display:inline-block;position:relative;" />');
+                const $btnCont2 = $('<div style="display:inline-block;position:relative;" />');
+                const $btnCont3 = $('<div style="display:inline-block;position:relative;" />');
                 $fwdButton.appendTo($btnCont1);
                 $revButton.appendTo($btnCont2);
                 $oppButton.appendTo($btnCont3);
@@ -1773,10 +1774,12 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
             $(".rev-lanes > div.lane-instruction.lane-instruction-to > div.instruction > div.edit-region > div > div > div:nth-child(1)").css("margin-bottom", "4px");
         }
         function getLaneItems(count, class_names_list) {
-            const itemsList = [], classString = class_names_list.join(" "), idStringBase = class_names_list.join("-");
+            const itemsList = [];
+            const classString = class_names_list.join(" ");
+            const idStringBase = class_names_list.join("-");
             for (let i = 1; i <= count; ++i) {
-                const idString = idStringBase + "-" + i.toString();
-                const selectorString = '<div class="' + classString + '" id="' + idString + '">' + i.toString() + "</div>";
+                const idString = `${idStringBase}-${i.toString()}`;
+                const selectorString = `<div class="${classString}" id="${idString}">${i.toString()}</div>`;
                 const newItem = $(selectorString).css({
                     padding: "1px 1px 1px 1px",
                     margin: "0 3px 0 3px",
@@ -1802,7 +1805,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
             return itemsList;
         }
         function setupLaneCountControls(parentSelector, classNamesList) {
-            const jqueryClassSelector = "." + classNamesList.join(".");
+            const jqueryClassSelector = `.${classNamesList.join(".")}`;
             $(jqueryClassSelector).on("click", function () {
                 $(jqueryClassSelector).css({ "background-color": "transparent", color: "black" });
                 $(this).css({ "background-color": "navy", color: "white" });
@@ -1831,18 +1834,18 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
                     prependElement.prepend(addLanesItem);
                     setupLaneCountControls(lanes, classNamesList);
                     $(".lt-add-lanes").on("click", function () {
-                        let numAddStr = $(this).text();
-                        let numAdd = Number.parseInt(numAddStr, 10);
-                        if ($(this).hasClass("lt-add-lanes " + laneDir)) {
+                        const numAddStr = $(this).text();
+                        const numAdd = Number.parseInt(numAddStr, 10);
+                        if ($(this).hasClass(`lt-add-lanes ${laneDir}`)) {
                             // As of React >=15.6.  Triggering change or input events on the input form cannot be
                             // done via jquery selectors.  Which means that they have to be triggered via
                             // React native calls.
-                            let nativeInputValueSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, "value").set;
-                            let inputForm = document.querySelector("wz-card" + dirLanesClass + " input[name=laneCount]");
+                            const nativeInputValueSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, "value").set;
+                            const inputForm = document.querySelector(`wz-card${dirLanesClass} input[name=laneCount]`);
                             nativeInputValueSetter.call(inputForm, numAdd);
-                            let inputEvent = new Event("input", { bubbles: true });
+                            const inputEvent = new Event("input", { bubbles: true });
                             inputForm.dispatchEvent(inputEvent);
-                            let changeEvent = new Event("change", { bubbles: true });
+                            const changeEvent = new Event("change", { bubbles: true });
                             inputForm.dispatchEvent(changeEvent);
                         }
                     });
@@ -1903,9 +1906,9 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
             //     setupLaneCountControls(lnSelector, classNamesList);
             // }
             $(".lt-add-Width").on("click", function () {
-                let numAddStr = $(this).text();
-                let numAdd = Number.parseInt(numAddStr, 10);
-                if ($(this).hasClass("lt-add-Width " + laneDir)) {
+                const numAddStr = $(this).text();
+                const numAdd = Number.parseInt(numAddStr, 10);
+                if ($(this).hasClass(`lt-add-Width ${laneDir}`)) {
                     const lanes = $(dirLanesClass);
                     lanes.find("#number-of-lanes").val(numAdd);
                     lanes.find("#number-of-lanes").trigger("change");
@@ -1921,8 +1924,8 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
         }
         function focusEle() {
             // Places the focus on the relevant lanes # input if the direction exists
-            let autoFocusLanes = getId("lt-AutoFocusLanes");
-            if (autoFocusLanes && autoFocusLanes.checked) {
+            const autoFocusLanes = getId("lt-AutoFocusLanes");
+            if (autoFocusLanes?.checked) {
                 const fwdLanes = $(".fwd-lanes");
                 const revLanes = $(".rev-lanes");
                 if (fwdLanes.find(".edit-region").children().length > 0 && !fwdDone) {
@@ -1934,11 +1937,11 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
             }
         }
         function insertSelAll(dir) {
-            let setAllEnable = getId("lt-SelAllEnable");
-            if (setAllEnable && setAllEnable.checked) {
+            const setAllEnable = getId("lt-SelAllEnable");
+            if (setAllEnable?.checked) {
                 $(".street-name").css("user-select", "none");
-                let inputDirection = dir === "fwd" ? $(".fwd-lanes").find(".form-control")[0] : $(".rev-lanes").find(".form-control")[0];
-                let startVal = $(inputDirection).val();
+                const inputDirection = dir === "fwd" ? $(".fwd-lanes").find(".form-control")[0] : $(".rev-lanes").find(".form-control")[0];
+                const startVal = $(inputDirection).val();
                 // Toggles all checkboxes in turns row
                 $(inputDirection).on("change", function () {
                     let boxDirection;
@@ -1952,10 +1955,10 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
                     for (let p = 0; p < boxDirection.length; p++) {
                         $(boxDirection[p]).off();
                         $(boxDirection[p]).click(function () {
-                            let secParent = $(this).get(0);
-                            let contParent = secParent.parentElement;
-                            let chkBxs = $(".checkbox-large.checkbox-white", contParent);
-                            const firstCheckInv = !getId(chkBxs[0].id).checked;
+                            const secParent = $(this).get(0);
+                            const contParent = secParent.parentElement;
+                            const chkBxs = $(".checkbox-large.checkbox-white", contParent);
+                            const firstCheckInv = !getId(chkBxs[0].id)?.checked;
                             for (let i = 0; i < chkBxs.length; i++) {
                                 const checkBox = $(`#${chkBxs[i].id}`);
                                 checkBox.prop("checked", firstCheckInv);
@@ -1977,11 +1980,11 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
                 return;
             const fwdNode = getNodeObj(selSeg?.toNodeId);
             const revNode = getNodeObj(selSeg?.fromNodeId);
-            let fwdConfig = checkLanesConfiguration(selSeg, fwdNode, fwdNode ? fwdNode.connectedSegmentIds : [], selSeg?.toNodeLanesCount);
-            let revConfig = checkLanesConfiguration(selSeg, revNode, revNode ? revNode.connectedSegmentIds : [], selSeg?.fromNodeLanesCount);
+            const fwdConfig = checkLanesConfiguration(selSeg, fwdNode, fwdNode ? fwdNode.connectedSegmentIds : [], selSeg?.toNodeLanesCount);
+            const revConfig = checkLanesConfiguration(selSeg, revNode, revNode ? revNode.connectedSegmentIds : [], selSeg?.fromNodeLanesCount);
             if (fwdConfig.csMode > 0) {
-                let csColor = fwdConfig.csMode === 1 ? LtSettings.CS1Color : LtSettings.CS2Color;
-                let arrowDiv = $("#segment-edit-lanes > div > div > div.fwd-lanes > div.lane-instruction.lane-instruction-to > div.instruction > div.lane-arrows > div").children();
+                const csColor = fwdConfig.csMode === 1 ? LtSettings.CS1Color : LtSettings.CS2Color;
+                const arrowDiv = $("#segment-edit-lanes > div > div > div.fwd-lanes > div.lane-instruction.lane-instruction-to > div.instruction > div.lane-arrows > div").children();
                 for (let i = 0; i < arrowDiv.length; i++) {
                     if (arrowDiv[i].title === fwdConfig.csStreet) {
                         $(arrowDiv[i]).css("background-color", csColor);
@@ -1989,8 +1992,8 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
                 }
             }
             if (revConfig.csMode > 0) {
-                let csColor = revConfig.csMode === 1 ? LtSettings.CS1Color : LtSettings.CS2Color;
-                let arrowDiv = $("#segment-edit-lanes > div > div > div.rev-lanes > div.lane-instruction.lane-instruction-to > div.instruction > div.lane-arrows > div").children();
+                const csColor = revConfig.csMode === 1 ? LtSettings.CS1Color : LtSettings.CS2Color;
+                const arrowDiv = $("#segment-edit-lanes > div > div > div.rev-lanes > div.lane-instruction.lane-instruction-to > div.instruction > div.lane-arrows > div").children();
                 for (let i = 0; i < arrowDiv.length; i++) {
                     if (arrowDiv[i].title === revConfig.csStreet) {
                         $(arrowDiv[i]).css("background-color", csColor);
@@ -2001,11 +2004,11 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
         // Rotates lane display arrows in lane tab for South directions
         // Function written by Dude495 and modified by SkiDooGuy to fit into LaneTools better
         function rotateArrows() {
-            let direction = document.getElementsByClassName("heading");
-            let boxDiv = $(".lane-arrows > div").get();
+            const direction = document.getElementsByClassName("heading");
+            const boxDiv = $(".lane-arrows > div").get();
             for (let i = 0; i < direction.length; i++) {
-                if (direction[i].textContent.includes("south")) {
-                    let arrows = $(boxDiv[i]).children();
+                if (direction[i]?.textContent?.includes("south")) {
+                    const arrows = $(boxDiv[i]).children();
                     $(arrows).css("transform", "rotate(180deg)");
                     $(boxDiv[i]).append(arrows.get().reverse());
                 }
@@ -2013,11 +2016,11 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
             isRotated = true;
         }
         // Begin lanes tab enhancements
-        if (getId("lt-UIEnable").checked && getId("lt-ScriptEnabled").checked) {
+        if (getId("lt-UIEnable")?.checked && getId("lt-ScriptEnabled")?.checked) {
             if (isSegmentSelected(selection)) {
                 // Check to ensure that there is only one segment object selected, then setup click event
                 waitForElementLoaded(".lanes-tab").then((elm) => {
-                    formatLanesTab(getId("lt-AutoLanesTab").checked || elm.isActive);
+                    formatLanesTab(getId("lt-AutoLanesTab")?.checked || elm.isActive);
                 });
                 //$('.lanes-tab').on("click",(event) => {
                 //    fwdDone = false;
@@ -2041,7 +2044,6 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
                 });
                 if (clickTab) {
                     // If the auto open lanes option is enabled, initiate a click event on the Lanes tab element
-                    let timeout = 10;
                     waitForElementLoaded(".lanes-tab").then((elm) => {
                         $(".tabs-labels > div:nth-child(3)", $(".segment-edit-section > wz-tabs")[0].shadowRoot).trigger("click");
                     });
@@ -2072,10 +2074,9 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
     }
     function displayToolbar() {
         const objSelected = sdk.Editing.getSelection();
-        let scriptEnabled = getId("lt-ScriptEnabled");
-        let copyEnable = getId("lt-CopyEnable");
-        if (scriptEnabled &&
-            scriptEnabled.checked &&
+        const scriptEnabled = getId("lt-ScriptEnabled");
+        const copyEnable = getId("lt-CopyEnable");
+        if (scriptEnabled?.checked &&
             copyEnable &&
             copyEnable.checked &&
             objSelected &&
@@ -2108,7 +2109,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
             return false;
         }
         // Either FREEWAY or Zoom >=4
-        if (curZoomLevel >= MIN_ZOOM_NON_FREEWAY || (isSegment(obj) && obj.roadType === LT_ROAD_TYPE.FREEWAY)) {
+        if (curZoomLevel >= MIN_ZOOM_NON_FREEWAY || (isSegment(obj) && obj.roadType === RoadType.FREEWAY)) {
             // var ext = W.map.getOLExtent();
             var ext = sdk.Map.getMapExtent();
             return true;
@@ -2120,24 +2121,25 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
         if (nodeId == null || segment == null) {
             return null;
         }
-        let ja_dx, ja_dy;
+        let ja_dx;
+        let ja_dy;
         if (segment.fromNodeId === nodeId) {
-            let sp = lt_get_second_point(segment);
-            let fp = lt_get_first_point(segment);
+            const sp = lt_get_second_point(segment);
+            const fp = lt_get_first_point(segment);
             if (!sp || !fp)
                 return null;
             ja_dx = sp[0] - fp[0];
             ja_dy = sp[1] - fp[1];
         }
         else {
-            let next_to_last = lt_get_next_to_last_point(segment);
-            let last_point = lt_get_last_point(segment);
+            const next_to_last = lt_get_next_to_last_point(segment);
+            const last_point = lt_get_last_point(segment);
             if (!next_to_last || !last_point)
                 return null;
             ja_dx = next_to_last[0] - last_point[0];
             ja_dy = next_to_last[1] - last_point[1];
         }
-        let angle_rad = Math.atan2(ja_dy, ja_dx);
+        const angle_rad = Math.atan2(ja_dy, ja_dx);
         let angle_deg = ((angle_rad * 180) / Math.PI) % 360;
         if (angle_deg < 0)
             angle_deg = angle_deg + 360;
@@ -2180,7 +2182,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
         }
         const mAction = new MultiAction();
         let conSegs;
-        let updates = {};
+        const updates = {};
         //    mAction.setModel(W.model);
         if (dir === "fwd") {
             updates.fwdLaneCount = 0;
@@ -2195,7 +2197,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
         }
         if (dir === "rev") {
             updates.revLaneCount = 0;
-            var node = getNodeObj(selSeg?.fromNodeId);
+            const node = getNodeObj(selSeg?.fromNodeId);
             if (!node) {
                 throw new Error(`Unable to Get Node: ${selSeg?.toNodeId}`);
             }
@@ -2207,9 +2209,9 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
         if (!conSegs)
             return;
         mAction.doSubAction(W.model, new UpdateObj(selSeg, updates));
-        let turnGraph = W.model.getTurnGraph();
+        const turnGraph = W.model.getTurnGraph();
         for (let i = 0; i < conSegs.length; i++) {
-            let turns = sdk.DataModel.Turns.getTurnsThroughNode({ nodeId: node.id });
+            const turns = sdk.DataModel.Turns.getTurnsThroughNode({ nodeId: node.id });
             for (let idx = 0; idx < turns.length; ++idx) {
                 if (turns[idx].fromSegmentId !== selSeg.id || turns[idx].toSegmentId !== conSegs[i])
                     continue;
@@ -3376,7 +3378,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
         const conSegs = node.getSegmentIds();
         // const turnGraph = W.model.getTurnGraph();
         let pasteData = {};
-        let pasteInfo = [];
+        const pasteInfo = [];
         if (side === "A") {
             geoPoint1 = segGeo[1];
         }
@@ -3388,12 +3390,12 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
         let angleRad = Math.atan2(ja_dy, ja_dx);
         let angleDeg = ((angleRad * 180) / Math.PI) % 360;
         for (let i = 0; i < conSegs.length; i++) {
-            let seg2 = getSegObj(conSegs[i]);
-            let seg2Att = seg2.attributes;
-            let seg2Geo = seg2.geometry.components;
+            const seg2 = getSegObj(conSegs[i]);
+            const seg2Att = seg2.attributes;
+            const seg2Geo = seg2.geometry.components;
             let geoPoint2 = {};
             let seg2Dir;
-            let turnInfo = turnGraph.getTurnThroughNode(node, seg, seg2).getTurnData();
+            const turnInfo = turnGraph.getTurnThroughNode(node, seg, seg2).getTurnData();
             if (seg2Att.fromNodeID === nodeID) {
                 seg2Dir = "A";
             }
@@ -3429,7 +3431,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
                 mAction.doSubAction(W.model, new UpdateObj(seg, { fwdLaneCount: laneCount }));
             }
             for (let k = 0; k < pasteInfo.length; k++) {
-                let pasteTurn = {};
+                const pasteTurn = {};
                 // Copy turn data into temp object
                 for (let q = 0; q < _turnInfo.length; q++) {
                     pasteTurn[q] = _turnInfo[q];
@@ -3440,7 +3442,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
                     pasteTurn[z].lanes.arrowAngle = pasteTurn[z].lanes.arrowAngle * -1;
                 }
             } */
-                let toSeg = getSegObj(pasteInfo[k].id);
+                const toSeg = getSegObj(pasteInfo[k].id);
                 let turnStatus = turnGraph.getTurnThroughNode(node, seg, toSeg);
                 let turnData = turnStatus.getTurnData();
                 turnData = turnData.withLanes(pasteTurn[k].lanes);
@@ -3496,41 +3498,41 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
         const start = !featDis || !featDis.start ? 0 : featDis.start;
         const boxheight = !featDis || !featDis.boxheight ? 0 : featDis.boxheight;
         const boxincwidth = !featDis || !featDis.boxincwidth ? 0 : featDis.boxincwidth;
-        const nodePos = epsg4326toEpsg3857(node.geometry.coordinates);
+        const nodePos = proj4("EPSG:4326", "EPSG:3857", node.geometry.coordinates);
         switch (sign) {
             case 0:
-                return epsg3857toEpsg4326([nodePos[0] + start * 2, nodePos[1] + boxheight]);
+                return proj4("EPSG:3857", "EPSG:4326", [nodePos[0] + start * 2, nodePos[1] + boxheight]);
             //                x: node.geometry.x + (featDis.start * 2),
             //                y: node.geometry.y + (featDis.boxheight)
             case 1:
-                return epsg3857toEpsg4326([nodePos[0] + boxheight, nodePos[1] + boxincwidth * numIcons]);
+                return proj4("EPSG:3857", "EPSG:4326", [nodePos[0] + boxheight, nodePos[1] + boxincwidth * numIcons]);
             //                x: node.geometry.x + featDis.boxheight,
             //                y: node.geometry.y + (featDis.boxincwidth * numIcons/1.8)
             case 2:
-                return epsg3857toEpsg4326([nodePos[0] - (start + boxincwidth + numIcons), nodePos[1] + boxheight]);
+                return proj4("EPSG:3857", "EPSG:4326", [nodePos[0] - (start + boxincwidth + numIcons), nodePos[1] + boxheight]);
             //                x: node.geometry.x - (featDis.start + (featDis.boxincwidth * numIcons)),
             //                y: node.geometry.y + (featDis.start + featDis.boxheight)
             case 3:
-                return epsg3857toEpsg4326([nodePos[0] + start + boxincwidth, nodePos[1] - (start + boxheight)]);
+                return proj4("EPSG:3857", "EPSG:4326", [nodePos[0] + start + boxincwidth, nodePos[1] - (start + boxheight)]);
             //                x: node.geometry.x + (featDis.start + featDis.boxincwidth),
             //                y: node.geometry.y - (featDis.start + featDis.boxheight)
             case 4:
-                return epsg3857toEpsg4326([
+                return proj4("EPSG:3857", "EPSG:4326", [
                     nodePos[0] - (start + boxheight * 3),
                     nodePos[1] + (boxincwidth + numIcons * 0.5),
                 ]);
             //                x: node.geometry.x - (featDis.start + (featDis.boxheight * 1.5)),
             //                y: node.geometry.y - (featDis.start + (featDis.boxincwidth * numIcons * 1.5))
             case 5:
-                return epsg3857toEpsg4326([nodePos[0] + (start + boxincwidth), nodePos[1] + start]);
+                return proj4("EPSG:3857", "EPSG:4326", [nodePos[0] + (start + boxincwidth), nodePos[1] + start]);
             //                x: node.geometry.x + (featDis.start + featDis.boxincwidth/2),
             //                y: node.geometry.y + (featDis.start/2)
             case 6:
-                return epsg3857toEpsg4326([nodePos[0] - start, nodePos[1] - start * ((boxincwidth * numIcons) / 2)]);
+                return proj4("EPSG:3857", "EPSG:4326", [nodePos[0] - start, nodePos[1] - start * ((boxincwidth * numIcons) / 2)]);
             //                x: node.geometry.x - (featDis.start),
             //                y: node.geometry.y - (featDis.start * (featDis.boxincwidth * numIcons/2))
             case 7:
-                return epsg3857toEpsg4326([nodePos[0] - start * boxincwidth * numIcons, nodePos[1] + start]);
+                return proj4("EPSG:3857", "EPSG:4326", [nodePos[0] - start * boxincwidth * numIcons, nodePos[1] + start]);
             //                x: node.geometry.x - (featDis.start * (featDis.boxincwidth * numIcons/2)),
             //                y: node.geometry.y - (featDis.start)
             default:
@@ -3539,7 +3541,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
         return [];
     }
     function getFeatDistance() {
-        var label_distance = {
+        const label_distance = {
             start: undefined,
             boxheight: undefined,
             boxincwidth: undefined,
@@ -3656,14 +3658,13 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
     function drawIcons(seg, node, imgs) {
         if (!seg || !node)
             return;
-        let featDis = getFeatDistance();
+        const featDis = getFeatDistance();
         let deg = getCardinalAngle(node.id, seg);
         if (!deg)
             return;
-        let centerPoint;
-        let points = [];
+        const points = [];
         let operatorSign = 0;
-        let numIcons = Object.getOwnPropertyNames(imgs).length;
+        const numIcons = Object.getOwnPropertyNames(imgs).length;
         // Orient all icons straight up if the rotate option isn't enabled
         if (!getId("lt-IconsRotate")?.checked)
             deg = -90;
@@ -3762,7 +3763,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
         // let boxVector = new OpenLayers.Feature.Vector(boxRing, null, boxStyle);
         let turfBoxRing = turf.polygon([points]);
         turfBoxRing = turf.transformRotate(turfBoxRing, -1 * boxRotate);
-        centerPoint = turf.centroid(turfBoxRing);
+        const centerPoint = turf.centroid(turfBoxRing);
         const boxRing = turf.polygon(turfBoxRing.geometry.coordinates, { styleName: "boxStyle", layerName: LTLaneGraphics.name }, { id: `polygon_${points.toString()}` });
         // LTLaneGraphics.addFeatures([boxVector]);
         sdk.Map.addFeatureToLayer({ feature: boxRing, layerName: LTLaneGraphics.name });
