@@ -23,12 +23,12 @@
 /* global W */
 /* global WazeWrap */
 
-// import type { KeyboardShortcut, Node, Segment, Selection, Turn, UserSession, WmeSDK } from "wme-sdk-typings";
-// import type { Position } from "geojson";
-// import _ from "underscore";
-// import * as turf from "@turf/turf";
-// import WazeWrap from "https://greasyfork.org/scripts/24851-wazewrap/code/WazeWrap.js";
-// import proj4 from "proj4";
+import type { KeyboardShortcut, Node, Segment, Selection, Turn, UserSession, WmeSDK } from "wme-sdk-typings";
+import type { Position } from "geojson";
+import _ from "underscore";
+import * as turf from "@turf/turf";
+import WazeWrap from "https://greasyfork.org/scripts/24851-wazewrap/code/WazeWrap.js";
+import proj4 from "proj4";
 
 let sdk: WmeSDK;
 unsafeWindow.SDK_INITIALIZED.then(() => {
@@ -63,6 +63,7 @@ function ltInit() {
         csStreet: string | undefined | null;
     }
     interface SettingsInterface {
+        [key: string]: number | boolean | string;
         lastSaveAction: number;
         ScriptEnabled: boolean;
         UIEnable: boolean;
@@ -137,28 +138,28 @@ function ltInit() {
         direction: Direction;
     }
 
-    // enum LT_ROAD_TYPE {
-    //     // Streets
-    //     NARROW_STREET = 22,
-    //     STREET = 1,
-    //     PRIMARY_STREET = 2,
-    //     // Highways
-    //     RAMP = 4,
-    //     FREEWAY = 3,
-    //     MAJOR_HIGHWAY = 6,
-    //     MINOR_HIGHWAY = 7,
-    //     // Other drivable
-    //     DIRT_ROAD = 8,
-    //     FERRY = 14,
-    //     PRIVATE_ROAD = 17,
-    //     PARKING_LOT_ROAD = 20,
-    //     // Non-drivable
-    //     WALKING_TRAIL = 5,
-    //     PEDESTRIAN_BOARDWALK = 10,
-    //     STAIRWAY = 16,
-    //     RAILROAD = 18,
-    //     RUNWAY = 19,
-    // }
+    enum LT_ROAD_TYPE {
+        // Streets
+        NARROW_STREET = 22,
+        STREET = 1,
+        PRIMARY_STREET = 2,
+        // Highways
+        RAMP = 4,
+        FREEWAY = 3,
+        MAJOR_HIGHWAY = 6,
+        MINOR_HIGHWAY = 7,
+        // Other drivable
+        DIRT_ROAD = 8,
+        FERRY = 14,
+        PRIVATE_ROAD = 17,
+        PARKING_LOT_ROAD = 20,
+        // Non-drivable
+        WALKING_TRAIL = 5,
+        PEDESTRIAN_BOARDWALK = 10,
+        STAIRWAY = 16,
+        RAILROAD = 18,
+        RUNWAY = 19,
+    }
     const MIN_DISPLAY_LEVEL = 14;
     const MIN_ZOOM_NON_FREEWAY = 17;
     // const DisplayLevels = {
@@ -1175,9 +1176,9 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
         });
         $(".lt-color-input").on("change", function () {
             const settingName: string = $(this)[0].id.substring(3);
-            LtSettings[settingName as keyof SettingsInterface] = this.value;
+            LtSettings[settingName] = (this as HTMLInputElement).value;
             saveSettings();
-            $(`#lt-${settingName}`).css("border", `2px solid ${this.value}`);
+            $(`#lt-${settingName}`).css("border", `2px solid ${(this as HTMLInputElement).value}`);
             removeHighlights();
             scanArea();
         });
@@ -1701,9 +1702,10 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
     }
 
     // Pulls the keyboard shortcuts from the script and returns a machine value
-    function getKeyboardShortcut(shortcut: string | null) {
-        if (shortcut !== null) return;
+    function getKeyboardShortcut(shortcut: string | null): string | null {
+        if (shortcut === null) return null;
         const keys = LtSettings[shortcut];
+        if(typeof keys !== "string") return null;
         let val = "";
 
         if (keys.indexOf("+") > -1) {
@@ -1725,7 +1727,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
             if (val.length > 0) {
                 val += "+";
             }
-            let num = keys.split("+")[1];
+            let num = Number.parseInt(keys.split("+")[1]);
             if (num >= 96 && num <= 105) {
                 // Numpad keys
                 num -= 48;
@@ -1767,7 +1769,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
 
     function lanesTabSetup() {
         // hook into edit panel on the left
-        if (getId("edit-panel").getElementsByTagName("wz-tabs").length === 0) {
+        if (getId("edit-panel")?.getElementsByTagName("wz-tabs").length === 0) {
             setTimeout(lanesTabSetup, 8000);
             //console.log('Edit panel not yet loaded.');
             return;
@@ -1788,7 +1790,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
             const selSeg: Segment | null = isSegmentSelected(selection)
                 ? sdk.DataModel.Segments.getById({ segmentId: selection.ids[0] })
                 : null;
-            const nodeB = selSeg && selSeg.toNodeId ? sdk.DataModel.Nodes.getById({ nodeId: selSeg.toNodeId }) : null;
+            const nodeB = selSeg?.toNodeId ? sdk.DataModel.Nodes.getById({ nodeId: selSeg.toNodeId }) : null;
             nodeB && document.getElementById(nodeB?.id.toString());
             // document.getElementById(
             //     W.model.nodes.getObjectById(W.selectionManager.getSegmentSelection().segments[0].attributes.toNodeID)
@@ -1806,7 +1808,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
                 : null;
 
             const nodeA =
-                selSeg && selSeg.fromNodeId ? sdk.DataModel.Nodes.getById({ nodeId: selSeg.fromNodeId }) : null;
+                selSeg?.fromNodeId ? sdk.DataModel.Nodes.getById({ nodeId: selSeg.fromNodeId }) : null;
             nodeA && document.getElementById(nodeA?.id.toString());
             //        W.model.nodes.get(W.selectionManager.getSegmentSelection().segments[0].attributes.fromNodeID).attributes.geometry
             // document.getElementById(
@@ -1823,7 +1825,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
             adjustSpace();
             focusEle();
             applyButtonListeners();
-            if (getId("lt-AddTIO").checked) addTIOUI(laneDir);
+            if (getId("lt-AddTIO")?.checked) addTIOUI(laneDir);
         }
 
         function updateUI(eventInfo = null) {
@@ -2426,7 +2428,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
         }
 
         // Either FREEWAY or Zoom >=4
-        if (curZoomLevel >= MIN_ZOOM_NON_FREEWAY || (isSegment(obj) && obj.roadType === RoadType.FREEWAY)) {
+        if (curZoomLevel >= MIN_ZOOM_NON_FREEWAY || (isSegment(obj) && obj.roadType === LT_ROAD_TYPE.FREEWAY)) {
             // var ext = W.map.getOLExtent();
             var ext = sdk.Map.getMapExtent();
 
@@ -3829,7 +3831,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
     function lt_segment_length(segment: Segment) {
         // let len = segment.geometry.getGeodesicLength(W.map.olMap.projection);
         // let len = olSphere.getLength(segment.geometry);
-        let len = 0;
+        const len = 0;
         //    let len = segment.geometry.getGeodesicLength(W.map.olMap.projection);
         lt_log(`segment: ${segment.id} computed len: ${len} `, 3);
         return len;
@@ -3939,7 +3941,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
         let ja_dx = geoPoint1.x - node.geometry.x;
         let ja_dy = geoPoint1.y - node.geometry.y;
         let angleRad = Math.atan2(ja_dy, ja_dx);
-        let angleDeg = ((angleRad * 180) / Math.PI) % 360;
+        const angleDeg = ((angleRad * 180) / Math.PI) % 360;
 
         for (let i = 0; i < conSegs.length; i++) {
             const seg2 = getSegObj(conSegs[i]);
@@ -4022,17 +4024,26 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
         }
     }
 
-    function getIcons(dir: string | any[]) {
-        const tempEle = {};
+    interface TurnDisplay {
+        uturn: string | boolean;
+        miniuturn: string | boolean;
+        svg: SVGSVGElement[];
+    }
+    function getIcons(dir: string[] | HTMLElement[]) {
+        const tempEle: TurnDisplay[] = [];
         let svgcount = 0;
         for (let i = 0; i < dir.length; i++) {
             //if (dir[i].id !== "") {
-            const temp = {};
-            const uTurnDisplay = $(dir[i]).find(".uturn").css("display");
-            const miniUturnDisplay = $(dir[i]).find(".small-uturn").css("display");
+            const temp: TurnDisplay = {
+                uturn: false,
+                miniuturn: false,
+                svg: []
+            };
+            const uTurnDisplay = $(dir[i] as string).find(".uturn").css("display");
+            const miniUturnDisplay = $(dir[i] as string).find(".small-uturn").css("display");
             temp.uturn = uTurnDisplay && uTurnDisplay !== "none";
             temp.miniuturn = miniUturnDisplay && miniUturnDisplay !== "none";
-            temp.svg = $(dir[i])
+            temp.svg = $(dir[i] as string)
                 .find("svg")
                 .map(function () {
                     return this;
@@ -4523,8 +4534,8 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
         const revImgs = revEle !== false ? convertToBase64(revEle) : false;
 
         if (fwdEle) {
-            if (Object.keys(fwdEle).length === 0) {
-                setTimeout(displayLaneGraphics, 200);
+            if (fwdEle.length === 0) {
+                // setTimeout(displayLaneGraphics, 200);
                 return;
             }
             drawIcons(
@@ -4534,8 +4545,8 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
             );
         }
         if (revEle) {
-            if (Object.keys(revEle).length === 0) {
-                setTimeout(displayLaneGraphics, 200);
+            if (revEle.length === 0) {
+                // setTimeout(displayLaneGraphics, 200);
                 return;
             }
             drawIcons(
