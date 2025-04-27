@@ -1,3 +1,4 @@
+"use strict";
 // ==UserScript==
 // @name         WME LaneTools
 // @namespace    https://github.com/SkiDooGuy/WME-LaneTools
@@ -19,10 +20,14 @@
 // @connect      raw.githubusercontent.com
 // @contributionURL https://github.com/WazeDev/Thank-The-Authors
 // ==/UserScript==
-import _ from "underscore";
-import * as turf from "@turf/turf";
-import WazeWrap from "https://greasyfork.org/scripts/24851-wazewrap/code/WazeWrap.js";
-import proj4 from "proj4";
+/* global W */
+/* global WazeWrap */
+// import type { KeyboardShortcut, Node, Segment, Selection, Turn, UserSession, WmeSDK } from "wme-sdk-typings";
+// import type { Position } from "geojson";
+// import _ from "underscore";
+// import * as turf from "@turf/turf";
+// import WazeWrap from "https://greasyfork.org/scripts/24851-wazewrap/code/WazeWrap.js";
+// import proj4 from "proj4";
 let sdk;
 unsafeWindow.SDK_INITIALIZED.then(() => {
     if (!unsafeWindow.getWmeSdk) {
@@ -241,9 +246,6 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
     let seaPickle;
     function applyNamesStyle(properties) {
         return properties.layerName === LTNamesLayer.name;
-    }
-    function applyHighlightStyle(properties) {
-        return properties.layerName === LTHighlightLayer.name;
     }
     function applyNodeHightlightStyle(properties) {
         return properties.styleName === "nodeStyle" && properties.layerName === LTHighlightLayer.name;
@@ -807,9 +809,11 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
         sdk.Events.on({
             eventName: "wme-save-finished",
             eventHandler: (payload) => {
-                if (payload.success &&
-                    (LtSettings.ltGraphicsVisible || LtSettings.highlightsVisible || LtSettings.ltNamesVisible))
+                if (payload.success) {
                     scanArea();
+                    lanesTabSetup();
+                    displayLaneGraphics();
+                }
             },
         });
         sdk.Map.addLayer({
@@ -1272,7 +1276,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
         // for (const name in W.accelerators.Actions) {
         //     const { shortcut, group } = W.accelerators.Actions[name];
         //     if (group === "wmelt") {
-        for (const shortcut in sdk.Shortcuts.getAllShortcuts()) {
+        for (const shortcut of sdk.Shortcuts.getAllShortcuts()) {
             localSettings[shortcut.shortcutId] = shortcut.shortcutKeys;
         }
         // Required for the instant update of changes to the keyboard shortcuts on the UI
@@ -1547,21 +1551,26 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
             $("#lt-LaneHeurChecksShortcut").text(getKeyboardShortcut("enableHeuristics"));
         }
     }
+    function getLegacySegObj(id) {
+        return W.model.segments.getObjectById(id);
+    }
     function getSegObj(id) {
         if (!id)
             return null;
         return sdk.DataModel.Segments.getById({ segmentId: id });
     }
     function getNodeObj(id) {
-        // return W.model.nodes.getObjectById(id);
         if (id === null)
             return null;
         return sdk.DataModel.Nodes.getById({ nodeId: id });
     }
+    function getLegacyNodeObj(id) {
+        return W.model.nodes.getObjectById(id);
+    }
     function lanesTabSetup() {
         // hook into edit panel on the left
         if (getId("edit-panel")?.getElementsByTagName("wz-tabs").length === 0) {
-            setTimeout(lanesTabSetup, 8000);
+            setTimeout(lanesTabSetup, 500);
             //console.log('Edit panel not yet loaded.');
             return;
         }
@@ -1577,7 +1586,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
             //     .attributes.geometry;
             //        W.model.nodes.get(W.selectionManager.getSegmentSelection().segments[0].attributes.toNodeID).attributes.geometry
             const selSeg = isSegmentSelected(selection)
-                ? sdk.DataModel.Segments.getById({ segmentId: selection.ids[0] })
+                ? sdk.DataModel.Segments.getById({ segmentId: selection?.ids[0] })
                 : null;
             const nodeB = selSeg?.toNodeId ? sdk.DataModel.Nodes.getById({ nodeId: selSeg.toNodeId }) : null;
             nodeB && document.getElementById(nodeB?.id.toString());
@@ -1592,7 +1601,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
             // W.model.nodes.getObjectById(W.selectionManager.getSegmentSelection().segments[0].attributes.fromNodeID)
             //     .attributes.geometry;
             const selSeg = isSegmentSelected(selection)
-                ? sdk.DataModel.Segments.getById({ segmentId: selection.ids[0] })
+                ? sdk.DataModel.Segments.getById({ segmentId: selection?.ids[0] })
                 : null;
             const nodeA = selSeg?.fromNodeId ? sdk.DataModel.Nodes.getById({ nodeId: selSeg.fromNodeId }) : null;
             nodeA && document.getElementById(nodeA?.id.toString());
@@ -1610,13 +1619,12 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
             adjustSpace();
             focusEle();
             applyButtonListeners();
-            if (getId("lt-AddTIO")?.checked)
-                addTIOUI(laneDir);
+            // if (getId("lt-AddTIO")?.checked) addTIOUI(laneDir);
         }
-        function updateUI(eventInfo = null) {
-            if (eventInfo !== null) {
-                eventInfo.stopPropagation();
-            }
+        function updateUI() {
+            // if (eventInfo !== null) {
+            //     eventInfo.stopPropagation();
+            // }
             //        if (getId('lt-ReverseLanesIcon').checked && !isRotated) {
             //            rotateArrows();
             //        }
@@ -1626,10 +1634,14 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
             // Add delete buttons and preselected lane number buttons to UI
             if (_pickleColor && _pickleColor >= 1) {
                 const selSeg = isSegmentSelected(selection)
-                    ? sdk.DataModel.Segments.getById({ segmentId: selection.ids[0] })
+                    ? sdk.DataModel.Segments.getById({ segmentId: selection?.ids[0] })
                     : null;
                 if (getId("li-del-opp-btn"))
                     $("#li-del-opp-btn").remove();
+                if (getId("li-del-fwd-btn"))
+                    $("#li-del-fwd-btn").remove();
+                if (getId("li-del-rev-btn"))
+                    $("#li-del-rev-btn").remove();
                 const $fwdButton = $(`<button type="button" id="li-del-fwd-btn" style="height:20px;background-color:white;border:1px solid grey;border-radius:8px;">${strings.delFwd}</button>`);
                 const $revButton = $(`<button type="button" id="li-del-rev-btn" style="height:20px;background-color:white;border:1px solid grey;border-radius:8px;">${strings.delRev}</button>`);
                 const $oppButton = $(`<button type="button" id="li-del-opp-btn" style="height:auto;background-color:orange;border:1px solid grey;border-radius:8px; margin-bottom:5px;">${strings.delOpp}</button>`);
@@ -1647,14 +1659,12 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
                 delOpp.off();
                 if (!getId("li-del-rev-btn") &&
                     !revDone &&
-                    selSeg &&
-                    selSeg.toNodeLanesCount &&
-                    selSeg.toNodeLanesCount > 0) {
+                    selSeg?.toNodeLanesCount > 0) {
                     if ($(".rev-lanes > div.lane-instruction.lane-instruction-from > div.instruction").length > 0) {
                         $btnCont2.prependTo(".rev-lanes > div.lane-instruction.lane-instruction-from > div.instruction");
                         $(".rev-lanes > div.lane-instruction.lane-instruction-from > div.instruction").css("border-bottom", `4px dashed ${LtSettings.BAColor}`);
                     }
-                    else if (selSeg.isBtoA) {
+                    else if (selSeg.isAtoB) {
                         //jm6087
                         $oppButton.prop("title", "rev");
                         $oppButton.prependTo("#edit-panel > div > div > div > div.segment-edit-section > wz-tabs > wz-tab.lanes-tab");
@@ -1665,14 +1675,12 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
                 }
                 if (!getId("li-del-fwd-btn") &&
                     !fwdDone &&
-                    selSeg &&
-                    selSeg.fromNodeLanesCount &&
-                    selSeg.fromNodeLanesCount > 0) {
+                    selSeg?.fromNodeLanesCount > 0) {
                     if ($(".fwd-lanes > div.lane-instruction.lane-instruction-from > div.instruction").length > 0) {
                         $btnCont1.prependTo(".fwd-lanes > div.lane-instruction.lane-instruction-from > div.instruction");
                         $(".fwd-lanes > div.lane-instruction.lane-instruction-from > div.instruction").css("border-bottom", `4px dashed ${LtSettings.ABColor}`);
                     }
-                    else if (selSeg.isAtoB) {
+                    else if (selSeg.isBtoA) {
                         //jm6087
                         $oppButton.prop("title", "fwd");
                         $oppButton.prependTo("#edit-panel > div > div > div > div.segment-edit-section > wz-tabs > wz-tab.lanes-tab");
@@ -1709,13 +1717,13 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
             }
             waitForElementLoaded(".fwd-lanes > div.lane-instruction.lane-instruction-to > div.instruction > div.lane-edit > .edit-lane-guidance").then((elem) => {
                 $(elem).off();
-                $(elem).on("click", function () {
+                $(elem).on("click", () => {
                     showAddLaneGuidance("fwd");
                 });
             });
             waitForElementLoaded(".rev-lanes > div.lane-instruction.lane-instruction-to > div.instruction > div.lane-edit > .edit-lane-guidance").then((elem) => {
                 $(elem).off();
-                $(elem).on("click", function () {
+                $(elem).on("click", () => {
                     showAddLaneGuidance("rev");
                 });
             });
@@ -1828,7 +1836,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
                 const prependSelector = `${dirLanesClass} > div.lane-instruction.lane-instruction-to > div.instruction > div.edit-region > div`;
                 // let prependSelector = dirLanesClass + "> div > div > div.lane-instruction.lane-instruction-to > div.instruction > div.edit-region > div.controls.direction-lanes-edit > div.form-group > div.controls-container";
                 waitForElementLoaded(prependSelector).then((elm) => {
-                    let prependElement = $(prependSelector);
+                    const prependElement = $(prependSelector);
                     prependElement.prepend(addLanesItem);
                     setupLaneCountControls(lanes, classNamesList);
                     $(".lt-add-lanes").on("click", function () {
@@ -1952,7 +1960,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
                     boxDirection = $(".street-name", boxDirection);
                     for (let p = 0; p < boxDirection.length; p++) {
                         $(boxDirection[p]).off();
-                        $(boxDirection[p]).click(function () {
+                        $(boxDirection[p]).on("click", function () {
                             const secParent = $(this).get(0);
                             const contParent = secParent.parentElement;
                             const chkBxs = $(".checkbox-large.checkbox-white", contParent);
@@ -2035,7 +2043,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
             if ($(".tabs-labels > div:nth-child(3)", $(".segment-edit-section > wz-tabs")[0].shadowRoot).length > 0) {
                 fwdDone = false;
                 revDone = false;
-                $(".tabs-labels > div:nth-child(3)", $(".segment-edit-section > wz-tabs")[0].shadowRoot).on("click", function () {
+                $(".tabs-labels > div:nth-child(3)", $(".segment-edit-section > wz-tabs")[0].shadowRoot).on("click", () => {
                     fwdDone = false;
                     revDone = false;
                     updateUI();
@@ -2165,63 +2173,41 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
         //    return segment.geometry.components[segment.geometry.components.length - 2];
     }
     function delLanes(dir) {
-        const selObjs = sdk.Editing.getSelection();
-        if (!isSegmentSelected(selObjs)) {
-            lt_log("Object selected for Delete Lanes is not a Segment", 1);
-            return;
-        }
-        if (selObjs?.ids && selObjs?.ids.length > 1) {
-            lt_log("Multiple Objects selected cannot perform Lane Deletion", 1);
-            return;
-        }
-        const selSeg = sdk.DataModel.Segments.getById({ segmentId: selObjs?.ids[0] });
-        if (!selSeg) {
-            lt_log(`No Segment with ID: ${selObjs?.ids[0]}`, 1);
-        }
-        const mAction = new MultiAction();
-        let conSegs;
-        const updates = {};
-        //    mAction.setModel(W.model);
-        if (dir === "fwd") {
-            updates.fwdLaneCount = 0;
-            var node = getNodeObj(selSeg?.toNodeId);
-            if (!node) {
-                throw new Error(`Unable to Get Node: ${selSeg?.toNodeId}`);
-            }
-            conSegs = node.connectedSegmentIds;
-            const fwdLanes = $(".fwd-lanes");
-            fwdLanes.find(".form-control").val(0);
-            fwdLanes.find(".form-control").trigger("change");
-        }
-        if (dir === "rev") {
-            updates.revLaneCount = 0;
-            const node = getNodeObj(selSeg?.fromNodeId);
-            if (!node) {
-                throw new Error(`Unable to Get Node: ${selSeg?.toNodeId}`);
-            }
-            conSegs = node.connectedSegmentIds;
-            const revLanes = $(".rev-lanes");
-            revLanes.find(".form-control").val(0);
-            revLanes.find(".form-control").trigger("change");
-        }
-        if (!conSegs)
-            return;
-        mAction.doSubAction(W.model, new UpdateObj(selSeg, updates));
+        const selObjs = W.selectionManager.getSelectedWMEFeatures();
+        const selSeg = selObjs[0]._wmeObject;
         const turnGraph = W.model.getTurnGraph();
+        const mAction = new MultiAction();
+        let node;
+        let conSegs;
+        let updates = {};
+        //    mAction.setModel(W.model);
+        if (dir === 'fwd') {
+            updates.fwdLaneCount = 0;
+            node = getLegacyNodeObj(selSeg.attributes.toNodeID);
+            conSegs = node.getSegmentIds();
+            // const fwdLanes = $('.fwd-lanes');
+            // fwdLanes.find('.form-control').val(0);
+            // fwdLanes.find('.form-control').trigger("change");
+        }
+        if (dir === 'rev') {
+            updates.revLaneCount = 0;
+            node = getLegacyNodeObj(selSeg.attributes.fromNodeID);
+            conSegs = node.getSegmentIds();
+            // const revLanes = $('.rev-lanes');
+            // revLanes.find('.form-control').val(0);
+            // revLanes.find('.form-control').trigger("change");
+        }
+        mAction.doSubAction(W.model, new UpdateObj(selSeg, updates));
         for (let i = 0; i < conSegs.length; i++) {
-            const turns = sdk.DataModel.Turns.getTurnsThroughNode({ nodeId: node.id });
-            for (let idx = 0; idx < turns.length; ++idx) {
-                if (turns[idx].fromSegmentId !== selSeg.id || turns[idx].toSegmentId !== conSegs[i])
-                    continue;
-                let turnData = turnStatus.getTurnData();
-                if (turnData.hasLanes()) {
-                    turnData = turnData.withLanes();
-                    turnStatus = turnStatus.withTurnData(turnData);
-                    mAction.doSubAction(W.model, new SetTurn(turnGraph, turnStatus));
-                }
+            let turnStatus = turnGraph.getTurnThroughNode(node, selSeg, getLegacySegObj(conSegs[i]));
+            let turnData = turnStatus.getTurnData();
+            if (turnData.hasLanes()) {
+                turnData = turnData.withLanes();
+                turnStatus = turnStatus.withTurnData(turnData);
+                mAction.doSubAction(W.model, new SetTurn(turnGraph, turnStatus));
             }
         }
-        mAction._description = "Deleted lanes and turn associations";
+        mAction._description = 'Deleted lanes and turn associations';
         W.model.actionManager.add(mAction);
     }
     function removeHighlights() {
