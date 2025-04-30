@@ -367,7 +367,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
 
     const styleConfig = {
         styleContext: {
-            nameStyleLabelColor: (context: any) => {
+            nameStyleLabelColor: (context) => {
                 return LtSettings.LabelColor;
             },
             nameStyleLaneNum: (context: { feature: { properties: { style: { laneNumLabel: string; }; }; }; }) => {
@@ -1744,10 +1744,10 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
     // Updates the UI tab with the shortcut values
     function updateShortcutLabels() {
         if (!shortcutsDisabled) {
-            $("#lt-EnableShortcut").text(getKeyboardShortcut("enableScript"));
-            $("#lt-HighlightShortcut").text(getKeyboardShortcut("enableHighlights"));
-            $("#lt-UIEnhanceShortcut").text(getKeyboardShortcut("enableUIEnhancements"));
-            $("#lt-LaneHeurChecksShortcut").text(getKeyboardShortcut("enableHeuristics"));
+            $("#lt-EnableShortcut").text(getKeyboardShortcut("enableScript") || "");
+            $("#lt-HighlightShortcut").text(getKeyboardShortcut("enableHighlights") || "");
+            $("#lt-UIEnhanceShortcut").text(getKeyboardShortcut("enableUIEnhancements") || "");
+            $("#lt-LaneHeurChecksShortcut").text(getKeyboardShortcut("enableHeuristics") || "");
         }
     }
 
@@ -1789,7 +1789,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
             //     .attributes.geometry;
             //        W.model.nodes.get(W.selectionManager.getSegmentSelection().segments[0].attributes.toNodeID).attributes.geometry
             const selSeg: Segment | null = isSegmentSelected(selection)
-                ? sdk.DataModel.Segments.getById({ segmentId: selection?.ids[0] })
+                ? sdk.DataModel.Segments.getById({ segmentId: (selection?.ids[0] as number) })
                 : null;
             const nodeB = selSeg?.toNodeId ? sdk.DataModel.Nodes.getById({ nodeId: selSeg.toNodeId }) : null;
             nodeB && document.getElementById(nodeB?.id.toString());
@@ -1805,7 +1805,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
             // W.model.nodes.getObjectById(W.selectionManager.getSegmentSelection().segments[0].attributes.fromNodeID)
             //     .attributes.geometry;
             const selSeg: Segment | null = isSegmentSelected(selection)
-                ? sdk.DataModel.Segments.getById({ segmentId: selection?.ids[0] })
+                ? sdk.DataModel.Segments.getById({ segmentId: (selection?.ids[0] as number) })
                 : null;
 
             const nodeA =
@@ -1820,7 +1820,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
             console.log("hovering to A");
         }
 
-        function showAddLaneGuidance(laneDir: string) {
+        function showAddLaneGuidance(laneDir: LaneDirection) {
             insertSelAll(laneDir);
             addLnsBtns(laneDir);
             adjustSpace();
@@ -1877,7 +1877,8 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
                 if (
                     !getId("li-del-rev-btn") &&
                     !revDone &&
-                    selSeg?.toNodeLanesCount > 0
+                    selSeg?.toNodeLanesCount &&
+                    selSeg.toNodeLanesCount > 0
                 ) {
                     if ($(".rev-lanes > div.lane-instruction.lane-instruction-from > div.instruction").length > 0) {
                         $btnCont2.prependTo(
@@ -1904,7 +1905,8 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
                 if (
                     !getId("li-del-fwd-btn") &&
                     !fwdDone &&
-                    selSeg?.fromNodeLanesCount > 0
+                    selSeg?.fromNodeLanesCount &&
+                    selSeg.fromNodeLanesCount > 0
                 ) {
                     if ($(".fwd-lanes > div.lane-instruction.lane-instruction-from > div.instruction").length > 0) {
                         $btnCont1.prependTo(
@@ -2069,7 +2071,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
             }
             return itemsList;
         }
-        function setupLaneCountControls(parentSelector: JQuery<HTMLElement>, classNamesList: any[]) {
+        function setupLaneCountControls(parentSelector: JQuery<HTMLElement>, classNamesList: string[]) {
             const jqueryClassSelector = `.${classNamesList.join(".")}`;
             $(jqueryClassSelector).on("click", function () {
                 $(jqueryClassSelector).css({ "background-color": "transparent", color: "black" });
@@ -2116,9 +2118,9 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
                             );
                             nativeInputValueSetter.call(inputForm, numAdd);
                             const inputEvent = new Event("input", { bubbles: true });
-                            inputForm.dispatchEvent(inputEvent);
+                            inputForm?.dispatchEvent(inputEvent);
                             const changeEvent = new Event("change", { bubbles: true });
-                            inputForm.dispatchEvent(changeEvent);
+                            inputForm?.dispatchEvent(changeEvent);
                         }
                     });
                 });
@@ -2212,7 +2214,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
             }
         }
 
-        function insertSelAll(dir: string) {
+        function insertSelAll(dir: LaneDirection) {
             const setAllEnable: HTMLInputElement | null = getId("lt-SelAllEnable");
             if (setAllEnable?.checked) {
                 $(".street-name").css("user-select", "none");

@@ -1545,10 +1545,10 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
     // Updates the UI tab with the shortcut values
     function updateShortcutLabels() {
         if (!shortcutsDisabled) {
-            $("#lt-EnableShortcut").text(getKeyboardShortcut("enableScript"));
-            $("#lt-HighlightShortcut").text(getKeyboardShortcut("enableHighlights"));
-            $("#lt-UIEnhanceShortcut").text(getKeyboardShortcut("enableUIEnhancements"));
-            $("#lt-LaneHeurChecksShortcut").text(getKeyboardShortcut("enableHeuristics"));
+            $("#lt-EnableShortcut").text(getKeyboardShortcut("enableScript") || "");
+            $("#lt-HighlightShortcut").text(getKeyboardShortcut("enableHighlights") || "");
+            $("#lt-UIEnhanceShortcut").text(getKeyboardShortcut("enableUIEnhancements") || "");
+            $("#lt-LaneHeurChecksShortcut").text(getKeyboardShortcut("enableHeuristics") || "");
         }
     }
     function getLegacySegObj(id) {
@@ -1659,7 +1659,8 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
                 delOpp.off();
                 if (!getId("li-del-rev-btn") &&
                     !revDone &&
-                    selSeg?.toNodeLanesCount > 0) {
+                    selSeg?.toNodeLanesCount &&
+                    selSeg.toNodeLanesCount > 0) {
                     if ($(".rev-lanes > div.lane-instruction.lane-instruction-from > div.instruction").length > 0) {
                         $btnCont2.prependTo(".rev-lanes > div.lane-instruction.lane-instruction-from > div.instruction");
                         $(".rev-lanes > div.lane-instruction.lane-instruction-from > div.instruction").css("border-bottom", `4px dashed ${LtSettings.BAColor}`);
@@ -1675,7 +1676,8 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
                 }
                 if (!getId("li-del-fwd-btn") &&
                     !fwdDone &&
-                    selSeg?.fromNodeLanesCount > 0) {
+                    selSeg?.fromNodeLanesCount &&
+                    selSeg.fromNodeLanesCount > 0) {
                     if ($(".fwd-lanes > div.lane-instruction.lane-instruction-from > div.instruction").length > 0) {
                         $btnCont1.prependTo(".fwd-lanes > div.lane-instruction.lane-instruction-from > div.instruction");
                         $(".fwd-lanes > div.lane-instruction.lane-instruction-from > div.instruction").css("border-bottom", `4px dashed ${LtSettings.ABColor}`);
@@ -1850,9 +1852,9 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
                             const inputForm = document.querySelector(`wz-card${dirLanesClass} input[name=laneCount]`);
                             nativeInputValueSetter.call(inputForm, numAdd);
                             const inputEvent = new Event("input", { bubbles: true });
-                            inputForm.dispatchEvent(inputEvent);
+                            inputForm?.dispatchEvent(inputEvent);
                             const changeEvent = new Event("change", { bubbles: true });
-                            inputForm.dispatchEvent(changeEvent);
+                            inputForm?.dispatchEvent(changeEvent);
                         }
                     });
                 });
