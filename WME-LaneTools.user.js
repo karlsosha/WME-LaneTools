@@ -47,28 +47,29 @@ function ltInit() {
         Direction[Direction["ANY"] = 0] = "ANY";
         Direction[Direction["FORWARD"] = 1] = "FORWARD";
     })(Direction || (Direction = {}));
-    // enum LT_ROAD_TYPE {
-    //     // Streets
-    //     NARROW_STREET = 22,
-    //     STREET = 1,
-    //     PRIMARY_STREET = 2,
-    //     // Highways
-    //     RAMP = 4,
-    //     FREEWAY = 3,
-    //     MAJOR_HIGHWAY = 6,
-    //     MINOR_HIGHWAY = 7,
-    //     // Other drivable
-    //     DIRT_ROAD = 8,
-    //     FERRY = 14,
-    //     PRIVATE_ROAD = 17,
-    //     PARKING_LOT_ROAD = 20,
-    //     // Non-drivable
-    //     WALKING_TRAIL = 5,
-    //     PEDESTRIAN_BOARDWALK = 10,
-    //     STAIRWAY = 16,
-    //     RAILROAD = 18,
-    //     RUNWAY = 19,
-    // }
+    let LT_ROAD_TYPE;
+    (function (LT_ROAD_TYPE) {
+        // Streets
+        LT_ROAD_TYPE[LT_ROAD_TYPE["NARROW_STREET"] = 22] = "NARROW_STREET";
+        LT_ROAD_TYPE[LT_ROAD_TYPE["STREET"] = 1] = "STREET";
+        LT_ROAD_TYPE[LT_ROAD_TYPE["PRIMARY_STREET"] = 2] = "PRIMARY_STREET";
+        // Highways
+        LT_ROAD_TYPE[LT_ROAD_TYPE["RAMP"] = 4] = "RAMP";
+        LT_ROAD_TYPE[LT_ROAD_TYPE["FREEWAY"] = 3] = "FREEWAY";
+        LT_ROAD_TYPE[LT_ROAD_TYPE["MAJOR_HIGHWAY"] = 6] = "MAJOR_HIGHWAY";
+        LT_ROAD_TYPE[LT_ROAD_TYPE["MINOR_HIGHWAY"] = 7] = "MINOR_HIGHWAY";
+        // Other drivable
+        LT_ROAD_TYPE[LT_ROAD_TYPE["DIRT_ROAD"] = 8] = "DIRT_ROAD";
+        LT_ROAD_TYPE[LT_ROAD_TYPE["FERRY"] = 14] = "FERRY";
+        LT_ROAD_TYPE[LT_ROAD_TYPE["PRIVATE_ROAD"] = 17] = "PRIVATE_ROAD";
+        LT_ROAD_TYPE[LT_ROAD_TYPE["PARKING_LOT_ROAD"] = 20] = "PARKING_LOT_ROAD";
+        // Non-drivable
+        LT_ROAD_TYPE[LT_ROAD_TYPE["WALKING_TRAIL"] = 5] = "WALKING_TRAIL";
+        LT_ROAD_TYPE[LT_ROAD_TYPE["PEDESTRIAN_BOARDWALK"] = 10] = "PEDESTRIAN_BOARDWALK";
+        LT_ROAD_TYPE[LT_ROAD_TYPE["STAIRWAY"] = 16] = "STAIRWAY";
+        LT_ROAD_TYPE[LT_ROAD_TYPE["RAILROAD"] = 18] = "RAILROAD";
+        LT_ROAD_TYPE[LT_ROAD_TYPE["RUNWAY"] = 19] = "RUNWAY";
+    })(LT_ROAD_TYPE || (LT_ROAD_TYPE = {}));
     const MIN_DISPLAY_LEVEL = 14;
     const MIN_ZOOM_NON_FREEWAY = 17;
     // const DisplayLevels = {
@@ -245,9 +246,6 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
     let seaPickle;
     function applyNamesStyle(properties) {
         return properties.layerName === LTNamesLayer.name;
-    }
-    function applyHighlightStyle(properties) {
-        return properties.layerName === LTHighlightLayer.name;
     }
     function applyNodeHightlightStyle(properties) {
         return properties.styleName === "nodeStyle" && properties.layerName === LTHighlightLayer.name;
@@ -811,9 +809,11 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
         sdk.Events.on({
             eventName: "wme-save-finished",
             eventHandler: (payload) => {
-                if (payload.success &&
-                    (LtSettings.ltGraphicsVisible || LtSettings.highlightsVisible || LtSettings.ltNamesVisible))
+                if (payload.success) {
                     scanArea();
+                    lanesTabSetup();
+                    displayLaneGraphics();
+                }
             },
         });
         sdk.Map.addLayer({
@@ -1276,7 +1276,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
         // for (const name in W.accelerators.Actions) {
         //     const { shortcut, group } = W.accelerators.Actions[name];
         //     if (group === "wmelt") {
-        for (const shortcut in sdk.Shortcuts.getAllShortcuts()) {
+        for (const shortcut of sdk.Shortcuts.getAllShortcuts()) {
             localSettings[shortcut.shortcutId] = shortcut.shortcutKeys;
         }
         // Required for the instant update of changes to the keyboard shortcuts on the UI
@@ -1498,9 +1498,11 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
     }
     // Pulls the keyboard shortcuts from the script and returns a machine value
     function getKeyboardShortcut(shortcut) {
-        if (shortcut !== null)
-            return;
+        if (shortcut === null)
+            return null;
         const keys = LtSettings[shortcut];
+        if (typeof keys !== "string")
+            return null;
         let val = "";
         if (keys.indexOf("+") > -1) {
             const specialKeys = keys.split("+")[0];
@@ -1521,7 +1523,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
             if (val.length > 0) {
                 val += "+";
             }
-            let num = keys.split("+")[1];
+            let num = Number.parseInt(keys.split("+")[1]);
             if (num >= 96 && num <= 105) {
                 // Numpad keys
                 num -= 48;
@@ -1543,11 +1545,14 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
     // Updates the UI tab with the shortcut values
     function updateShortcutLabels() {
         if (!shortcutsDisabled) {
-            $("#lt-EnableShortcut").text(getKeyboardShortcut("enableScript"));
-            $("#lt-HighlightShortcut").text(getKeyboardShortcut("enableHighlights"));
-            $("#lt-UIEnhanceShortcut").text(getKeyboardShortcut("enableUIEnhancements"));
-            $("#lt-LaneHeurChecksShortcut").text(getKeyboardShortcut("enableHeuristics"));
+            $("#lt-EnableShortcut").text(getKeyboardShortcut("enableScript") || "");
+            $("#lt-HighlightShortcut").text(getKeyboardShortcut("enableHighlights") || "");
+            $("#lt-UIEnhanceShortcut").text(getKeyboardShortcut("enableUIEnhancements") || "");
+            $("#lt-LaneHeurChecksShortcut").text(getKeyboardShortcut("enableHeuristics") || "");
         }
+    }
+    function getLegacySegObj(id) {
+        return W.model.segments.getObjectById(id);
     }
     function getSegObj(id) {
         if (!id)
@@ -1555,15 +1560,17 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
         return sdk.DataModel.Segments.getById({ segmentId: id });
     }
     function getNodeObj(id) {
-        // return W.model.nodes.getObjectById(id);
         if (id === null)
             return null;
         return sdk.DataModel.Nodes.getById({ nodeId: id });
     }
+    function getLegacyNodeObj(id) {
+        return W.model.nodes.getObjectById(id);
+    }
     function lanesTabSetup() {
         // hook into edit panel on the left
-        if (getId("edit-panel").getElementsByTagName("wz-tabs").length === 0) {
-            setTimeout(lanesTabSetup, 8000);
+        if (getId("edit-panel")?.getElementsByTagName("wz-tabs").length === 0) {
+            setTimeout(lanesTabSetup, 500);
             //console.log('Edit panel not yet loaded.');
             return;
         }
@@ -1579,9 +1586,9 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
             //     .attributes.geometry;
             //        W.model.nodes.get(W.selectionManager.getSegmentSelection().segments[0].attributes.toNodeID).attributes.geometry
             const selSeg = isSegmentSelected(selection)
-                ? sdk.DataModel.Segments.getById({ segmentId: selection.ids[0] })
+                ? sdk.DataModel.Segments.getById({ segmentId: selection?.ids[0] })
                 : null;
-            const nodeB = selSeg && selSeg.toNodeId ? sdk.DataModel.Nodes.getById({ nodeId: selSeg.toNodeId }) : null;
+            const nodeB = selSeg?.toNodeId ? sdk.DataModel.Nodes.getById({ nodeId: selSeg.toNodeId }) : null;
             nodeB && document.getElementById(nodeB?.id.toString());
             // document.getElementById(
             //     W.model.nodes.getObjectById(W.selectionManager.getSegmentSelection().segments[0].attributes.toNodeID)
@@ -1594,9 +1601,9 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
             // W.model.nodes.getObjectById(W.selectionManager.getSegmentSelection().segments[0].attributes.fromNodeID)
             //     .attributes.geometry;
             const selSeg = isSegmentSelected(selection)
-                ? sdk.DataModel.Segments.getById({ segmentId: selection.ids[0] })
+                ? sdk.DataModel.Segments.getById({ segmentId: selection?.ids[0] })
                 : null;
-            const nodeA = selSeg && selSeg.fromNodeId ? sdk.DataModel.Nodes.getById({ nodeId: selSeg.fromNodeId }) : null;
+            const nodeA = selSeg?.fromNodeId ? sdk.DataModel.Nodes.getById({ nodeId: selSeg.fromNodeId }) : null;
             nodeA && document.getElementById(nodeA?.id.toString());
             //        W.model.nodes.get(W.selectionManager.getSegmentSelection().segments[0].attributes.fromNodeID).attributes.geometry
             // document.getElementById(
@@ -1612,13 +1619,12 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
             adjustSpace();
             focusEle();
             applyButtonListeners();
-            if (getId("lt-AddTIO").checked)
-                addTIOUI(laneDir);
+            // if (getId("lt-AddTIO")?.checked) addTIOUI(laneDir);
         }
-        function updateUI(eventInfo = null) {
-            if (eventInfo !== null) {
-                eventInfo.stopPropagation();
-            }
+        function updateUI() {
+            // if (eventInfo !== null) {
+            //     eventInfo.stopPropagation();
+            // }
             //        if (getId('lt-ReverseLanesIcon').checked && !isRotated) {
             //            rotateArrows();
             //        }
@@ -1628,10 +1634,14 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
             // Add delete buttons and preselected lane number buttons to UI
             if (_pickleColor && _pickleColor >= 1) {
                 const selSeg = isSegmentSelected(selection)
-                    ? sdk.DataModel.Segments.getById({ segmentId: selection.ids[0] })
+                    ? sdk.DataModel.Segments.getById({ segmentId: selection?.ids[0] })
                     : null;
                 if (getId("li-del-opp-btn"))
                     $("#li-del-opp-btn").remove();
+                if (getId("li-del-fwd-btn"))
+                    $("#li-del-fwd-btn").remove();
+                if (getId("li-del-rev-btn"))
+                    $("#li-del-rev-btn").remove();
                 const $fwdButton = $(`<button type="button" id="li-del-fwd-btn" style="height:20px;background-color:white;border:1px solid grey;border-radius:8px;">${strings.delFwd}</button>`);
                 const $revButton = $(`<button type="button" id="li-del-rev-btn" style="height:20px;background-color:white;border:1px solid grey;border-radius:8px;">${strings.delRev}</button>`);
                 const $oppButton = $(`<button type="button" id="li-del-opp-btn" style="height:auto;background-color:orange;border:1px solid grey;border-radius:8px; margin-bottom:5px;">${strings.delOpp}</button>`);
@@ -1649,14 +1659,13 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
                 delOpp.off();
                 if (!getId("li-del-rev-btn") &&
                     !revDone &&
-                    selSeg &&
-                    selSeg.toNodeLanesCount &&
+                    selSeg?.toNodeLanesCount &&
                     selSeg.toNodeLanesCount > 0) {
                     if ($(".rev-lanes > div.lane-instruction.lane-instruction-from > div.instruction").length > 0) {
                         $btnCont2.prependTo(".rev-lanes > div.lane-instruction.lane-instruction-from > div.instruction");
                         $(".rev-lanes > div.lane-instruction.lane-instruction-from > div.instruction").css("border-bottom", `4px dashed ${LtSettings.BAColor}`);
                     }
-                    else if (selSeg.isBtoA) {
+                    else if (selSeg.isAtoB) {
                         //jm6087
                         $oppButton.prop("title", "rev");
                         $oppButton.prependTo("#edit-panel > div > div > div > div.segment-edit-section > wz-tabs > wz-tab.lanes-tab");
@@ -1667,14 +1676,13 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
                 }
                 if (!getId("li-del-fwd-btn") &&
                     !fwdDone &&
-                    selSeg &&
-                    selSeg.fromNodeLanesCount &&
+                    selSeg?.fromNodeLanesCount &&
                     selSeg.fromNodeLanesCount > 0) {
                     if ($(".fwd-lanes > div.lane-instruction.lane-instruction-from > div.instruction").length > 0) {
                         $btnCont1.prependTo(".fwd-lanes > div.lane-instruction.lane-instruction-from > div.instruction");
                         $(".fwd-lanes > div.lane-instruction.lane-instruction-from > div.instruction").css("border-bottom", `4px dashed ${LtSettings.ABColor}`);
                     }
-                    else if (selSeg.isAtoB) {
+                    else if (selSeg.isBtoA) {
                         //jm6087
                         $oppButton.prop("title", "fwd");
                         $oppButton.prependTo("#edit-panel > div > div > div > div.segment-edit-section > wz-tabs > wz-tab.lanes-tab");
@@ -1711,13 +1719,13 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
             }
             waitForElementLoaded(".fwd-lanes > div.lane-instruction.lane-instruction-to > div.instruction > div.lane-edit > .edit-lane-guidance").then((elem) => {
                 $(elem).off();
-                $(elem).on("click", function () {
+                $(elem).on("click", () => {
                     showAddLaneGuidance("fwd");
                 });
             });
             waitForElementLoaded(".rev-lanes > div.lane-instruction.lane-instruction-to > div.instruction > div.lane-edit > .edit-lane-guidance").then((elem) => {
                 $(elem).off();
-                $(elem).on("click", function () {
+                $(elem).on("click", () => {
                     showAddLaneGuidance("rev");
                 });
             });
@@ -1830,7 +1838,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
                 const prependSelector = `${dirLanesClass} > div.lane-instruction.lane-instruction-to > div.instruction > div.edit-region > div`;
                 // let prependSelector = dirLanesClass + "> div > div > div.lane-instruction.lane-instruction-to > div.instruction > div.edit-region > div.controls.direction-lanes-edit > div.form-group > div.controls-container";
                 waitForElementLoaded(prependSelector).then((elm) => {
-                    let prependElement = $(prependSelector);
+                    const prependElement = $(prependSelector);
                     prependElement.prepend(addLanesItem);
                     setupLaneCountControls(lanes, classNamesList);
                     $(".lt-add-lanes").on("click", function () {
@@ -1844,9 +1852,9 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
                             const inputForm = document.querySelector(`wz-card${dirLanesClass} input[name=laneCount]`);
                             nativeInputValueSetter.call(inputForm, numAdd);
                             const inputEvent = new Event("input", { bubbles: true });
-                            inputForm.dispatchEvent(inputEvent);
+                            inputForm?.dispatchEvent(inputEvent);
                             const changeEvent = new Event("change", { bubbles: true });
-                            inputForm.dispatchEvent(changeEvent);
+                            inputForm?.dispatchEvent(changeEvent);
                         }
                     });
                 });
@@ -1954,7 +1962,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
                     boxDirection = $(".street-name", boxDirection);
                     for (let p = 0; p < boxDirection.length; p++) {
                         $(boxDirection[p]).off();
-                        $(boxDirection[p]).click(function () {
+                        $(boxDirection[p]).on("click", function () {
                             const secParent = $(this).get(0);
                             const contParent = secParent.parentElement;
                             const chkBxs = $(".checkbox-large.checkbox-white", contParent);
@@ -2037,7 +2045,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
             if ($(".tabs-labels > div:nth-child(3)", $(".segment-edit-section > wz-tabs")[0].shadowRoot).length > 0) {
                 fwdDone = false;
                 revDone = false;
-                $(".tabs-labels > div:nth-child(3)", $(".segment-edit-section > wz-tabs")[0].shadowRoot).on("click", function () {
+                $(".tabs-labels > div:nth-child(3)", $(".segment-edit-section > wz-tabs")[0].shadowRoot).on("click", () => {
                     fwdDone = false;
                     revDone = false;
                     updateUI();
@@ -2109,7 +2117,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
             return false;
         }
         // Either FREEWAY or Zoom >=4
-        if (curZoomLevel >= MIN_ZOOM_NON_FREEWAY || (isSegment(obj) && obj.roadType === RoadType.FREEWAY)) {
+        if (curZoomLevel >= MIN_ZOOM_NON_FREEWAY || (isSegment(obj) && obj.roadType === LT_ROAD_TYPE.FREEWAY)) {
             // var ext = W.map.getOLExtent();
             var ext = sdk.Map.getMapExtent();
             return true;
@@ -2167,63 +2175,41 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
         //    return segment.geometry.components[segment.geometry.components.length - 2];
     }
     function delLanes(dir) {
-        const selObjs = sdk.Editing.getSelection();
-        if (!isSegmentSelected(selObjs)) {
-            lt_log("Object selected for Delete Lanes is not a Segment", 1);
-            return;
-        }
-        if (selObjs?.ids && selObjs?.ids.length > 1) {
-            lt_log("Multiple Objects selected cannot perform Lane Deletion", 1);
-            return;
-        }
-        const selSeg = sdk.DataModel.Segments.getById({ segmentId: selObjs?.ids[0] });
-        if (!selSeg) {
-            lt_log(`No Segment with ID: ${selObjs?.ids[0]}`, 1);
-        }
-        const mAction = new MultiAction();
-        let conSegs;
-        const updates = {};
-        //    mAction.setModel(W.model);
-        if (dir === "fwd") {
-            updates.fwdLaneCount = 0;
-            var node = getNodeObj(selSeg?.toNodeId);
-            if (!node) {
-                throw new Error(`Unable to Get Node: ${selSeg?.toNodeId}`);
-            }
-            conSegs = node.connectedSegmentIds;
-            const fwdLanes = $(".fwd-lanes");
-            fwdLanes.find(".form-control").val(0);
-            fwdLanes.find(".form-control").trigger("change");
-        }
-        if (dir === "rev") {
-            updates.revLaneCount = 0;
-            const node = getNodeObj(selSeg?.fromNodeId);
-            if (!node) {
-                throw new Error(`Unable to Get Node: ${selSeg?.toNodeId}`);
-            }
-            conSegs = node.connectedSegmentIds;
-            const revLanes = $(".rev-lanes");
-            revLanes.find(".form-control").val(0);
-            revLanes.find(".form-control").trigger("change");
-        }
-        if (!conSegs)
-            return;
-        mAction.doSubAction(W.model, new UpdateObj(selSeg, updates));
+        const selObjs = W.selectionManager.getSelectedWMEFeatures();
+        const selSeg = selObjs[0]._wmeObject;
         const turnGraph = W.model.getTurnGraph();
+        const mAction = new MultiAction();
+        let node;
+        let conSegs;
+        let updates = {};
+        //    mAction.setModel(W.model);
+        if (dir === 'fwd') {
+            updates.fwdLaneCount = 0;
+            node = getLegacyNodeObj(selSeg.attributes.toNodeID);
+            conSegs = node.getSegmentIds();
+            // const fwdLanes = $('.fwd-lanes');
+            // fwdLanes.find('.form-control').val(0);
+            // fwdLanes.find('.form-control').trigger("change");
+        }
+        if (dir === 'rev') {
+            updates.revLaneCount = 0;
+            node = getLegacyNodeObj(selSeg.attributes.fromNodeID);
+            conSegs = node.getSegmentIds();
+            // const revLanes = $('.rev-lanes');
+            // revLanes.find('.form-control').val(0);
+            // revLanes.find('.form-control').trigger("change");
+        }
+        mAction.doSubAction(W.model, new UpdateObj(selSeg, updates));
         for (let i = 0; i < conSegs.length; i++) {
-            const turns = sdk.DataModel.Turns.getTurnsThroughNode({ nodeId: node.id });
-            for (let idx = 0; idx < turns.length; ++idx) {
-                if (turns[idx].fromSegmentId !== selSeg.id || turns[idx].toSegmentId !== conSegs[i])
-                    continue;
-                let turnData = turnStatus.getTurnData();
-                if (turnData.hasLanes()) {
-                    turnData = turnData.withLanes();
-                    turnStatus = turnStatus.withTurnData(turnData);
-                    mAction.doSubAction(W.model, new SetTurn(turnGraph, turnStatus));
-                }
+            let turnStatus = turnGraph.getTurnThroughNode(node, selSeg, getLegacySegObj(conSegs[i]));
+            let turnData = turnStatus.getTurnData();
+            if (turnData.hasLanes()) {
+                turnData = turnData.withLanes();
+                turnStatus = turnStatus.withTurnData(turnData);
+                mAction.doSubAction(W.model, new SetTurn(turnGraph, turnStatus));
             }
         }
-        mAction._description = "Deleted lanes and turn associations";
+        mAction._description = 'Deleted lanes and turn associations';
         W.model.actionManager.add(mAction);
     }
     function removeHighlights() {
@@ -3289,7 +3275,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
     function lt_segment_length(segment) {
         // let len = segment.geometry.getGeodesicLength(W.map.olMap.projection);
         // let len = olSphere.getLength(segment.geometry);
-        let len = 0;
+        const len = 0;
         //    let len = segment.geometry.getGeodesicLength(W.map.olMap.projection);
         lt_log(`segment: ${segment.id} computed len: ${len} `, 3);
         return len;
@@ -3388,7 +3374,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
         let ja_dx = geoPoint1.x - node.geometry.x;
         let ja_dy = geoPoint1.y - node.geometry.y;
         let angleRad = Math.atan2(ja_dy, ja_dx);
-        let angleDeg = ((angleRad * 180) / Math.PI) % 360;
+        const angleDeg = ((angleRad * 180) / Math.PI) % 360;
         for (let i = 0; i < conSegs.length; i++) {
             const seg2 = getSegObj(conSegs[i]);
             const seg2Att = seg2.attributes;
@@ -3458,11 +3444,15 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
         }
     }
     function getIcons(dir) {
-        const tempEle = {};
+        const tempEle = [];
         let svgcount = 0;
         for (let i = 0; i < dir.length; i++) {
             //if (dir[i].id !== "") {
-            const temp = {};
+            const temp = {
+                uturn: false,
+                miniuturn: false,
+                svg: []
+            };
             const uTurnDisplay = $(dir[i]).find(".uturn").css("display");
             const miniUturnDisplay = $(dir[i]).find(".small-uturn").css("display");
             temp.uturn = uTurnDisplay && uTurnDisplay !== "none";
@@ -3919,15 +3909,15 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
         const fwdImgs = fwdEle !== false ? convertToBase64(fwdEle) : false;
         const revImgs = revEle !== false ? convertToBase64(revEle) : false;
         if (fwdEle) {
-            if (Object.keys(fwdEle).length === 0) {
-                setTimeout(displayLaneGraphics, 200);
+            if (fwdEle.length === 0) {
+                // setTimeout(displayLaneGraphics, 200);
                 return;
             }
             drawIcons(seg, !seg || !seg.toNodeId ? null : sdk.DataModel.Nodes.getById({ nodeId: seg?.toNodeId }), fwdImgs);
         }
         if (revEle) {
-            if (Object.keys(revEle).length === 0) {
-                setTimeout(displayLaneGraphics, 200);
+            if (revEle.length === 0) {
+                // setTimeout(displayLaneGraphics, 200);
                 return;
             }
             drawIcons(seg, !seg || !seg.fromNodeId ? null : sdk.DataModel.Nodes.getById({ nodeId: seg?.fromNodeId }), revImgs);
