@@ -14,7 +14,7 @@
 // @exclude      https://www.waze.com/user/editor*
 // @require      https://greasyfork.org/scripts/24851-wazewrap/code/WazeWrap.js
 // @require      https://cdn.jsdelivr.net/npm/@turf/turf@7.2.0/turf.min.js
-// @require      https://cdn.jsdelivr.net/npm/proj4@2.15.0/dist/proj4.min.js
+// @require      https://cdn.jsdelivr.net/npm/proj4@2.16.2/dist/proj4.min.js
 // @grant        GM_xmlhttpRequest
 // @grant        unsafeWindow
 // @connect      raw.githubusercontent.com
@@ -828,12 +828,15 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
             layerName: LTNamesLayer.name,
             visibility: LtSettings.ltNamesVisible,
         });
-        // LTNamesLayer = new OpenLayers.Layer.Vector("LTNamesLayer", {
-        //     uniqueName: "LTNamesLayer",
-        //     styleMap: new OpenLayers.StyleMap(namesStyle),
-        // });
-        // W.map.addLayer(LTNamesLayer);
-        // LTNamesLayer.setVisibility(true);
+        sdk.LayerSwitcher.setLayerCheckboxChecked({
+            name: LTLaneGraphics.name,
+            isChecked: LtSettings.ltGraphicsVisible,
+        });
+        sdk.LayerSwitcher.setLayerCheckboxChecked({
+            name: LTHighlightLayer.name,
+            isChecked: LtSettings.highlightsVisible,
+        });
+        sdk.LayerSwitcher.setLayerCheckboxChecked({ name: LTNamesLayer.name, isChecked: LtSettings.ltNamesVisible });
         sdk.Events.on({
             eventName: "wme-map-move-end",
             eventHandler: () => {
@@ -856,22 +859,6 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
                 displayLaneGraphics();
             },
         });
-        // Add event listers
-        // WazeWrap.Events.register("moveend", null, scanArea);
-        // WazeWrap.Events.register("moveend", null, displayLaneGraphics);
-        // WazeWrap.Events.register("zoomend", null, scanArea);
-        // WazeWrap.Events.register("zoomend", null, displayLaneGraphics);
-        // WazeWrap.Events.register("afteraction", null, scanArea);
-        // WazeWrap.Events.register("afteraction", null, lanesTabSetup);
-        // WazeWrap.Events.register("afteraction", null, displayLaneGraphics);
-        // WazeWrap.Events.register("afterundoaction", null, scanArea);
-        // WazeWrap.Events.register("afterundoaction", null, lanesTabSetup);
-        // WazeWrap.Events.register("afterundoaction", null, displayLaneGraphics);
-        // WazeWrap.Events.register("afterclearactions", null, scanArea);
-        // WazeWrap.Events.register("selectionchanged", null, scanArea);
-        // WazeWrap.Events.register("selectionchanged", null, lanesTabSetup);
-        // WazeWrap.Events.register("selectionchanged", null, displayLaneGraphics);
-        // WazeWrap.Events.register("changelayer", null, scanArea);
         // Add keyboard shortcuts
         try {
             const enableHighlightsShortcut = {
@@ -1217,11 +1204,6 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
         else {
             // console.log('LaneTools: local settings used');
         }
-        // If there is no value set in any of the stored settings then use the default
-        for (const funcProp of Object.keys(defaultSettings)) {
-            LtSettings[funcProp] = defaultSettings[funcProp];
-        }
-        ;
     }
     async function saveSettings() {
         const { ScriptEnabled, HighlightsEnable, LabelsEnable, NodesEnable, UIEnable, AutoLanesTab, AutoOpenWidth, AutoExpandLanes, ABColor, BAColor, LabelColor, ErrorColor, NodeColor, TIOColor, LIOColor, CS1Color, CS2Color, CopyEnable, SelAllEnable, serverSelect, LIOEnable, CSEnable, AutoFocusLanes, ReverseLanesIcon, ClickSaveEnable, ClickSaveStraight, ClickSaveTurns, enableScript, enableHighlights, enableUIEnhancements, enableHeuristics, HeurColor, HeurFailColor, LaneHeurPosHighlight, LaneHeurNegHighlight, LaneHeuristicsChecks, highlightCSIcons, highlightOverride, AddTIO, IconsEnable, IconsRotate, highlightsVisible, ltGraphicsVisible, ltNamesVisible, } = LtSettings;
@@ -1395,7 +1377,6 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
                 strings[transString] = TAB_TRANSLATIONS.default[transString];
             }
         }
-        ;
         $(".lt-trans-enabled").text(strings.enabled);
         $(".lt-trans-tglshcut").text(strings.toggleShortcut);
         $("#lt-trans-uiEnhance").text(strings.UIEnhance);
@@ -1657,10 +1638,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
                 delFwd.off();
                 delRev.off();
                 delOpp.off();
-                if (!getId("li-del-rev-btn") &&
-                    !revDone &&
-                    selSeg?.toNodeLanesCount &&
-                    selSeg.toNodeLanesCount > 0) {
+                if (!getId("li-del-rev-btn") && !revDone && selSeg?.toNodeLanesCount && selSeg.toNodeLanesCount > 0) {
                     if ($(".rev-lanes > div.lane-instruction.lane-instruction-from > div.instruction").length > 0) {
                         $btnCont2.prependTo(".rev-lanes > div.lane-instruction.lane-instruction-from > div.instruction");
                         $(".rev-lanes > div.lane-instruction.lane-instruction-from > div.instruction").css("border-bottom", `4px dashed ${LtSettings.BAColor}`);
@@ -2084,11 +2062,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
         const objSelected = sdk.Editing.getSelection();
         const scriptEnabled = getId("lt-ScriptEnabled");
         const copyEnable = getId("lt-CopyEnable");
-        if (scriptEnabled?.checked &&
-            copyEnable &&
-            copyEnable.checked &&
-            objSelected &&
-            objSelected.ids.length === 1) {
+        if (scriptEnabled?.checked && copyEnable && copyEnable.checked && objSelected && objSelected.ids.length === 1) {
             if (objSelected.objectType === "segment") {
                 const map = sdk.Map.getMapViewportElement();
                 $("#lt-toolbar-container").css({
@@ -2183,7 +2157,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
         let conSegs;
         let updates = {};
         //    mAction.setModel(W.model);
-        if (dir === 'fwd') {
+        if (dir === "fwd") {
             updates.fwdLaneCount = 0;
             node = getLegacyNodeObj(selSeg.attributes.toNodeID);
             conSegs = node.getSegmentIds();
@@ -2191,7 +2165,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
             // fwdLanes.find('.form-control').val(0);
             // fwdLanes.find('.form-control').trigger("change");
         }
-        if (dir === 'rev') {
+        if (dir === "rev") {
             updates.revLaneCount = 0;
             node = getLegacyNodeObj(selSeg.attributes.fromNodeID);
             conSegs = node.getSegmentIds();
@@ -2209,7 +2183,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
                 mAction.doSubAction(W.model, new SetTurn(turnGraph, turnStatus));
             }
         }
-        mAction._description = 'Deleted lanes and turn associations';
+        mAction._description = "Deleted lanes and turn associations";
         W.model.actionManager.add(mAction);
     }
     function removeHighlights() {
@@ -2795,10 +2769,8 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
                     if (turnSection.getElementsByClassName(right).length > 0) {
                         for (let j = 0; j < laneCheckboxes.length - 1; ++j) {
                             waitForElementLoaded("input[type='checkbox']", laneCheckboxes[j].shadowRoot);
-                            {
-                                if (laneCheckboxes[j].checked)
-                                    laneCheckboxes[j].click();
-                            }
+                            if (laneCheckboxes[j].checked)
+                                laneCheckboxes[j].click();
                         }
                     }
                 }
@@ -2807,10 +2779,8 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
                     if (turnSection.getElementsByClassName(left).length > 0) {
                         for (let j = 1; j < laneCheckboxes.length; ++j) {
                             waitForElementLoaded("input[type='checkbox']", laneCheckboxes[j].shadowRoot);
-                            {
-                                if (laneCheckboxes[j].checked)
-                                    laneCheckboxes[j].click();
-                            }
+                            if (laneCheckboxes[j].checked)
+                                laneCheckboxes[j].click();
                         }
                     }
                 }
@@ -2818,18 +2788,16 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
                     // Set all lanes for straight turns
                     for (let j = 0; j < laneCheckboxes.length; j++) {
                         waitForElementLoaded("input[type='checkbox']", laneCheckboxes[j].shadowRoot);
-                        {
-                            if (laneCheckboxes[j].checked === false) {
-                                if (j === 0 && (getId("lt-ClickSaveStraight")?.checked || setLeft === false)) {
-                                    laneCheckboxes[j].click();
-                                }
-                                else if (j === laneCheckboxes.length - 1 &&
-                                    (getId("lt-ClickSaveStraight")?.checked || setRight === false)) {
-                                    laneCheckboxes[j].click();
-                                }
-                                else if (j !== 0 && j !== laneCheckboxes.length - 1) {
-                                    laneCheckboxes[j].click();
-                                }
+                        if (laneCheckboxes[j].checked === false) {
+                            if (j === 0 && (LtSettings.ClickSaveStraight || setLeft === false)) {
+                                laneCheckboxes[j].click();
+                            }
+                            else if (j === laneCheckboxes.length - 1 &&
+                                (LtSettings.ClickSaveStraight || setRight === false)) {
+                                laneCheckboxes[j].click();
+                            }
+                            else if (j !== 0 && j !== laneCheckboxes.length - 1) {
+                                laneCheckboxes[j].click();
                             }
                         }
                     }
@@ -3451,10 +3419,14 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
             const temp = {
                 uturn: false,
                 miniuturn: false,
-                svg: []
+                svg: [],
             };
-            const uTurnDisplay = $(dir[i]).find(".uturn").css("display");
-            const miniUturnDisplay = $(dir[i]).find(".small-uturn").css("display");
+            const uTurnDisplay = $(dir[i])
+                .find(".uturn")
+                .css("display");
+            const miniUturnDisplay = $(dir[i])
+                .find(".small-uturn")
+                .css("display");
             temp.uturn = uTurnDisplay && uTurnDisplay !== "none";
             temp.miniuturn = miniUturnDisplay && miniUturnDisplay !== "none";
             temp.svg = $(dir[i])
@@ -3499,11 +3471,17 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
             //                x: node.geometry.x + featDis.boxheight,
             //                y: node.geometry.y + (featDis.boxincwidth * numIcons/1.8)
             case 2:
-                return proj4("EPSG:3857", "EPSG:4326", [nodePos[0] - (start + boxincwidth + numIcons), nodePos[1] + boxheight]);
+                return proj4("EPSG:3857", "EPSG:4326", [
+                    nodePos[0] - (start + boxincwidth + numIcons),
+                    nodePos[1] + boxheight,
+                ]);
             //                x: node.geometry.x - (featDis.start + (featDis.boxincwidth * numIcons)),
             //                y: node.geometry.y + (featDis.start + featDis.boxheight)
             case 3:
-                return proj4("EPSG:3857", "EPSG:4326", [nodePos[0] + start + boxincwidth, nodePos[1] - (start + boxheight)]);
+                return proj4("EPSG:3857", "EPSG:4326", [
+                    nodePos[0] + start + boxincwidth,
+                    nodePos[1] - (start + boxheight),
+                ]);
             //                x: node.geometry.x + (featDis.start + featDis.boxincwidth),
             //                y: node.geometry.y - (featDis.start + featDis.boxheight)
             case 4:
@@ -3518,11 +3496,17 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
             //                x: node.geometry.x + (featDis.start + featDis.boxincwidth/2),
             //                y: node.geometry.y + (featDis.start/2)
             case 6:
-                return proj4("EPSG:3857", "EPSG:4326", [nodePos[0] - start, nodePos[1] - start * ((boxincwidth * numIcons) / 2)]);
+                return proj4("EPSG:3857", "EPSG:4326", [
+                    nodePos[0] - start,
+                    nodePos[1] - start * ((boxincwidth * numIcons) / 2),
+                ]);
             //                x: node.geometry.x - (featDis.start),
             //                y: node.geometry.y - (featDis.start * (featDis.boxincwidth * numIcons/2))
             case 7:
-                return proj4("EPSG:3857", "EPSG:4326", [nodePos[0] - start * boxincwidth * numIcons, nodePos[1] + start]);
+                return proj4("EPSG:3857", "EPSG:4326", [
+                    nodePos[0] - start * boxincwidth * numIcons,
+                    nodePos[1] + start,
+                ]);
             //                x: node.geometry.x - (featDis.start * (featDis.boxincwidth * numIcons/2)),
             //                y: node.geometry.y - (featDis.start)
             default:
@@ -3654,7 +3638,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
             return;
         const points = [];
         let operatorSign = 0;
-        const numIcons = Object.getOwnPropertyNames(imgs).length;
+        const numIcons = imgs.length;
         // Orient all icons straight up if the rotate option isn't enabled
         if (!getId("lt-IconsRotate")?.checked)
             deg = -90;
@@ -3890,38 +3874,40 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
             (seg.roadType !== (LT_ROAD_TYPE.FREEWAY || LT_ROAD_TYPE.MAJOR_HIGHWAY || LT_ROAD_TYPE.MINOR_HIGHWAY) &&
                 zoomLevel < 16))
             return;
-        const fwdEle = seg?.fromNodeLanesCount && seg.fromNodeLanesCount > 0
-            ? getIcons($(".fwd-lanes")
-                .find(".lane-arrow")
-                .map(function () {
-                return this;
-            })
-                .get())
-            : false;
-        const revEle = seg?.toNodeLanesCount && seg.toNodeLanesCount > 0
-            ? getIcons($(".rev-lanes")
-                .find(".lane-arrow")
-                .map(function () {
-                return this;
-            })
-                .get())
-            : false;
-        const fwdImgs = fwdEle !== false ? convertToBase64(fwdEle) : false;
-        const revImgs = revEle !== false ? convertToBase64(revEle) : false;
-        if (fwdEle) {
-            if (fwdEle.length === 0) {
-                // setTimeout(displayLaneGraphics, 200);
-                return;
+        waitForElementLoaded(".lanes-tab > .lanes > .direction-lanes").then(() => {
+            const fwdEle = seg?.fromNodeLanesCount && seg.fromNodeLanesCount > 0
+                ? getIcons($(".fwd-lanes")
+                    .find(".lane-arrow")
+                    .map(function () {
+                    return this;
+                })
+                    .get())
+                : false;
+            const revEle = seg?.toNodeLanesCount && seg.toNodeLanesCount > 0
+                ? getIcons($(".rev-lanes")
+                    .find(".lane-arrow")
+                    .map(function () {
+                    return this;
+                })
+                    .get())
+                : false;
+            const fwdImgs = fwdEle !== false ? convertToBase64(fwdEle) : false;
+            const revImgs = revEle !== false ? convertToBase64(revEle) : false;
+            if (fwdEle) {
+                if (fwdEle.length === 0) {
+                    // setTimeout(displayLaneGraphics, 200);
+                    return;
+                }
+                drawIcons(seg, !seg || !seg.toNodeId ? null : sdk.DataModel.Nodes.getById({ nodeId: seg?.toNodeId }), fwdImgs);
             }
-            drawIcons(seg, !seg || !seg.toNodeId ? null : sdk.DataModel.Nodes.getById({ nodeId: seg?.toNodeId }), fwdImgs);
-        }
-        if (revEle) {
-            if (revEle.length === 0) {
-                // setTimeout(displayLaneGraphics, 200);
-                return;
+            if (revEle) {
+                if (revEle.length === 0) {
+                    // setTimeout(displayLaneGraphics, 200);
+                    return;
+                }
+                drawIcons(seg, !seg || !seg.fromNodeId ? null : sdk.DataModel.Nodes.getById({ nodeId: seg?.fromNodeId }), revImgs);
             }
-            drawIcons(seg, !seg || !seg.fromNodeId ? null : sdk.DataModel.Nodes.getById({ nodeId: seg?.fromNodeId }), revImgs);
-        }
+        });
         // There are now 23 zoom levels where 22 is fully zoomed and currently 14 is where major road types load data and 16 loads the rest
     }
     laneToolsBootstrap();

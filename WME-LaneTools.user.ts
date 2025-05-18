@@ -13,7 +13,7 @@
 // @exclude      https://www.waze.com/user/editor*
 // @require      https://greasyfork.org/scripts/24851-wazewrap/code/WazeWrap.js
 // @require      https://cdn.jsdelivr.net/npm/@turf/turf@7.2.0/turf.min.js
-// @require      https://cdn.jsdelivr.net/npm/proj4@2.15.0/dist/proj4.min.js
+// @require      https://cdn.jsdelivr.net/npm/proj4@2.16.2/dist/proj4.min.js
 // @grant        GM_xmlhttpRequest
 // @grant        unsafeWindow
 // @connect      raw.githubusercontent.com
@@ -332,7 +332,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
     const LTNamesLayer: LayerDescriptor = { name: "LT Names Layer" };
     const LTLaneGraphics: LayerDescriptor = { name: "LT Lane Graphics" };
     let _pickleColor: number | undefined;
-    let UpdateObj: new (arg0: Segment | null, arg1: { revLaneCount?: number; fwdLaneCount?: number; }) => any;
+    let UpdateObj: new (arg0: Segment | null, arg1: { revLaneCount?: number; fwdLaneCount?: number }) => any;
     let MultiAction: new () => any;
     let SetTurn: new (arg0: any, arg1: any) => any;
     let shortcutsDisabled = false;
@@ -370,52 +370,54 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
             nameStyleLabelColor: (context) => {
                 return LtSettings.LabelColor;
             },
-            nameStyleLaneNum: (context: { feature: { properties: { style: { laneNumLabel: string; }; }; }; }) => {
+            nameStyleLaneNum: (context: { feature: { properties: { style: { laneNumLabel: string } } } }) => {
                 return context?.feature?.properties?.style?.laneNumLabel;
             },
-            highlightStrokeColor: (context: { feature: { properties: { style: { stroke: string; }; }; }; }) => {
+            highlightStrokeColor: (context: { feature: { properties: { style: { stroke: string } } } }) => {
                 return context?.feature?.properties?.style?.stroke;
             },
-            hightlightStrokeWidth: (context: { feature: { properties: { style: { strokeWidth: number; }; }; }; }) => {
+            hightlightStrokeWidth: (context: { feature: { properties: { style: { strokeWidth: number } } } }) => {
                 return context?.feature?.properties?.style?.strokeWidth;
             },
-            hightlightStrokeOpacity: (context: { feature: { properties: { style: { strokeOpacity: number; }; }; }; }) => {
+            hightlightStrokeOpacity: (context: { feature: { properties: { style: { strokeOpacity: number } } } }) => {
                 return context?.feature?.properties?.style?.strokeOpacity;
             },
-            hightlightStrokeDashStyle: (context: { feature: { properties: { style: { strokeDashstyle: string; }; }; }; }) => {
+            hightlightStrokeDashStyle: (context: {
+                feature: { properties: { style: { strokeDashstyle: string } } };
+            }) => {
                 return context?.feature?.properties?.style?.strokeDashstyle;
             },
-            highlightFillColor: (context: { feature: { properties: { style: { fillColor: string; }; }; }; }) => {
+            highlightFillColor: (context: { feature: { properties: { style: { fillColor: string } } } }) => {
                 return context?.feature?.properties?.style?.fillColor;
             },
-            highlightPointRadius: (context: { feature: { properties: { style: { pointRadius: number; }; }; }; }) => {
+            highlightPointRadius: (context: { feature: { properties: { style: { pointRadius: number } } } }) => {
                 return context?.feature?.properties?.style?.pointRadius;
             },
-            externalGraphic: (context: { feature: { properties: { style: { externalGraphic: string; }; }; }; }) => {
+            externalGraphic: (context: { feature: { properties: { style: { externalGraphic: string } } } }) => {
                 return context?.feature?.properties?.style?.externalGraphic;
             },
-            graphicHeight: (context: { feature: { properties: { style: { graphicHeight: number; }; }; }; }) => {
+            graphicHeight: (context: { feature: { properties: { style: { graphicHeight: number } } } }) => {
                 return context?.feature?.properties?.style?.graphicHeight;
             },
-            graphicWidth: (context: { feature: { properties: { style: { graphicWidth: number; }; }; }; }) => {
+            graphicWidth: (context: { feature: { properties: { style: { graphicWidth: number } } } }) => {
                 return context?.feature?.properties?.style?.graphicWidth;
             },
-            rotation: (context: { feature: { properties: { style: { rotation: number; }; }; }; }) => {
+            rotation: (context: { feature: { properties: { style: { rotation: number } } } }) => {
                 return context?.feature?.properties?.style?.rotation;
             },
-            backgroundGraphic: (context: { feature: { properties: { style: { backgroundGraphic: string; }; }; }; }) => {
+            backgroundGraphic: (context: { feature: { properties: { style: { backgroundGraphic: string } } } }) => {
                 return context?.feature?.properties?.style?.backgroundGraphic;
             },
-            backgroundHeight: (context: { feature: { properties: { style: { backgroundHeight: number; }; }; }; }) => {
+            backgroundHeight: (context: { feature: { properties: { style: { backgroundHeight: number } } } }) => {
                 return context?.feature?.properties?.style?.backgroundHeight;
             },
-            backgroundWidth: (context: { feature: { properties: { style: { backgroundWidth: number; }; }; }; }) => {
+            backgroundWidth: (context: { feature: { properties: { style: { backgroundWidth: number } } } }) => {
                 return context?.feature?.properties?.style?.backgroundWidth;
             },
-            backgroundXOffset: (context: { feature: { properties: { style: { backgroundXOffset: number; }; }; }; }) => {
+            backgroundXOffset: (context: { feature: { properties: { style: { backgroundXOffset: number } } } }) => {
                 return context?.feature?.properties?.style?.backgroundXOffset;
             },
-            backgroundYOffset: (context: { feature: { properties: { style: { backgroundYOffset: number; }; }; }; }) => {
+            backgroundYOffset: (context: { feature: { properties: { style: { backgroundYOffset: number } } } }) => {
                 return context?.feature?.properties?.style?.backgroundYOffset;
             },
         },
@@ -942,7 +944,8 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
         sdk.Events.on({
             eventName: "wme-save-finished",
             eventHandler: (payload) => {
-                if (payload.success){ scanArea();
+                if (payload.success) {
+                    scanArea();
                     lanesTabSetup();
                     displayLaneGraphics();
                 }
@@ -963,12 +966,15 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
             visibility: LtSettings.ltNamesVisible,
         });
 
-        // LTNamesLayer = new OpenLayers.Layer.Vector("LTNamesLayer", {
-        //     uniqueName: "LTNamesLayer",
-        //     styleMap: new OpenLayers.StyleMap(namesStyle),
-        // });
-        // W.map.addLayer(LTNamesLayer);
-        // LTNamesLayer.setVisibility(true);
+        sdk.LayerSwitcher.setLayerCheckboxChecked({
+            name: LTLaneGraphics.name,
+            isChecked: LtSettings.ltGraphicsVisible,
+        });
+        sdk.LayerSwitcher.setLayerCheckboxChecked({
+            name: LTHighlightLayer.name,
+            isChecked: LtSettings.highlightsVisible,
+        });
+        sdk.LayerSwitcher.setLayerCheckboxChecked({ name: LTNamesLayer.name, isChecked: LtSettings.ltNamesVisible });
 
         sdk.Events.on({
             eventName: "wme-map-move-end",
@@ -992,23 +998,6 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
                 displayLaneGraphics();
             },
         });
-
-        // Add event listers
-        // WazeWrap.Events.register("moveend", null, scanArea);
-        // WazeWrap.Events.register("moveend", null, displayLaneGraphics);
-        // WazeWrap.Events.register("zoomend", null, scanArea);
-        // WazeWrap.Events.register("zoomend", null, displayLaneGraphics);
-        // WazeWrap.Events.register("afteraction", null, scanArea);
-        // WazeWrap.Events.register("afteraction", null, lanesTabSetup);
-        // WazeWrap.Events.register("afteraction", null, displayLaneGraphics);
-        // WazeWrap.Events.register("afterundoaction", null, scanArea);
-        // WazeWrap.Events.register("afterundoaction", null, lanesTabSetup);
-        // WazeWrap.Events.register("afterundoaction", null, displayLaneGraphics);
-        // WazeWrap.Events.register("afterclearactions", null, scanArea);
-        // WazeWrap.Events.register("selectionchanged", null, scanArea);
-        // WazeWrap.Events.register("selectionchanged", null, lanesTabSetup);
-        // WazeWrap.Events.register("selectionchanged", null, displayLaneGraphics);
-        // WazeWrap.Events.register("changelayer", null, scanArea);
 
         // Add keyboard shortcuts
         try {
@@ -1354,11 +1343,6 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
         } else {
             // console.log('LaneTools: local settings used');
         }
-
-        // If there is no value set in any of the stored settings then use the default
-        for(const funcProp of Object.keys(defaultSettings)) {
-            LtSettings[funcProp as keyof SettingsInterface] = defaultSettings[funcProp as keyof SettingsInterface];
-        };
     }
 
     async function saveSettings() {
@@ -1585,11 +1569,11 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
             strings = TAB_TRANSLATIONS[langLocality.split("-")[0]];
         }
         // If there is no value set in any of the translated strings then use the defaults
-        for(const transString of Object.keys(strings)) {
+        for (const transString of Object.keys(strings)) {
             if (strings[transString] === "") {
                 strings[transString] = TAB_TRANSLATIONS.default[transString];
             }
-        };
+        }
 
         $(".lt-trans-enabled").text(strings.enabled);
         $(".lt-trans-tglshcut").text(strings.toggleShortcut);
@@ -1700,7 +1684,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
     function getKeyboardShortcut(shortcut: string | null): string | null {
         if (shortcut === null) return null;
         const keys = LtSettings[shortcut];
-        if(typeof keys !== "string") return null;
+        if (typeof keys !== "string") return null;
         let val = "";
 
         if (keys.indexOf("+") > -1) {
@@ -1789,7 +1773,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
             //     .attributes.geometry;
             //        W.model.nodes.get(W.selectionManager.getSegmentSelection().segments[0].attributes.toNodeID).attributes.geometry
             const selSeg: Segment | null = isSegmentSelected(selection)
-                ? sdk.DataModel.Segments.getById({ segmentId: (selection?.ids[0] as number) })
+                ? sdk.DataModel.Segments.getById({ segmentId: selection?.ids[0] as number })
                 : null;
             const nodeB = selSeg?.toNodeId ? sdk.DataModel.Nodes.getById({ nodeId: selSeg.toNodeId }) : null;
             nodeB && document.getElementById(nodeB?.id.toString());
@@ -1805,11 +1789,10 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
             // W.model.nodes.getObjectById(W.selectionManager.getSegmentSelection().segments[0].attributes.fromNodeID)
             //     .attributes.geometry;
             const selSeg: Segment | null = isSegmentSelected(selection)
-                ? sdk.DataModel.Segments.getById({ segmentId: (selection?.ids[0] as number) })
+                ? sdk.DataModel.Segments.getById({ segmentId: selection?.ids[0] as number })
                 : null;
 
-            const nodeA =
-                selSeg?.fromNodeId ? sdk.DataModel.Nodes.getById({ nodeId: selSeg.fromNodeId }) : null;
+            const nodeA = selSeg?.fromNodeId ? sdk.DataModel.Nodes.getById({ nodeId: selSeg.fromNodeId }) : null;
             nodeA && document.getElementById(nodeA?.id.toString());
             //        W.model.nodes.get(W.selectionManager.getSegmentSelection().segments[0].attributes.fromNodeID).attributes.geometry
             // document.getElementById(
@@ -1848,8 +1831,8 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
                     : null;
 
                 if (getId("li-del-opp-btn")) $("#li-del-opp-btn").remove();
-                if(getId("li-del-fwd-btn")) $("#li-del-fwd-btn").remove();
-                if(getId("li-del-rev-btn")) $("#li-del-rev-btn").remove();
+                if (getId("li-del-fwd-btn")) $("#li-del-fwd-btn").remove();
+                if (getId("li-del-rev-btn")) $("#li-del-rev-btn").remove();
 
                 const $fwdButton = $(
                     `<button type="button" id="li-del-fwd-btn" style="height:20px;background-color:white;border:1px solid grey;border-radius:8px;">${strings.delFwd}</button>`
@@ -1874,12 +1857,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
                 delRev.off();
                 delOpp.off();
 
-                if (
-                    !getId("li-del-rev-btn") &&
-                    !revDone &&
-                    selSeg?.toNodeLanesCount &&
-                    selSeg.toNodeLanesCount > 0
-                ) {
+                if (!getId("li-del-rev-btn") && !revDone && selSeg?.toNodeLanesCount && selSeg.toNodeLanesCount > 0) {
                     if ($(".rev-lanes > div.lane-instruction.lane-instruction-from > div.instruction").length > 0) {
                         $btnCont2.prependTo(
                             ".rev-lanes > div.lane-instruction.lane-instruction-from > div.instruction"
@@ -2045,8 +2023,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
             const idStringBase = class_names_list.join("-");
             for (let i = 1; i <= count; ++i) {
                 const idString = `${idStringBase}-${i.toString()}`;
-                const selectorString =
-                    `<div class="${classString}" id="${idString}">${i.toString()}</div>`;
+                const selectorString = `<div class="${classString}" id="${idString}">${i.toString()}</div>`;
                 const newItem = $(selectorString).css({
                     padding: "1px 1px 1px 1px",
                     margin: "0 3px 0 3px",
@@ -2113,9 +2090,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
                                 window.HTMLInputElement.prototype,
                                 "value"
                             ).set;
-                            const inputForm = document.querySelector(
-                                `wz-card${dirLanesClass} input[name=laneCount]`
-                            );
+                            const inputForm = document.querySelector(`wz-card${dirLanesClass} input[name=laneCount]`);
                             nativeInputValueSetter.call(inputForm, numAdd);
                             const inputEvent = new Event("input", { bubbles: true });
                             inputForm?.dispatchEvent(inputEvent);
@@ -2391,13 +2366,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
         const objSelected: Selection | null = sdk.Editing.getSelection();
         const scriptEnabled: HTMLInputElement | null = getId("lt-ScriptEnabled");
         const copyEnable: HTMLInputElement | null = getId("lt-CopyEnable");
-        if (
-            scriptEnabled?.checked &&
-            copyEnable &&
-            copyEnable.checked &&
-            objSelected &&
-            objSelected.ids.length === 1
-        ) {
+        if (scriptEnabled?.checked && copyEnable && copyEnable.checked && objSelected && objSelected.ids.length === 1) {
             if (objSelected.objectType === "segment") {
                 const map = sdk.Map.getMapViewportElement();
                 $("#lt-toolbar-container").css({
@@ -2499,10 +2468,10 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
         let node;
         let conSegs;
         let updates = {};
-    
-    //    mAction.setModel(W.model);
-    
-        if (dir === 'fwd') {
+
+        //    mAction.setModel(W.model);
+
+        if (dir === "fwd") {
             updates.fwdLaneCount = 0;
             node = getLegacyNodeObj(selSeg.attributes.toNodeID);
             conSegs = node.getSegmentIds();
@@ -2510,7 +2479,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
             // fwdLanes.find('.form-control').val(0);
             // fwdLanes.find('.form-control').trigger("change");
         }
-        if (dir === 'rev') {
+        if (dir === "rev") {
             updates.revLaneCount = 0;
             node = getLegacyNodeObj(selSeg.attributes.fromNodeID);
             conSegs = node.getSegmentIds();
@@ -2518,22 +2487,22 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
             // revLanes.find('.form-control').val(0);
             // revLanes.find('.form-control').trigger("change");
         }
-    
+
         mAction.doSubAction(W.model, new UpdateObj(selSeg, updates));
-    
+
         for (let i = 0; i < conSegs.length; i++) {
             let turnStatus = turnGraph.getTurnThroughNode(node, selSeg, getLegacySegObj(conSegs[i]));
             let turnData = turnStatus.getTurnData();
-    
+
             if (turnData.hasLanes()) {
                 turnData = turnData.withLanes();
                 turnStatus = turnStatus.withTurnData(turnData);
-    
+
                 mAction.doSubAction(W.model, new SetTurn(turnGraph, turnStatus));
             }
         }
-    
-        mAction._description = 'Deleted lanes and turn associations';
+
+        mAction._description = "Deleted lanes and turn associations";
         W.model.actionManager.add(mAction);
     }
 
@@ -3256,10 +3225,8 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
                     if (turnSection.getElementsByClassName(right).length > 0) {
                         for (let j = 0; j < laneCheckboxes.length - 1; ++j) {
                             waitForElementLoaded("input[type='checkbox']", laneCheckboxes[j].shadowRoot);
-                            {
-                                if ((laneCheckboxes[j] as HTMLInputElement).checked)
-                                    (laneCheckboxes[j] as HTMLInputElement).click();
-                            }
+                            if ((laneCheckboxes[j] as HTMLInputElement).checked)
+                                (laneCheckboxes[j] as HTMLInputElement).click();
                         }
                     }
                 }
@@ -3268,10 +3235,8 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
                     if (turnSection.getElementsByClassName(left).length > 0) {
                         for (let j = 1; j < laneCheckboxes.length; ++j) {
                             waitForElementLoaded("input[type='checkbox']", laneCheckboxes[j].shadowRoot);
-                            {
-                                if ((laneCheckboxes[j] as HTMLInputElement).checked)
-                                    (laneCheckboxes[j] as HTMLInputElement).click();
-                            }
+                            if ((laneCheckboxes[j] as HTMLInputElement).checked)
+                                (laneCheckboxes[j] as HTMLInputElement).click();
                         }
                     }
                 }
@@ -3279,18 +3244,16 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
                     // Set all lanes for straight turns
                     for (let j = 0; j < laneCheckboxes.length; j++) {
                         waitForElementLoaded("input[type='checkbox']", laneCheckboxes[j].shadowRoot);
-                        {
-                            if ((laneCheckboxes[j] as HTMLInputElement).checked === false) {
-                                if (j === 0 && (getId("lt-ClickSaveStraight")?.checked || setLeft === false)) {
-                                    (laneCheckboxes[j] as HTMLInputElement).click();
-                                } else if (
-                                    j === laneCheckboxes.length - 1 &&
-                                    (getId("lt-ClickSaveStraight")?.checked || setRight === false)
-                                ) {
-                                    (laneCheckboxes[j] as HTMLInputElement).click();
-                                } else if (j !== 0 && j !== laneCheckboxes.length - 1) {
-                                    (laneCheckboxes[j] as HTMLInputElement).click();
-                                }
+                        if ((laneCheckboxes[j] as HTMLInputElement).checked === false) {
+                            if (j === 0 && (LtSettings.ClickSaveStraight || setLeft === false)) {
+                                (laneCheckboxes[j] as HTMLInputElement).click();
+                            } else if (
+                                j === laneCheckboxes.length - 1 &&
+                                (LtSettings.ClickSaveStraight || setRight === false)
+                            ) {
+                                (laneCheckboxes[j] as HTMLInputElement).click();
+                            } else if (j !== 0 && j !== laneCheckboxes.length - 1) {
+                                (laneCheckboxes[j] as HTMLInputElement).click();
                             }
                         }
                     }
@@ -3888,7 +3851,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
                 _turnData.lanes = laneData;
                 _turnInfo.push(_turnData);
             }
-            _turnInfo.sort((a: { order: number; }, b: { order: number; }) => (a.order > b.order ? 1 : -1));
+            _turnInfo.sort((a: { order: number }, b: { order: number }) => (a.order > b.order ? 1 : -1));
         }
 
         console.log(_turnInfo);
@@ -4017,10 +3980,14 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
             const temp: TurnDisplay = {
                 uturn: false,
                 miniuturn: false,
-                svg: []
+                svg: [],
             };
-            const uTurnDisplay = $(dir[i] as string).find(".uturn").css("display");
-            const miniUturnDisplay = $(dir[i] as string).find(".small-uturn").css("display");
+            const uTurnDisplay = $(dir[i] as string)
+                .find(".uturn")
+                .css("display");
+            const miniUturnDisplay = $(dir[i] as string)
+                .find(".small-uturn")
+                .css("display");
             temp.uturn = uTurnDisplay && uTurnDisplay !== "none";
             temp.miniuturn = miniUturnDisplay && miniUturnDisplay !== "none";
             temp.svg = $(dir[i] as string)
@@ -4066,11 +4033,17 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
             //                x: node.geometry.x + featDis.boxheight,
             //                y: node.geometry.y + (featDis.boxincwidth * numIcons/1.8)
             case 2:
-                return proj4("EPSG:3857", "EPSG:4326", [nodePos[0] - (start + boxincwidth + numIcons), nodePos[1] + boxheight]);
+                return proj4("EPSG:3857", "EPSG:4326", [
+                    nodePos[0] - (start + boxincwidth + numIcons),
+                    nodePos[1] + boxheight,
+                ]);
             //                x: node.geometry.x - (featDis.start + (featDis.boxincwidth * numIcons)),
             //                y: node.geometry.y + (featDis.start + featDis.boxheight)
             case 3:
-                return proj4("EPSG:3857", "EPSG:4326", [nodePos[0] + start + boxincwidth, nodePos[1] - (start + boxheight)]);
+                return proj4("EPSG:3857", "EPSG:4326", [
+                    nodePos[0] + start + boxincwidth,
+                    nodePos[1] - (start + boxheight),
+                ]);
             //                x: node.geometry.x + (featDis.start + featDis.boxincwidth),
             //                y: node.geometry.y - (featDis.start + featDis.boxheight)
             case 4:
@@ -4081,15 +4054,21 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
             //                x: node.geometry.x - (featDis.start + (featDis.boxheight * 1.5)),
             //                y: node.geometry.y - (featDis.start + (featDis.boxincwidth * numIcons * 1.5))
             case 5:
-                return proj4("EPSG:3857", "EPSG:4326",[nodePos[0] + (start + boxincwidth), nodePos[1] + start]);
+                return proj4("EPSG:3857", "EPSG:4326", [nodePos[0] + (start + boxincwidth), nodePos[1] + start]);
             //                x: node.geometry.x + (featDis.start + featDis.boxincwidth/2),
             //                y: node.geometry.y + (featDis.start/2)
             case 6:
-                return proj4("EPSG:3857", "EPSG:4326",[nodePos[0] - start, nodePos[1] - start * ((boxincwidth * numIcons) / 2)]);
+                return proj4("EPSG:3857", "EPSG:4326", [
+                    nodePos[0] - start,
+                    nodePos[1] - start * ((boxincwidth * numIcons) / 2),
+                ]);
             //                x: node.geometry.x - (featDis.start),
             //                y: node.geometry.y - (featDis.start * (featDis.boxincwidth * numIcons/2))
             case 7:
-                return proj4("EPSG:3857", "EPSG:4326",[nodePos[0] - start * boxincwidth * numIcons, nodePos[1] + start]);
+                return proj4("EPSG:3857", "EPSG:4326", [
+                    nodePos[0] - start * boxincwidth * numIcons,
+                    nodePos[1] + start,
+                ]);
             //                x: node.geometry.x - (featDis.start * (featDis.boxincwidth * numIcons/2)),
             //                y: node.geometry.y - (featDis.start)
             default:
@@ -4221,7 +4200,7 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
         if (!deg) return;
         const points: Position[] = [];
         let operatorSign = 0;
-        const numIcons = Object.getOwnPropertyNames(imgs).length;
+        const numIcons = imgs.length;
 
         // Orient all icons straight up if the rotate option isn't enabled
         if (!getId("lt-IconsRotate")?.checked) deg = -90;
@@ -4487,55 +4466,56 @@ KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
         )
             return;
 
-        const fwdEle =
-            seg?.fromNodeLanesCount && seg.fromNodeLanesCount > 0
-                ? getIcons(
-                      $(".fwd-lanes")
-                          .find(".lane-arrow")
-                          .map(function () {
-                              return this;
-                          })
-                          .get()
-                  )
-                : false;
-        const revEle =
-            seg?.toNodeLanesCount && seg.toNodeLanesCount > 0
-                ? getIcons(
-                      $(".rev-lanes")
-                          .find(".lane-arrow")
-                          .map(function () {
-                              return this;
-                          })
-                          .get()
-                  )
-                : false;
+        waitForElementLoaded(".lanes-tab > .lanes > .direction-lanes").then(() => {
+            const fwdEle =
+                seg?.fromNodeLanesCount && seg.fromNodeLanesCount > 0
+                    ? getIcons(
+                          $(".fwd-lanes")
+                              .find(".lane-arrow")
+                              .map(function () {
+                                  return this;
+                              })
+                              .get()
+                      )
+                    : false;
+            const revEle =
+                seg?.toNodeLanesCount && seg.toNodeLanesCount > 0
+                    ? getIcons(
+                          $(".rev-lanes")
+                              .find(".lane-arrow")
+                              .map(function () {
+                                  return this;
+                              })
+                              .get()
+                      )
+                    : false;
 
-        const fwdImgs = fwdEle !== false ? convertToBase64(fwdEle) : false;
-        const revImgs = revEle !== false ? convertToBase64(revEle) : false;
+            const fwdImgs = fwdEle !== false ? convertToBase64(fwdEle) : false;
+            const revImgs = revEle !== false ? convertToBase64(revEle) : false;
 
-        if (fwdEle) {
-            if (fwdEle.length === 0) {
-                // setTimeout(displayLaneGraphics, 200);
-                return;
+            if (fwdEle) {
+                if (fwdEle.length === 0) {
+                    // setTimeout(displayLaneGraphics, 200);
+                    return;
+                }
+                drawIcons(
+                    seg,
+                    !seg || !seg.toNodeId ? null : sdk.DataModel.Nodes.getById({ nodeId: seg?.toNodeId }),
+                    fwdImgs
+                );
             }
-            drawIcons(
-                seg,
-                !seg || !seg.toNodeId ? null : sdk.DataModel.Nodes.getById({ nodeId: seg?.toNodeId }),
-                fwdImgs
-            );
-        }
-        if (revEle) {
-            if (revEle.length === 0) {
-                // setTimeout(displayLaneGraphics, 200);
-                return;
+            if (revEle) {
+                if (revEle.length === 0) {
+                    // setTimeout(displayLaneGraphics, 200);
+                    return;
+                }
+                drawIcons(
+                    seg,
+                    !seg || !seg.fromNodeId ? null : sdk.DataModel.Nodes.getById({ nodeId: seg?.fromNodeId }),
+                    revImgs
+                );
             }
-            drawIcons(
-                seg,
-                !seg || !seg.fromNodeId ? null : sdk.DataModel.Nodes.getById({ nodeId: seg?.fromNodeId }),
-                revImgs
-            );
-        }
-
+        });
         // There are now 23 zoom levels where 22 is fully zoomed and currently 14 is where major road types load data and 16 loads the rest
     }
 
