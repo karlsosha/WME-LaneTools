@@ -2,7 +2,7 @@
 // ==UserScript==
 // @name         WME LaneTools
 // @namespace    https://github.com/SkiDooGuy/WME-LaneTools
-// @version      2025.05.24.001
+// @version      2025.05.25.001
 // @description  Adds highlights and tools to WME to supplement the lanes feature
 // @author       SkiDooGuy, Click Saver by HBiede, Heuristics by kndcajun, assistance by jm6087
 // @updateURL    https://github.com/SkiDooGuy/WME-LaneTools/raw/master/WME-LaneTools.user.js
@@ -90,11 +90,12 @@ function ltInit() {
         return;
     }
     const LANETOOLS_VERSION = `${GM_info.script.version}`;
-    const GF_LINK = "https://github.com/SkiDooGuy/WME-LaneTools/blob/master/WME-LaneTools.user.js";
-    const DOWNLOAD_URL = "https://raw.githubusercontent.com/SkiDooGuy/WME-LaneTools/master/WME-LaneTools.user.js";
+    const GF_LINK = "https://greasyfork.org/en/scripts/537219-wme-lanetools";
+    const DOWNLOAD_URL = "https://greasyfork.org/en/scripts/537219-wme-lanetools";
     const FORUM_LINK = "https://www.waze.com/discuss/t/script-wme-lanetools/53136";
     const LI_UPDATE_NOTES = `FEATURES:<br>
-    - Conversion to WME SDK<br><br>
+    - Conversion to WME SDK<br>
+    - Point Updates to GF vs. GITHUB<br><br>
 KNOWN ISSUE:<br>
     - Some tab UI enhancements may not work as expected.<br>`;
     const LANETOOLS_DEBUG_LEVEL = 1;
@@ -3876,7 +3877,7 @@ KNOWN ISSUE:<br>
             (seg.roadType !== (LT_ROAD_TYPE.FREEWAY || LT_ROAD_TYPE.MAJOR_HIGHWAY || LT_ROAD_TYPE.MINOR_HIGHWAY) &&
                 zoomLevel < 16))
             return;
-        waitForElementLoaded(".lanes-tab > .lanes > .direction-lanes").then(() => {
+        waitForElementLoaded(".lanes-tab > .lanes > div > .direction-lanes").then(() => {
             const fwdEle = seg?.fromNodeLanesCount && seg.fromNodeLanesCount > 0
                 ? getIcons($(".fwd-lanes")
                     .find(".lane-arrow")
