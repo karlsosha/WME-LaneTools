@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         WME LaneTools
 // @namespace    https://github.com/SkiDooGuy/WME-LaneTools
-// @version      2025.05.25.001
+// @version      2025.05.25.002
 // @description  Adds highlights and tools to WME to supplement the lanes feature
 // @author       SkiDooGuy, Click Saver by HBiede, Heuristics by kndcajun, assistance by jm6087
 // @updateURL    https://github.com/SkiDooGuy/WME-LaneTools/raw/master/WME-LaneTools.user.js
@@ -16,7 +16,7 @@
 // @require      https://cdn.jsdelivr.net/npm/proj4@2.16.2/dist/proj4.min.js
 // @grant        GM_xmlhttpRequest
 // @grant        unsafeWindow
-// @connect      raw.githubusercontent.com
+// @connect      greasyfork.org
 // @contributionURL https://github.com/WazeDev/Thank-The-Authors
 // ==/UserScript==
 
@@ -186,8 +186,9 @@ function ltInit() {
     const GF_LINK = "https://greasyfork.org/en/scripts/537219-wme-lanetools";
     const DOWNLOAD_URL = "https://greasyfork.org/en/scripts/537219-wme-lanetools";
     const FORUM_LINK = "https://www.waze.com/discuss/t/script-wme-lanetools/53136";
-    const LI_UPDATE_NOTES = `FEATURES:<br>
+    const LI_UPDATE_NOTES = `NEW:<br>
     - Conversion to WME SDK<br>
+    - <b>ENABLE LT Layers To See Markings on the Map</b><br>
     - Point Updates to GF vs. GITHUB<br><br>
 KNOWN ISSUE:<br>
     - Some tab UI enhancements may not work as expected.<br>`;
