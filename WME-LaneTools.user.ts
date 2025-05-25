@@ -186,8 +186,9 @@ function ltInit() {
     const GF_LINK = "https://greasyfork.org/en/scripts/537219-wme-lanetools";
     const DOWNLOAD_URL = "https://greasyfork.org/en/scripts/537219-wme-lanetools";
     const FORUM_LINK = "https://www.waze.com/discuss/t/script-wme-lanetools/53136";
-    const LI_UPDATE_NOTES = `FEATURES:<br>
+    const LI_UPDATE_NOTES = `NEW:<br>
     - Conversion to WME SDK<br>
+    - <b>ENABLE LT Layers To See Markings on the Map</b><br>
     - Point Updates to GF vs. GITHUB<br><br>
 KNOWN ISSUE:<br>
     - Some tab UI enhancements may not work as expected.<br>`;
