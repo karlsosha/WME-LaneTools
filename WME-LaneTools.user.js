@@ -17,7 +17,7 @@
 // @require      https://cdn.jsdelivr.net/npm/proj4@2.16.2/dist/proj4.min.js
 // @grant        GM_xmlhttpRequest
 // @grant        unsafeWindow
-// @connect      raw.githubusercontent.com
+// @connect      greasyfork.org
 // @contributionURL https://github.com/WazeDev/Thank-The-Authors
 // ==/UserScript==
 /* global W */
