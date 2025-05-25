@@ -407,44 +407,40 @@ KNOWN ISSUE:<br>
         initLaneTools();
         console.log("Lane Tools: Initialization Finished.");
     }
-}
-
-function initLaneTools() {
-    startScriptUpdateMonitor();
-    seaPickle = W.loginManager.user;
-    UpdateObj = require('Waze/Action/UpdateObject');
-    MultiAction = require('Waze/Action/MultiAction');
-    SetTurn = require('Waze/Model/Graph/Actions/SetTurn');
-
-    const ltCss = [
-        '.lt-wrapper {position:relative;width:100%;font-size:12px;font-family:"Rubik", "Boing-light", sans-serif;user-select:none;}',
-        '.lt-section-wrapper {display:block;width:100%;padding:4px;}',
-        '.lt-section-wrapper.border {border-bottom:1px solid grey;margin-bottom:5px;}',
-        '.lt-option-container {padding:3px;}',
-        '.lt-option-container.color {text-decoration:none;}',
-        'input[type="checkbox"].lt-checkbox {position:relative;top:3px;vertical-align:top;margin:0;}',
-        'input[type="text"].lt-color-input {position:relative;width:70px;padding:3px;border:2px solid black;border-radius:6px;}',
-        'input[type="text"].lt-color-input:focus {outline-width:0;}',
-        'label.lt-label {position:relative;max-width:90%;font-weight:normal;padding-left:5px}',
-        '.lt-Toolbar-Container {display:none;position:absolute;background-color:orange;border-radius:6px;border:1.5px solid;box-size:border-box;z-index:1050;}',
-        '.lt-Toolbar-Wrapper {position:relative;padding:3px;}',
-        '.lt-toolbar-button-container {display:inline-block;padding:5px;}',
-        '.lt-toolbar-button {position:relative;display:block;width:60px;height:25px;border-radius:6px;font-size:12px;}',
-        '.lt-add-Width {display:inline-block;width:15px;height:15px;border:1px solid black;border-radius:8px;margin:0 3px 0 3px;line-height: 1.5;text-align:center;font-size:10px;}',
-        '.lt-add-Width:hover {border:1px solid #26bae8;background-color:#26bae8;cursor:pointer;}',
-        '.lt-add-lanes {display:inline-block;width:15px;height:15px;border:1px solid black;border-radius:8px;margin:0 3px 0 3px;line-height: 1.5;text-align:center;font-size:10px;}',
-        '.lt-add-lanes:hover {border:1px solid #26bae8;background-color:#26bae8;cursor:pointer;}',
-        '.lt-chkAll-lns {display:inline-block;width:20px;height:20px;text-decoration:underline;font-weight:bold;font-size:10px;padding-left:3px;cursor:pointer;}',
-        '.lt-tio-select {max-width:80%;color:rgb(32, 33, 36);background-color:rgb(242, 243, 244);border:0px;border-radius:6px;padding:0 16px 0 10px;cursor:pointer;}',
-        '#lt-color-title {display:block;width:100%;padding:5px 0 5px 0;font-weight:bold;text-decoration:underline;cursor:pointer;}'
-    ].join(' ');
-
-    const $ltTab = $('<div>');
-    $ltTab.html = ([
-        `<div class='lt-wrapper' id='lt-tab-wrapper'>
+    function initLaneTools() {
+        startScriptUpdateMonitor();
+        seaPickle = sdk.State.getUserInfo();
+        UpdateObj = require("Waze/Action/UpdateObject");
+        MultiAction = require("Waze/Action/MultiAction");
+        SetTurn = require("Waze/Model/Graph/Actions/SetTurn");
+        const ltCss = [
+            '.lt-wrapper {position:relative;width:100%;font-size:12px;font-family:"Rubik", "Boing-light", sans-serif;user-select:none;}',
+            ".lt-section-wrapper {display:block;width:100%;padding:4px;}",
+            ".lt-section-wrapper.border {border-bottom:1px solid grey;margin-bottom:5px;}",
+            ".lt-option-container {padding:3px;}",
+            ".lt-option-container.color {text-decoration:none;}",
+            'input[type="checkbox"].lt-checkbox {position:relative;top:3px;vertical-align:top;margin:0;}',
+            'input[type="text"].lt-color-input {position:relative;width:70px;padding:3px;border:2px solid black;border-radius:6px;}',
+            'input[type="text"].lt-color-input:focus {outline-width:0;}',
+            "label.lt-label {position:relative;max-width:90%;font-weight:normal;padding-left:5px}",
+            ".lt-Toolbar-Container {display:none;position:absolute;background-color:orange;border-radius:6px;border:1.5px solid;box-size:border-box;z-index:1050;}",
+            ".lt-Toolbar-Wrapper {position:relative;padding:3px;}",
+            ".lt-toolbar-button-container {display:inline-block;padding:5px;}",
+            ".lt-toolbar-button {position:relative;display:block;width:60px;height:25px;border-radius:6px;font-size:12px;}",
+            ".lt-add-Width {display:inline-block;width:15px;height:15px;border:1px solid black;border-radius:8px;margin:0 3px 0 3px;line-height: 1.5;text-align:center;font-size:10px;}",
+            ".lt-add-Width:hover {border:1px solid #26bae8;background-color:#26bae8;cursor:pointer;}",
+            ".lt-add-lanes {display:inline-block;width:15px;height:15px;border:1px solid black;border-radius:8px;margin:0 3px 0 3px;line-height: 1.5;text-align:center;font-size:10px;}",
+            ".lt-add-lanes:hover {border:1px solid #26bae8;background-color:#26bae8;cursor:pointer;}",
+            ".lt-chkAll-lns {display:inline-block;width:20px;height:20px;text-decoration:underline;font-weight:bold;font-size:10px;padding-left:3px;cursor:pointer;}",
+            ".lt-tio-select {max-width:80%;color:rgb(32, 33, 36);background-color:rgb(242, 243, 244);border:0px;border-radius:6px;padding:0 16px 0 10px;cursor:pointer;}",
+            "#lt-color-title {display:block;width:100%;padding:5px 0 5px 0;font-weight:bold;text-decoration:underline;cursor:pointer;}",
+        ].join(" ");
+        const $ltTab = $("<div>");
+        $ltTab.html = [
+            `<div class='lt-wrapper' id='lt-tab-wrapper'>
             <div class='lt-section-wrapper' id='lt-tab-body'>
                 <div class='lt-section-wrapper border' style='border-bottom:2px double grey;'>
-                    <a href=${FORUM_LINK} style='font-weight:bold;font-size:12px;text-decoration:underline;'  target='_blank'>LaneTools - v${LANETOOLS_VERSION}</a>
+                    <a href='https://www.waze.com/forum/viewtopic.php?f=819&t=301158' style='font-weight:bold;font-size:12px;text-decoration:underline;'  target='_blank'>LaneTools - v${LANETOOLS_VERSION}</a>
                     <div>
                         <div style='display:inline-block;'><span class='lt-trans-tglshcut'></span>:<span id='lt-EnableShortcut' style='padding-left:10px;'></span></div>
                         <div class='lt-option-container' style='float:right;'>

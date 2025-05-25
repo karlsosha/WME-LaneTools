@@ -173,6 +173,7 @@ function ltInit() {
         NONE = 0,
         PASS = 1,
     }
+    
 
     if (!WazeWrap.Ready) {
         setTimeout(() => {
