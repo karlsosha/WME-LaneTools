@@ -92,7 +92,7 @@ function ltInit() {
     const LANETOOLS_VERSION = `${GM_info.script.version}`;
     const GF_LINK = "https://github.com/SkiDooGuy/WME-LaneTools/blob/master/WME-LaneTools.user.js";
     const DOWNLOAD_URL = "https://raw.githubusercontent.com/SkiDooGuy/WME-LaneTools/master/WME-LaneTools.user.js";
-    const FORUM_LINK = "https://www.waze.com/forum/viewtopic.php?f=819&t=301158";
+    const FORUM_LINK = "https://www.waze.com/discuss/t/script-wme-lanetools/53136";
     const LI_UPDATE_NOTES = `FEATURES:<br>
     - Conversion to WME SDK<br><br>
 KNOWN ISSUE:<br>
