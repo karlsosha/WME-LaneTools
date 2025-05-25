@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         WME LaneTools
 // @namespace    https://github.com/SkiDooGuy/WME-LaneTools
-// @version      99999999999
+// @version      2025.05.24.001
 // @description  Adds highlights and tools to WME to supplement the lanes feature
 // @author       SkiDooGuy, Click Saver by HBiede, Heuristics by kndcajun, assistance by jm6087
 // @updateURL    https://github.com/SkiDooGuy/WME-LaneTools/raw/master/WME-LaneTools.user.js
@@ -185,8 +185,10 @@ function ltInit() {
     const GF_LINK = "https://github.com/SkiDooGuy/WME-LaneTools/blob/master/WME-LaneTools.user.js";
     const DOWNLOAD_URL = "https://raw.githubusercontent.com/SkiDooGuy/WME-LaneTools/master/WME-LaneTools.user.js";
     const FORUM_LINK = "https://www.waze.com/forum/viewtopic.php?f=819&t=301158";
-    const LI_UPDATE_NOTES = `Conversion to WME SDK<br>
-KNOWN ISSUE:  Some tab UI enhancements may not work as expected.`;
+    const LI_UPDATE_NOTES = `FEATURES:<br>
+    - Conversion to WME SDK<br><br>
+KNOWN ISSUE:<br>
+    - Some tab UI enhancements may not work as expected.<br>`;
 
     const LANETOOLS_DEBUG_LEVEL = 1;
     const configArray = {};
