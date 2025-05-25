@@ -1,0 +1,32 @@
+{
+  "name": "wme-lane-tools",
+  "devDependencies": {
+    "@turf/turf": "^7.2.0",
+    "@types/jquery": "^3.5.32",
+    "@types/node": "^22.15.2",
+    "@types/proj4": "^2.5.6",
+    "@types/tampermonkey": "^5.0.4",
+    "@types/underscore": "^1.13.0",
+    "proj4": "2.16.2",
+    "typescript": "^5.8.2",
+    "underscore": "^1.13.7",
+    "wme-sdk-typings": "https://web-assets.waze.com/wme_sdk_docs/beta/latest/wme-sdk-typings.tgz"
+  },
+  "version": "1.0.0",
+  "description": "",
+  "main": "WME-LaneTools.user.ts",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "lint": "biome check"
+  },
+  "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/karlsosha/WME-LaneTools.git"
+  },
+  "private": true,
+  "dependencies": {
+    "jquery": "^3.7.1",
+    "prettier": "^3.5.1"
+  }
+}
