@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         WME LaneTools
 // @namespace    https://github.com/SkiDooGuy/WME-LaneTools
-// @version      2025.05.25.002
+// @version      2025.06.01.001
 // @description  Adds highlights and tools to WME to supplement the lanes feature
 // @author       SkiDooGuy, Click Saver by HBiede, Heuristics by kndcajun, assistance by jm6087
 // @updateURL    https://github.com/SkiDooGuy/WME-LaneTools/raw/master/WME-LaneTools.user.js
@@ -13,7 +13,7 @@
 // @exclude      https://www.waze.com/user/editor*
 // @require      https://greasyfork.org/scripts/24851-wazewrap/code/WazeWrap.js
 // @require      https://cdn.jsdelivr.net/npm/@turf/turf@7.2.0/turf.min.js
-// @require      https://cdn.jsdelivr.net/npm/proj4@2.16.2/dist/proj4.min.js
+// @require      https://cdn.jsdelivr.net/npm/proj4@2.17.0/dist/proj4.min.js
 // @grant        GM_xmlhttpRequest
 // @grant        unsafeWindow
 // @connect      greasyfork.org
@@ -2560,19 +2560,19 @@ KNOWN ISSUE:<br>
 
         // Need to rework this to account for segment length, cause of geo adjustment and such
         if (objGeo.length > 2) {
-            let geoLength = objGeo.length;
-            let geoMiddle = geoLength / 2;
-            let fwdPoint = geoLength % 2 ? Math.ceil(geoMiddle) - 1 : Math.ceil(geoMiddle);
-            let revPoint = geoLength % 2 ? Math.floor(geoMiddle) + 1 : Math.floor(geoMiddle);
+            const geoLength = objGeo.length;
+            const geoMiddle = geoLength / 2;
+            const fwdPoint = geoLength % 2 ? Math.ceil(geoMiddle) - 1 : Math.ceil(geoMiddle);
+            const revPoint = geoLength % 2 ? Math.floor(geoMiddle) + 1 : Math.floor(geoMiddle);
 
             if (direction === Direction.FORWARD) {
-                let newString = buildGeoComponentString(objGeo, fwdPoint, geoLength);
+                const newString = buildGeoComponentString(objGeo, fwdPoint, geoLength);
                 if (applyDash) {
                     createVector(newString, LtSettings.ABColor, VectorStyle.DASH_THIN);
                 } // draw dashed line
                 drawHighlight(newString, applyLioHighlight, isBad, heur, heurOverHighlight); // draw highlight
             } else if (direction === Direction.REVERSE) {
-                let newString = buildGeoComponentString(objGeo, 0, revPoint);
+                const newString = buildGeoComponentString(objGeo, 0, revPoint);
                 if (applyDash) {
                     createVector(newString, LtSettings.BAColor, VectorStyle.DASH_THIN);
                 }
@@ -2584,9 +2584,9 @@ KNOWN ISSUE:<br>
                 if (geoLength % 2) {
                     applyName(objGeo[fwdPoint], fwdLnsCount, revLnsCount);
                 } else {
-                    let p0 = objGeo[revPoint - 1];
-                    let p1 = objGeo[fwdPoint];
-                    var newPoint = [(p0[0] + p1[0]) / 2, (p0[1] + p1[1]) / 2];
+                    const p0 = objGeo[revPoint - 1];
+                    const p1 = objGeo[fwdPoint];
+                    const newPoint = [(p0[0] + p1[0]) / 2, (p0[1] + p1[1]) / 2];
                     //                let newPoint = new OpenLayers.getOLGeometry().Point((p0.x + p1.x) / 2, (p0.y + p1.y) / 2);
                     // let newPoint = new OpenLayers.Geometry.Point((p0.x + p1.x) / 2, (p0.y + p1.y) / 2);
                     // var newPoint = {
@@ -2602,12 +2602,12 @@ KNOWN ISSUE:<br>
                 }
             }
         } else {
-            let p0 = objGeo[0];
-            let p1 = objGeo[1];
+            const p0 = objGeo[0];
+            const p1 = objGeo[1];
             //        let point1 = new OpenLayers.getOLGeometry().Point((p0.x + p1.x) / 2, (p0.y + p1.y) / 2);
             // let point1 = new OpenLayers.Geometry.Point((p0.x + p1.x) / 2, (p0.y + p1.y) / 2);
-            var p1C = [(p0[0] + p1[0]) / 2, (p0[1] + p1[1]) / 2];
-            var pVector = [p1C];
+            const p1C = [(p0[0] + p1[0]) / 2, (p0[1] + p1[1]) / 2];
+            const pVector = [p1C];
             // var point1 = {
             //     id: "pointNode_" + (p0[0] + p1[0]) / 2 + " " + (p0[1] + p1[1]) / 2,
             //     geometry: {
@@ -2618,24 +2618,24 @@ KNOWN ISSUE:<br>
             //     properties: { styleName: "vectorStyle", layerName: LTHighlightLayer.name },
             // };
             if (direction === Direction.FORWARD) {
-                let p2C = [objGeo[1][0], objGeo[1][1]];
+                const p2C = [objGeo[1][0], objGeo[1][1]];
                 pVector.push(p2C);
-                let newString: GeoJSON.Feature = turf.lineString(
+                const newString: GeoJSON.Feature = turf.lineString(
                     pVector,
                     { styleName: "vectorStyle", layerName: LTHighlightLayer.name },
-                    { id: "line_" + pVector.toString() }
+                    { id: `line_${pVector.toString()}` }
                 );
                 if (applyDash) {
                     createVector(newString, LtSettings.ABColor, VectorStyle.DASH_THIN);
                 }
                 drawHighlight(newString, applyLioHighlight, isBad, heur, heurOverHighlight);
             } else if (direction === Direction.REVERSE) {
-                let p2C = [objGeo[0][0], objGeo[0][1]];
+                const p2C = [objGeo[0][0], objGeo[0][1]];
                 pVector.push(p2C);
-                let newString: GeoJSON.Feature = turf.lineString(
+                const newString: GeoJSON.Feature = turf.lineString(
                     pVector,
                     { styleName: "vectorStyle", layerName: LTHighlightLayer.name },
-                    { id: "line_" + pVector.toString() }
+                    { id: `line_${pVector.toString()}` }
                 );
 
                 if (applyDash) {
@@ -2651,7 +2651,7 @@ KNOWN ISSUE:<br>
         }
 
         function buildGeoComponentString(geometry: Position[], from: number, to: number): GeoJSON.Feature {
-            let components: Position[] = [];
+            const components: Position[] = [];
             let cIdx: number = 0;
             for (let i = from; i < to; i++) {
                 components[cIdx++] = geometry[i];
@@ -2659,7 +2659,7 @@ KNOWN ISSUE:<br>
             return turf.lineString(
                 components,
                 { styleName: "vectorStyle", layerName: LTHighlightLayer.name },
-                { id: "line_" + components.toString() }
+                { id: `line_${components.toString()}` }
             );
         }
 
@@ -2701,7 +2701,7 @@ KNOWN ISSUE:<br>
         function createVector(geoCom: GeoJSON.Feature, lineColor: string, style: number) {
             // let newVector = new OpenLayers.Feature.Vector(geoCom, {}, {});
             // LTHighlightLayer.addFeatures([newVector]);
-            let stroke: string = lineColor;
+            const stroke: string = lineColor;
             let strokeOpacity: number = 1;
             let strokeWidth: number = 15;
             let strokeDashArray: number[] = [];
@@ -2745,8 +2745,8 @@ KNOWN ISSUE:<br>
         // const geo = objGeo.clone();
         // const highlight = new OpenLayers.Feature.Vector(geo, {});
         if (!objGeo) return;
-        let newString = {
-            id: "Node_" + objGeo.toString(),
+        const newString = {
+            id: `Node_${objGeo.toString()}`,
             geometry: {
                 type: "Point",
                 coordinates: objGeo,
@@ -2780,13 +2780,12 @@ KNOWN ISSUE:<br>
         // }
     }
 
-    let lt_scanArea_timer = {
+    const lt_scanArea_timer = {
         timeoutID: -1,
         start: function () {
             this.cancel();
-            let lt_scanArea_timer_self = this;
-            this.timeoutID = window.setTimeout(function () {
-                lt_scanArea_timer_self.calculate();
+            this.timeoutID = window.setTimeout(() => {
+                this.calculate();
             }, 500);
         },
 
@@ -2844,13 +2843,13 @@ KNOWN ISSUE:<br>
 
     // Given two features, checks if they are segments, and their path qualifies for heuristics; then highlight
     function scanHeuristicsCandidates(selection: Selection) {
-        let segs: Segment[] = [];
+        const segs: Segment[] = [];
         let count: number = 0;
         for (let idx = 0; selection && idx < selection.ids.length; ++idx) {
             if (typeof selection.ids[idx] === "string") {
                 lt_log(`Segment ID: ${selection.ids[idx]} reported as Segment ID incorrectly`, 1);
             }
-            let seg: Segment | null = sdk.DataModel.Segments.getById({ segmentId: selection.ids[idx] });
+            const seg: Segment | null = sdk.DataModel.Segments.getById({ segmentId: selection.ids[idx] });
             if (!seg) continue;
             count = segs.push(seg);
         }
@@ -2880,8 +2879,8 @@ KNOWN ISSUE:<br>
         _.each(segments, (s) => {
             if (onScreen(s, zoomLevel)) {
                 // const sAtts = s.getAttributes();
-                let tryRedo = false;
-                let segLength = lt_segment_length(s);
+                const tryRedo = false;
+                const segLength = lt_segment_length(s);
                 // FORWARD
                 tryRedo || scanSegment_Inner(s, Direction.FORWARD, segLength, tryRedo);
 
@@ -2928,11 +2927,11 @@ KNOWN ISSUE:<br>
             let tio = false;
             let badLn = false;
             let lio = false;
-            let csMode: number = 0;
+            let csMode = 0;
             let heurCand = HeuristicsCandidate.NONE;
             let entrySeg = null;
 
-            let entrySegRef: SegmentReference = {
+            const entrySegRef: SegmentReference = {
                 seg: 0,
                 direction: Direction.ANY,
             };
@@ -2942,7 +2941,7 @@ KNOWN ISSUE:<br>
                 const nodeSegs = node.connectedSegmentIds;
 
                 if (laneCount && laneCount > 0) {
-                    let config: LaneConfiguration = checkLanesConfiguration(seg, node, nodeSegs, laneCount);
+                    const config: LaneConfiguration = checkLanesConfiguration(seg, node, nodeSegs, laneCount);
                     tlns = config.tlns;
                     tio = config.tio;
                     lio = config.lio;
@@ -3090,6 +3089,7 @@ KNOWN ISSUE:<br>
         }
 
         for (let i = 0; i < segs.length; i++) {
+            if(segs[i] === s.id) continue;
             const seg2 = getSegObj(segs[i]);
             const turnsThrough: Turn[] = !node ? [] : sdk.DataModel.Turns.getTurnsThroughNode({ nodeId: node?.id });
             for (let idx = 0; idx < turnsThrough.length; ++idx) {
@@ -3110,8 +3110,8 @@ KNOWN ISSUE:<br>
                         }
                         // Check for Continue Straight override
                         // 1 is for view only, 2 is for view and hear
-                        let primaryStreetId: number | null | undefined = seg2?.primaryStreetId;
-                        if (primaryStreetId && primaryStreetId !== null) {
+                        const primaryStreetId: number | null | undefined = seg2?.primaryStreetId;
+                        if (primaryStreetId && primaryStreetId !== null && s.primaryStreetId === primaryStreetId) {
                             if (t.lanes.guidanceMode === "display") {
                                 laneConfig.csMode = 1;
                                 laneConfig.csStreet = sdk.DataModel.Streets.getById({
