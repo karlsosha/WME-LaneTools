@@ -2,7 +2,7 @@
 // ==UserScript==
 // @name         WME LaneTools
 // @namespace    https://github.com/SkiDooGuy/WME-LaneTools
-// @version      2025.06.01.001
+// @version      2025.06.09.001
 // @description  Adds highlights and tools to WME to supplement the lanes feature
 // @author       SkiDooGuy, Click Saver by HBiede, Heuristics by kndcajun, assistance by jm6087
 // @updateURL    https://github.com/SkiDooGuy/WME-LaneTools/raw/master/WME-LaneTools.user.js
@@ -3461,55 +3461,57 @@ KNOWN ISSUE:<br>
         });
         return svgs;
     }
-    function getStartPoints(node, featDis, numIcons, sign) {
+    function getStartPoints(node, featDis, numIcons, sign, isLeftDrive) {
         const start = !featDis || !featDis.start ? 0 : featDis.start;
         const boxheight = !featDis || !featDis.boxheight ? 0 : featDis.boxheight;
         const boxincwidth = !featDis || !featDis.boxincwidth ? 0 : featDis.boxincwidth;
         const nodePos = proj4("EPSG:4326", "EPSG:3857", node.geometry.coordinates);
+        const leftDriveModifier = isLeftDrive ? -1 : 1;
+        const leftOffset = isLeftDrive ? featDis.leftOffset : 0;
         switch (sign) {
             case 0:
-                return proj4("EPSG:3857", "EPSG:4326", [nodePos[0] + start * 2, nodePos[1] + boxheight]);
+                return proj4("EPSG:3857", "EPSG:4326", [nodePos[0] + leftDriveModifier * start * 2 - leftOffset, nodePos[1] + boxheight]);
             //                x: node.geometry.x + (featDis.start * 2),
             //                y: node.geometry.y + (featDis.boxheight)
             case 1:
-                return proj4("EPSG:3857", "EPSG:4326", [nodePos[0] + boxheight, nodePos[1] + boxincwidth * numIcons]);
+                return proj4("EPSG:3857", "EPSG:4326", [nodePos[0] + leftDriveModifier * boxheight - leftOffset, nodePos[1] + boxincwidth * numIcons]);
             //                x: node.geometry.x + featDis.boxheight,
             //                y: node.geometry.y + (featDis.boxincwidth * numIcons/1.8)
             case 2:
                 return proj4("EPSG:3857", "EPSG:4326", [
-                    nodePos[0] - (start + boxincwidth + numIcons),
+                    nodePos[0] - leftDriveModifier * (start + boxincwidth * numIcons),
                     nodePos[1] + boxheight,
                 ]);
             //                x: node.geometry.x - (featDis.start + (featDis.boxincwidth * numIcons)),
             //                y: node.geometry.y + (featDis.start + featDis.boxheight)
             case 3:
                 return proj4("EPSG:3857", "EPSG:4326", [
-                    nodePos[0] + start + boxincwidth,
+                    nodePos[0] + leftDriveModifier * (start + boxincwidth) - leftOffset,
                     nodePos[1] - (start + boxheight),
                 ]);
             //                x: node.geometry.x + (featDis.start + featDis.boxincwidth),
             //                y: node.geometry.y - (featDis.start + featDis.boxheight)
             case 4:
                 return proj4("EPSG:3857", "EPSG:4326", [
-                    nodePos[0] - (start + boxheight * 3),
+                    nodePos[0] - leftDriveModifier * (start + boxheight * 3) - leftOffset,
                     nodePos[1] + (boxincwidth + numIcons * 0.5),
                 ]);
             //                x: node.geometry.x - (featDis.start + (featDis.boxheight * 1.5)),
             //                y: node.geometry.y - (featDis.start + (featDis.boxincwidth * numIcons * 1.5))
             case 5:
-                return proj4("EPSG:3857", "EPSG:4326", [nodePos[0] + (start + boxincwidth), nodePos[1] + start]);
+                return proj4("EPSG:3857", "EPSG:4326", [nodePos[0] + leftDriveModifier * (start + boxincwidth) - leftOffset, nodePos[1] + start]);
             //                x: node.geometry.x + (featDis.start + featDis.boxincwidth/2),
             //                y: node.geometry.y + (featDis.start/2)
             case 6:
                 return proj4("EPSG:3857", "EPSG:4326", [
-                    nodePos[0] - start,
+                    nodePos[0] - leftDriveModifier * start - leftOffset,
                     nodePos[1] - start * ((boxincwidth * numIcons) / 2),
                 ]);
             //                x: node.geometry.x - (featDis.start),
             //                y: node.geometry.y - (featDis.start * (featDis.boxincwidth * numIcons/2))
             case 7:
                 return proj4("EPSG:3857", "EPSG:4326", [
-                    nodePos[0] - start * boxincwidth * numIcons,
+                    nodePos[0] - leftDriveModifier * start * boxincwidth * numIcons - leftOffset,
                     nodePos[1] + start,
                 ]);
             //                x: node.geometry.x - (featDis.start * (featDis.boxincwidth * numIcons/2)),
@@ -3529,6 +3531,7 @@ KNOWN ISSUE:<br>
             iconborderwidth: undefined,
             graphicHeight: undefined,
             graphicWidth: undefined,
+            leftOffset: undefined
         };
         switch (sdk.Map.getZoomLevel()) {
             case 22:
@@ -3540,6 +3543,7 @@ KNOWN ISSUE:<br>
                 label_distance.iconborderwidth = 1;
                 label_distance.graphicHeight = 42;
                 label_distance.graphicWidth = 25;
+                label_distance.leftOffset = 2;
                 break;
             case 21:
                 label_distance.start = 2;
@@ -3550,6 +3554,7 @@ KNOWN ISSUE:<br>
                 label_distance.iconborderwidth = 2;
                 label_distance.graphicHeight = 42;
                 label_distance.graphicWidth = 25;
+                label_distance.leftOffset = 2;
                 break;
             case 20:
                 label_distance.start = 2;
@@ -3560,6 +3565,7 @@ KNOWN ISSUE:<br>
                 label_distance.iconborderwidth = 3.5;
                 label_distance.graphicHeight = 42;
                 label_distance.graphicWidth = 25;
+                label_distance.leftOffset = 8;
                 break;
             case 19:
                 label_distance.start = 3;
@@ -3570,6 +3576,7 @@ KNOWN ISSUE:<br>
                 label_distance.iconborderwidth = 6.8;
                 label_distance.graphicHeight = 42;
                 label_distance.graphicWidth = 25;
+                label_distance.leftOffset = 8;
                 break;
             case 18:
                 label_distance.start = 3;
@@ -3580,6 +3587,7 @@ KNOWN ISSUE:<br>
                 label_distance.iconborderwidth = 13.5;
                 label_distance.graphicHeight = 42;
                 label_distance.graphicWidth = 25;
+                label_distance.leftOffset = 16;
                 break;
             case 17:
                 label_distance.start = 10;
@@ -3590,6 +3598,7 @@ KNOWN ISSUE:<br>
                 label_distance.iconborderwidth = 27.0;
                 label_distance.graphicHeight = 42;
                 label_distance.graphicWidth = 25;
+                label_distance.leftOffset = 16;
                 break;
             case 16:
                 label_distance.start = 15;
@@ -3600,6 +3609,7 @@ KNOWN ISSUE:<br>
                 label_distance.iconborderwidth = 53;
                 label_distance.graphicHeight = 42;
                 label_distance.graphicWidth = 25;
+                label_distance.leftOffset = 32;
                 break;
             case 15:
                 label_distance.start = 2;
@@ -3610,6 +3620,7 @@ KNOWN ISSUE:<br>
                 label_distance.iconborderwidth = 87;
                 label_distance.graphicHeight = 42;
                 label_distance.graphicWidth = 25;
+                label_distance.leftOffset = 32;
                 break;
             case 14:
                 label_distance.start = 2;
@@ -3620,6 +3631,7 @@ KNOWN ISSUE:<br>
                 label_distance.iconborderwidth = 3.5;
                 label_distance.graphicHeight = 42;
                 label_distance.graphicWidth = 25;
+                label_distance.leftOffset = 32;
                 break;
             // case 13:
             //     label_distance.start = 2;
@@ -3634,7 +3646,7 @@ KNOWN ISSUE:<br>
         }
         return label_distance;
     }
-    function drawIcons(seg, node, imgs) {
+    function drawIcons(seg, node, imgs, isLeftDrive = false) {
         if (!seg || !node)
             return;
         const featDis = getFeatDistance();
@@ -3706,7 +3718,7 @@ KNOWN ISSUE:<br>
         // console.log(operatorSign);
         // Determine start point respective to node based on segment angle
         // let boxRotate = deg * -1;
-        const startPoint = getStartPoints(node, featDis, numIcons, operatorSign);
+        const startPoint = getStartPoints(node, featDis, numIcons, operatorSign, isLeftDrive);
         if (!startPoint[0] || !startPoint[1])
             return;
         // Box coords
@@ -3879,6 +3891,17 @@ KNOWN ISSUE:<br>
             (seg.roadType !== (LT_ROAD_TYPE.FREEWAY || LT_ROAD_TYPE.MAJOR_HIGHWAY || LT_ROAD_TYPE.MINOR_HIGHWAY) &&
                 zoomLevel < 16))
             return;
+        let isLeftDrive = false;
+        if (seg.primaryStreetId) {
+            let primaryStreet = sdk.DataModel.Streets.getById({ streetId: seg.primaryStreetId });
+            if (primaryStreet?.cityId) {
+                let city = sdk.DataModel.Cities.getById({ cityId: primaryStreet.cityId });
+                if (city?.countryId) {
+                    let country = sdk.DataModel.Countries.getById({ countryId: city.countryId });
+                    isLeftDrive = country?.isLeftHandTraffic || false;
+                }
+            }
+        }
         waitForElementLoaded(".lanes-tab > .lanes > div > .direction-lanes").then(() => {
             const fwdEle = seg?.fromNodeLanesCount && seg.fromNodeLanesCount > 0
                 ? getIcons($(".fwd-lanes")
@@ -3903,14 +3926,14 @@ KNOWN ISSUE:<br>
                     // setTimeout(displayLaneGraphics, 200);
                     return;
                 }
-                drawIcons(seg, !seg || !seg.toNodeId ? null : sdk.DataModel.Nodes.getById({ nodeId: seg?.toNodeId }), fwdImgs);
+                drawIcons(seg, !seg || !seg.toNodeId ? null : sdk.DataModel.Nodes.getById({ nodeId: seg?.toNodeId }), fwdImgs, isLeftDrive);
             }
             if (revEle) {
                 if (revEle.length === 0) {
                     // setTimeout(displayLaneGraphics, 200);
                     return;
                 }
-                drawIcons(seg, !seg || !seg.fromNodeId ? null : sdk.DataModel.Nodes.getById({ nodeId: seg?.fromNodeId }), revImgs);
+                drawIcons(seg, !seg || !seg.fromNodeId ? null : sdk.DataModel.Nodes.getById({ nodeId: seg?.fromNodeId }), revImgs, isLeftDrive);
             }
         });
         // There are now 23 zoom levels where 22 is fully zoomed and currently 14 is where major road types load data and 16 loads the rest
