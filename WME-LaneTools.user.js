@@ -400,12 +400,6 @@ KNOWN ISSUE:<br>
     console.log("LaneTools: initializing...");
     function laneToolsBootstrap(tries = 0) {
         console.log("Lane Tools: Initializing...");
-        const locale = sdk.Settings.getLocale();
-        LANG = locale.localeCode.toLowerCase();
-        if (!(LANG in TAB_TRANSLATIONS))
-            langLocality = "en-us";
-        else
-            langLocality = LANG;
         initLaneTools();
         console.log("Lane Tools: Initialization Finished.");
     }
@@ -1366,6 +1360,12 @@ KNOWN ISSUE:<br>
     }
     function setLocalisation() {
         // langLocality = I18n.currentLocale().toLowerCase();
+        const locale = sdk.Settings.getLocale();
+        LANG = locale.localeCode.toLowerCase();
+        if (!(LANG in TAB_TRANSLATIONS))
+            langLocality = "en-us";
+        else
+            langLocality = LANG;
         if (!(langLocality in TAB_TRANSLATIONS)) {
             langLocality = "en";
         }

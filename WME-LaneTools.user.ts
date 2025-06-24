@@ -509,10 +509,6 @@ KNOWN ISSUE:<br>
 
     function laneToolsBootstrap(tries = 0) {
         console.log("Lane Tools: Initializing...");
-        const locale = sdk.Settings.getLocale();
-        LANG = locale.localeCode.toLowerCase();
-        if (!(LANG in TAB_TRANSLATIONS)) langLocality = "en-us";
-        else langLocality = LANG;
 
         initLaneTools();
 
@@ -1566,6 +1562,10 @@ KNOWN ISSUE:<br>
 
     function setLocalisation() {
         // langLocality = I18n.currentLocale().toLowerCase();
+        const locale = sdk.Settings.getLocale();
+        LANG = locale.localeCode.toLowerCase();
+        if (!(LANG in TAB_TRANSLATIONS)) langLocality = "en-us";
+        else langLocality = LANG;
         if (!(langLocality in TAB_TRANSLATIONS)) {
             langLocality = "en";
         }
