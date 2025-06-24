@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         WME LaneTools
 // @namespace    https://github.com/SkiDooGuy/WME-LaneTools
-// @version      2025.06.09.001
+// @version      2025.06.23.001
 // @description  Adds highlights and tools to WME to supplement the lanes feature
 // @author       SkiDooGuy, Click Saver by HBiede, Heuristics by kndcajun, assistance by jm6087
 // @updateURL    https://github.com/SkiDooGuy/WME-LaneTools/raw/master/WME-LaneTools.user.js
@@ -509,10 +509,6 @@ KNOWN ISSUE:<br>
 
     function laneToolsBootstrap(tries = 0) {
         console.log("Lane Tools: Initializing...");
-        const locale = sdk.Settings.getLocale();
-        LANG = locale.localeCode.toLowerCase();
-        if (!(LANG in TAB_TRANSLATIONS)) langLocality = "en-us";
-        else langLocality = LANG;
 
         initLaneTools();
 
@@ -1566,6 +1562,10 @@ KNOWN ISSUE:<br>
 
     function setLocalisation() {
         // langLocality = I18n.currentLocale().toLowerCase();
+        const locale = sdk.Settings.getLocale();
+        LANG = locale.localeCode.toLowerCase();
+        if (!(LANG in TAB_TRANSLATIONS)) langLocality = "en-us";
+        else langLocality = LANG;
         if (!(langLocality in TAB_TRANSLATIONS)) {
             langLocality = "en";
         }
