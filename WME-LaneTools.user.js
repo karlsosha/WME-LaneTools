@@ -2,7 +2,7 @@
 // ==UserScript==
 // @name         WME LaneTools
 // @namespace    https://github.com/SkiDooGuy/WME-LaneTools
-// @version      2025.06.23.001
+// @version      2025.06.26.001
 // @description  Adds highlights and tools to WME to supplement the lanes feature
 // @author       SkiDooGuy, Click Saver by HBiede, Heuristics by kndcajun, assistance by jm6087
 // @updateURL    https://github.com/SkiDooGuy/WME-LaneTools/raw/master/WME-LaneTools.user.js
@@ -99,7 +99,7 @@ function ltInit() {
     - Point Updates to GF vs. GITHUB<br><br>
 KNOWN ISSUE:<br>
     - Some tab UI enhancements may not work as expected.<br>`;
-    const LANETOOLS_DEBUG_LEVEL = 1;
+    const LANETOOLS_DEBUG_LEVEL = 5;
     const configArray = {};
     const RBSArray = { failed: false };
     const IsBeta = location.href.indexOf("beta.waze.com") !== -1;
@@ -248,9 +248,6 @@ KNOWN ISSUE:<br>
     let langLocality = "default";
     let LANG;
     let seaPickle;
-    function applyNamesStyle(properties) {
-        return properties.layerName === LTNamesLayer.name;
-    }
     function applyNodeHightlightStyle(properties) {
         return properties.styleName === "nodeStyle" && properties.layerName === LTHighlightLayer.name;
     }
@@ -322,7 +319,7 @@ KNOWN ISSUE:<br>
         },
         styleRules: [
             {
-                predicate: applyNamesStyle,
+                predicate: (properties) => { return properties.layerName === LTNamesLayer.name; },
                 style: {
                     fontFamily: "Open Sans, Alef, helvetica, sans-serif, monospace",
                     labelColor: "${nameStyleLabelColor}",
@@ -2493,7 +2490,7 @@ KNOWN ISSUE:<br>
             if (onScreen(s, zoomLevel)) {
                 // const sAtts = s.getAttributes();
                 const tryRedo = false;
-                const segLength = lt_segment_length(s);
+                const segLength = s.length; //lt_segment_length(s);
                 // FORWARD
                 tryRedo || scanSegment_Inner(s, Direction.FORWARD, segLength, tryRedo);
                 // If errors encountered, scan again. (Usually this is an issue with first loading of DOM after zoom or long pan)
@@ -2917,29 +2914,16 @@ KNOWN ISSUE:<br>
         }
         // Get current segment heading at the node
         const segId = segCandidate.id;
-        const segEndAzm = lt_getMathAzimuth_to_node(curNodeExit.id, segCandidate);
-        const segBeginAzm = lt_getMathAzimuth_from_node(curNodeEntry.id, segCandidate);
+        const segEndAzm = lt_getBearing(curNodeExit.id, segCandidate, true);
+        const segBeginAzm = lt_getBearing(curNodeEntry.id, segCandidate);
         let out1TargetAngle = -90.0; // For right-hand side of the road countries  (right-turn)
         let out2TargetAngle = 90.0; // (left-turn)
-        if (segCandidate.primaryStreetId === null) {
+        const segAddress = sdk.DataModel.Segments.getAddress({ segmentId: segCandidate.id });
+        if (segAddress.street === null) {
             lt_log(`Unable to process Heuristics on Segment: ${segCandidate.id} as it has no Primary Street Set`, 1);
             return HeuristicsCandidate.NONE;
         }
-        const street = sdk.DataModel.Streets.getById({ streetId: segCandidate.primaryStreetId });
-        if (!street) {
-            lt_log(`Unable to Process Heuristics on Street: ${segCandidate.primaryStreetId} as street with this id doesn't exist`, 1);
-            return HeuristicsCandidate.NONE;
-        }
-        const city = street?.cityId ? sdk.DataModel.Cities.getById({ cityId: street.cityId }) : null;
-        if (!city) {
-            lt_log(`Unable to Process Heuristics on City ${street?.cityId} as it doesn't exist`, 1);
-            return HeuristicsCandidate.NONE;
-        }
-        const segmentCountry = city.countryId ? sdk.DataModel.Countries.getById({ countryId: city?.countryId }) : null;
-        if (!segmentCountry) {
-            lt_log(`Unable to Process Heuristics on Country ${city.countryId}`, 1);
-        }
-        if (segmentCountry?.isLeftHandTraffic) {
+        if (segAddress.country?.isLeftHandTraffic) {
             out1TargetAngle = 90.0; // left turn
             out2TargetAngle = -90.0; // right turn
         }
@@ -2957,8 +2941,9 @@ KNOWN ISSUE:<br>
             if (is !== null && !lt_is_turn_allowed(is, curNodeEntry, segCandidate)) {
                 continue;
             }
-            const ia = lt_getMathAzimuth_to_node(curNodeEntry.id, is); // absolute math azimuth
-            const ita = lt_turn_angle(ia, segBeginAzm); // turn angle
+            const ia = lt_getBearing(curNodeEntry.id, is, true); // absolute math azimuth
+            // const ita: number | null = lt_turn_angle(ia, segBeginAzm); // turn angle
+            const ita = lt_turn_angle_seg_to_seg(is, curNodeEntry, segCandidate);
             lt_log(`Turn angle from inseg ${nodeEntrySegIds[ii]}: ${ita}(${ia},${segBeginAzm})`, 3);
             if (ita !== null && Math.abs(ita) > MAX_STRAIGHT_DIF) {
                 // tolerance met?
@@ -3034,8 +3019,8 @@ KNOWN ISSUE:<br>
             if (!lt_is_turn_allowed(segCandidate, curNodeExit, os)) {
                 continue;
             }
-            const oa = lt_getMathAzimuth_from_node(curNodeExit.id, os); // absolute math azimuth
-            const ota = lt_turn_angle(segEndAzm, oa); // turn angle
+            const oa = lt_getBearing(curNodeExit.id, os); // absolute math azimuth
+            const ota = lt_turn_angle_seg_to_seg(segCandidate, curNodeExit, os); // turn angle
             lt_log(`Turn angle to outseg2 ${nodeExitSegIds[ii]}: ${ota}(${segEndAzm},${oa})`, 2);
             // Just to be sure, we can't do Heuristics if there's a chance to turn right (RH)
             if (ota !== null && Math.abs(out1TargetAngle - ota) < MAX_PERP_TO_CONSIDER) {
@@ -3063,7 +3048,7 @@ KNOWN ISSUE:<br>
             outTurnAngle2 = ota;
             outSeg2IsHeurFail = thisTimeFail;
         }
-        if (outSeg2 == null) {
+        if (outSeg2 === null) {
             lt_log("== No Outseg2 found ==================================================================", 2);
             return 0;
         }
@@ -3077,15 +3062,21 @@ KNOWN ISSUE:<br>
             const ai1 = getSegObj(nodeEntrySegIds[ii]);
             let thisTimeFail = 0;
             // Ensure the segment is one-way TOWARD the node (incoming direction)
-            if ((ai1?.isAtoB && ai1.toNodeId !== curNodeEntry.id) ||
-                (ai1?.isBtoA && ai1.fromNodeId !== curNodeEntry.id)) {
+            const sourceSegment = ((ai1?.isBtoA && ai1.fromNodeId === curNodeEntry.id) || (ai1?.isAtoB && ai1.toNodeId === curNodeEntry.id));
+            if ((ai1?.isAtoB && ai1.toNodeId !== curNodeEntry.id) || (ai1?.isBtoA && ai1.fromNodeId !== curNodeEntry.id)) {
                 continue;
             }
             // Check turn from this seg to our segment
-            const ia = lt_getMathAzimuth_to_node(curNodeEntry.id, ai1); // absolute math azimuth
+            const ia = lt_getBearing(curNodeEntry.id, ai1, true); // absolute math azimuth
             // 12. Check angle from inseg to this seg (se)
             //  Since we already have azm of this seg TOWARD the node, just check the supplementary turn angle. Must also be within tolerance. (See Geometry proof :)
-            const tta = lt_turn_angle(inAzm, ia);
+            // const tta: number | null = lt_turn_angle(inAzm, ia);
+            let tta;
+            if (sourceSegment) {
+                tta = lt_turn_angle_seg_to_seg(ai1, curNodeEntry, inSeg);
+            }
+            else
+                tta = lt_turn_angle_seg_to_seg(inSeg, curNodeEntry, ai1);
             lt_log(`Turn angle from inseg (supplementary) ${nodeEntrySegIds[ii]}: ${tta}(${inAzm},${ia})`, 3);
             if (tta !== null && Math.abs(out1TargetAngle - tta) > MAX_PERP_DIF_ALT) {
                 // tolerance met?
@@ -3113,7 +3104,7 @@ KNOWN ISSUE:<br>
             altInAzm = ia;
             altInIsHeurFail = thisTimeFail;
         }
-        if (altIncomingSeg == null) {
+        if (altIncomingSeg === null) {
             lt_log("== No alt incoming-1 segment found ==================================================================", 2);
             return 0;
         }
@@ -3134,20 +3125,29 @@ KNOWN ISSUE:<br>
         return 1;
         ////////////////////////////////////////////// end of func /////////////////////////////////////////////////////////
         // get the absolute angle for a segment at an end point - borrowed from JAI
-        function lt_getMathAzimuth_from_node(nodeId, segment) {
+        function lt_getBearing(nodeId, segment, toNode = false) {
             if (nodeId === null || segment === null) {
                 return null;
             }
-            let ja_dx;
-            let ja_dy;
+            // let ja_dx: number;
+            // let ja_dy: number;
+            let startPos, endPos;
             if (segment.fromNodeId === nodeId) {
                 const secondPoint = lt_get_second_point(segment);
                 const firstPoint = lt_get_first_point(segment);
                 if (!secondPoint || !firstPoint) {
                     throw new Error("Missing Start and end Point of the Segment");
                 }
-                ja_dx = secondPoint[0] - firstPoint[0];
-                ja_dy = secondPoint[1] - firstPoint[1];
+                // ja_dx = secondPoint[0] - firstPoint[0];
+                // ja_dy = secondPoint[1] - firstPoint[1];
+                if (toNode) {
+                    startPos = secondPoint;
+                    endPos = firstPoint;
+                }
+                else {
+                    startPos = firstPoint;
+                    endPos = secondPoint;
+                }
             }
             else {
                 const nextToLastPoint = lt_get_next_to_last_point(segment);
@@ -3155,27 +3155,34 @@ KNOWN ISSUE:<br>
                 if (!nextToLastPoint || !lastPoint) {
                     throw new Error("Missing Points at the End of the Segment");
                 }
-                ja_dx = nextToLastPoint[0] - lastPoint[0];
-                ja_dy = nextToLastPoint[1] - lastPoint[1];
+                // ja_dx = nextToLastPoint[0] - lastPoint[0];
+                // ja_dy = nextToLastPoint[1] - lastPoint[1];
+                if (toNode) {
+                    endPos = lastPoint;
+                    startPos = nextToLastPoint;
+                }
+                else {
+                    startPos = lastPoint;
+                    endPos = nextToLastPoint;
+                }
             }
-            const angle_rad = Math.atan2(ja_dy, ja_dx);
-            const angle_deg = ((angle_rad * 180) / Math.PI) % 360;
+            // const angle_rad = Math.atan2(ja_dy, ja_dx);
+            // const angle_deg = ((angle_rad * 180) / Math.PI) % 360;
+            const angle_deg = turf.bearing(startPos, endPos);
             lt_log(`Azm from node ${nodeId} / ${segment.id}: ${angle_deg}`, 3);
             return angle_deg;
         }
-        function lt_getMathAzimuth_to_node(nodeId, segment) {
-            if (!nodeId || !segment)
-                return null;
-            const fromAzm = lt_getMathAzimuth_from_node(nodeId, segment);
-            if (fromAzm === null)
-                return null;
-            let toAzm = fromAzm + 180.0;
-            if (toAzm >= 180.0) {
-                toAzm -= 360.0;
-            }
-            lt_log(`Azm to node ${nodeId} / ${segment.id}: ${toAzm}`, 3);
-            return toAzm;
-        }
+        // function lt_getBearing_to_node(nodeId: number | null, segment: Segment | null) {
+        //     if (!nodeId || !segment) return null;
+        //     const fromAzm = lt_getBearing(nodeId, segment);
+        //     if (fromAzm === null) return null;
+        //     let toAzm = fromAzm + 180.0;
+        //     if (toAzm >= 180.0) {
+        //         toAzm -= 360.0;
+        //     }
+        //     lt_log(`Azm to node ${nodeId} / ${segment.id}: ${toAzm}`, 3);
+        //     return toAzm;
+        // }
         /** Get absolute angle between 2 inputs.
          * @param aIn absolute s_in angle (to node)
          * @param aOut absolute s_out angle (from node)
@@ -3202,6 +3209,28 @@ KNOWN ISSUE:<br>
             a += a > 180 ? -360 : a < -180 ? 360 : 0;
             lt_log(`Turn ${angleInAdjusted},${angleOutAdjusted}: ${a}`, 3);
             return a;
+        }
+        function lt_turn_angle_seg_to_seg(inSeg, connectorNode, outSeg) {
+            let inPoint;
+            let outPoint;
+            if (inSeg.fromNodeId === connectorNode.id) {
+                inPoint = lt_get_second_point(inSeg);
+            }
+            else if (inSeg.toNodeId === connectorNode.id) {
+                inPoint = lt_get_next_to_last_point(inSeg);
+            }
+            if (outSeg.fromNodeId === connectorNode.id) {
+                outPoint = lt_get_second_point(outSeg);
+            }
+            else if (outSeg.toNodeId === connectorNode.id) {
+                outPoint = lt_get_next_to_last_point(outSeg);
+            }
+            if (!inPoint || !outPoint)
+                return null;
+            let turnAngle = turf.angle(inPoint, connectorNode.geometry.coordinates, outPoint);
+            turnAngle -= (turnAngle > 180 ? 360 : 0);
+            turnAngle = (turnAngle > 0) ? 180 - turnAngle : -180 - turnAngle;
+            return turnAngle;
         }
         function lt_is_turn_allowed(s_from, via_node, s_to) {
             const turnsThrough = sdk.DataModel.Turns.getTurnsThroughNode({ nodeId: via_node.id });
@@ -3245,14 +3274,14 @@ KNOWN ISSUE:<br>
         }
     }
     // Segment Length - borrowed from JAI
-    function lt_segment_length(segment) {
-        // let len = segment.geometry.getGeodesicLength(W.map.olMap.projection);
-        // let len = olSphere.getLength(segment.geometry);
-        const len = 0;
-        //    let len = segment.geometry.getGeodesicLength(W.map.olMap.projection);
-        lt_log(`segment: ${segment.id} computed len: ${len} `, 3);
-        return len;
-    }
+    // function lt_segment_length(segment: Segment) {
+    //     // let len = segment.geometry.getGeodesicLength(W.map.olMap.projection);
+    //     // let len = olSphere.getLength(segment.geometry);
+    //     const len = 0;
+    //     //    let len = segment.geometry.getGeodesicLength(W.map.olMap.projection);
+    //     lt_log(`segment: ${segment.id} computed len: ${len} `, 3);
+    //     return len;
+    // }
     function lt_log(lt_log_msg, lt_log_level = 1) {
         // ##NO_FF_START##
         // Firefox addons should not use console.(log|error|debug), so these lines
