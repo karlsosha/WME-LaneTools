@@ -187,7 +187,7 @@ function ltInit() {
     const GF_LINK = "https://greasyfork.org/en/scripts/537219-wme-lanetools";
     const DOWNLOAD_URL = "https://greasyfork.org/en/scripts/537219-wme-lanetools";
     const FORUM_LINK = "https://www.waze.com/discuss/t/script-wme-lanetools/53136";
-    const LI_UPDATE_NOTES = `NEW:<br>
+    const LT_UPDATE_NOTES = `NEW:<br>
     - Conversion to WME SDK<br>
     - <b>ENABLE LT Layers To See Markings on the Map</b><br>
     - Point Updates to GF vs. GITHUB<br><br>
@@ -794,7 +794,7 @@ KNOWN ISSUE:<br>
             WazeWrap.Interface.ShowScriptUpdate(
                 GM_info.script.name,
                 GM_info.script.version,
-                LI_UPDATE_NOTES,
+                LT_UPDATE_NOTES,
                 GF_LINK,
                 FORUM_LINK
             );
