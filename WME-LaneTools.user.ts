@@ -13,7 +13,6 @@
 // @exclude      https://www.waze.com/user/editor*
 // @require      https://greasyfork.org/scripts/24851-wazewrap/code/WazeWrap.js
 // @require      https://cdn.jsdelivr.net/npm/@turf/turf@7.2.0/turf.min.js
-// @require      https://cdn.jsdelivr.net/npm/proj4@2.17.0/dist/proj4.min.js
 // @grant        GM_xmlhttpRequest
 // @grant        unsafeWindow
 // @connect      greasyfork.org
@@ -23,12 +22,11 @@
 /* global W */
 /* global WazeWrap */
 
-// import type { KeyboardShortcut, Node, Segment, Selection, Turn, UserSession, WmeSDK } from "wme-sdk-typings";
+// import type { KeyboardShortcut, Node, Pixel, Segment, Selection, Turn, UserSession, WmeSDK } from "wme-sdk-typings";
 // import type { Position } from "geojson";
 // import _ from "underscore";
 // import * as turf from "@turf/turf";
 // import WazeWrap from "https://greasyfork.org/scripts/24851-wazewrap/code/WazeWrap.js";
-// import proj4 from "proj4";
 
 let sdk: WmeSDK;
 unsafeWindow.SDK_INITIALIZED.then(() => {
@@ -117,15 +115,15 @@ function ltInit() {
     }
 
     interface FeatureDistance {
-        start: number | undefined;
-        boxheight: number | undefined;
-        boxincwidth: number | undefined;
-        iconbordermargin: number | undefined;
-        iconborderheight: number | undefined;
-        iconborderwidth: number | undefined;
-        graphicHeight: number | undefined;
-        graphicWidth: number | undefined;
-        leftOffset: number | undefined;
+        start: number;
+        boxheight: number;
+        boxincwidth: number;
+        iconbordermargin: number;
+        iconborderheight: number;
+        iconborderwidth: number;
+        graphicHeight: number;
+        graphicWidth: number;
+        leftOffset: number;
     }
 
     enum Direction {
@@ -174,7 +172,6 @@ function ltInit() {
         NONE = 0,
         PASS = 1,
     }
-
 
     if (!WazeWrap.Ready) {
         setTimeout(() => {
@@ -376,13 +373,13 @@ KNOWN ISSUE:<br>
             nameStyleLabelColor: (context) => {
                 return LtSettings.LabelColor;
             },
-            nameStyleLaneNum: (context: { feature: { properties: { style: { laneNumLabel: string } } } }) => {
+            nameStyleLaneNum: (context) => {
                 return context?.feature?.properties?.style?.laneNumLabel;
             },
-            highlightStrokeColor: (context: { feature: { properties: { style: { stroke: string } } } }) => {
+            highlightStrokeColor: (context) => {
                 return context?.feature?.properties?.style?.stroke;
             },
-            hightlightStrokeWidth: (context: { feature: { properties: { style: { strokeWidth: number } } } }) => {
+            hightlightStrokeWidth: (context) => {
                 return context?.feature?.properties?.style?.strokeWidth;
             },
             hightlightStrokeOpacity: (context: { feature: { properties: { style: { strokeOpacity: number } } } }) => {
@@ -3090,7 +3087,7 @@ KNOWN ISSUE:<br>
         }
 
         for (let i = 0; i < segs.length; i++) {
-            if(segs[i] === s.id) continue;
+            if (segs[i] === s.id) continue;
             const seg2 = getSegObj(segs[i]);
             const turnsThrough: Turn[] = !node ? [] : sdk.DataModel.Turns.getTurnsThroughNode({ nodeId: node?.id });
             for (let idx = 0; idx < turnsThrough.length; ++idx) {
@@ -4024,190 +4021,183 @@ KNOWN ISSUE:<br>
         return svgs;
     }
 
-    function getStartPoints(node: Node, featDis: FeatureDistance, numIcons: number, sign: number, isLeftDrive: boolean): Position {
+    function getStartPoints(
+        node: Node,
+        featDis: FeatureDistance,
+        numIcons: number,
+        sign: number,
+        isLeftDrive: boolean
+    ): Position {
         const start: number = !featDis || !featDis.start ? 0 : featDis.start;
         const boxheight: number = !featDis || !featDis.boxheight ? 0 : featDis.boxheight;
         const boxincwidth: number = !featDis || !featDis.boxincwidth ? 0 : featDis.boxincwidth;
-        const nodePos = proj4("EPSG:4326", "EPSG:3857", node.geometry.coordinates);
+        let nodePos = sdk.Map.getPixelFromLonLat({lonLat: {lon: node.geometry.coordinates[0], lat: node.geometry.coordinates[1]}});
         const leftDriveModifier = isLeftDrive ? -1 : 1;
         const leftOffset = isLeftDrive ? featDis.leftOffset : 0;
         switch (sign) {
             case 0:
-                return proj4("EPSG:3857", "EPSG:4326", [nodePos[0] + leftDriveModifier * start * 2 - leftOffset, nodePos[1] + boxheight]);
-            //                x: node.geometry.x + (featDis.start * 2),
-            //                y: node.geometry.y + (featDis.boxheight)
-            case 1:
-                return proj4("EPSG:3857", "EPSG:4326", [nodePos[0] + leftDriveModifier * boxheight - leftOffset, nodePos[1] + boxincwidth * numIcons]);
-            //                x: node.geometry.x + featDis.boxheight,
-            //                y: node.geometry.y + (featDis.boxincwidth * numIcons/1.8)
-            case 2:
-                return proj4("EPSG:3857", "EPSG:4326", [
-                    nodePos[0] - leftDriveModifier * (start + boxincwidth * numIcons),
-                    nodePos[1] + boxheight,
-                ]);
-            //                x: node.geometry.x - (featDis.start + (featDis.boxincwidth * numIcons)),
-            //                y: node.geometry.y + (featDis.start + featDis.boxheight)
-            case 3:
-                return proj4("EPSG:3857", "EPSG:4326", [
-                    nodePos[0] + leftDriveModifier* (start + boxincwidth) - leftOffset,
-                    nodePos[1] - (start + boxheight),
-                ]);
-            //                x: node.geometry.x + (featDis.start + featDis.boxincwidth),
-            //                y: node.geometry.y - (featDis.start + featDis.boxheight)
-            case 4:
-                return proj4("EPSG:3857", "EPSG:4326", [
-                    nodePos[0] - leftDriveModifier * (start + boxheight * 3) - leftOffset,
-                    nodePos[1] + (boxincwidth + numIcons * 0.5),
-                ]);
-            //                x: node.geometry.x - (featDis.start + (featDis.boxheight * 1.5)),
-            //                y: node.geometry.y - (featDis.start + (featDis.boxincwidth * numIcons * 1.5))
-            case 5:
-                return proj4("EPSG:3857", "EPSG:4326", [nodePos[0] + leftDriveModifier * (start + boxincwidth) - leftOffset, nodePos[1] + start]);
-            //                x: node.geometry.x + (featDis.start + featDis.boxincwidth/2),
-            //                y: node.geometry.y + (featDis.start/2)
-            case 6:
-                return proj4("EPSG:3857", "EPSG:4326", [
-                    nodePos[0] - leftDriveModifier * start - leftOffset,
-                    nodePos[1] - start * ((boxincwidth * numIcons) / 2),
-                ]);
-            //                x: node.geometry.x - (featDis.start),
-            //                y: node.geometry.y - (featDis.start * (featDis.boxincwidth * numIcons/2))
-            case 7:
-                return proj4("EPSG:3857", "EPSG:4326", [
-                    nodePos[0] - leftDriveModifier * start * boxincwidth * numIcons - leftOffset,
-                    nodePos[1] + start,
-                ]);
-            //                x: node.geometry.x - (featDis.start * (featDis.boxincwidth * numIcons/2)),
-            //                y: node.geometry.y - (featDis.start)
-            default:
+                nodePos.x += leftDriveModifier * start * 2 - leftOffset;
+                nodePos.y += boxheight;
                 break;
+
+            case 1:
+                nodePos.x += leftDriveModifier * featDis.boxheight - leftOffset;
+                nodePos.y += boxincwidth * numIcons;
+                break;
+            case 2:
+                nodePos.x -= leftDriveModifier * (start + boxincwidth * numIcons);
+                nodePos.y += boxheight;
+                break;
+            case 3:
+                nodePos.x += leftDriveModifier * (start + boxincwidth) - leftOffset;
+                nodePos.y -= (start + boxheight);
+                break;
+            case 4:
+                nodePos.x -= leftDriveModifier * (start + boxheight * 3) - leftOffset;
+                nodePos.y += (boxincwidth + numIcons * 0.5);
+                break;
+            case 5:
+                nodePos.x += leftDriveModifier * (start + boxincwidth) - leftOffset;
+                nodePos.y += start;
+                break;
+            case 6:
+                nodePos.x -= leftDriveModifier * start - leftOffset;
+                nodePos.y -= start * ((boxincwidth * numIcons) / 2);
+                break;
+            case 7:
+                nodePos.x -= leftDriveModifier * start * boxincwidth * numIcons - leftOffset;
+                nodePos.y += start; 
+                break;
+            default:
+                return [];
         }
-        return [];
+        const lonLatRes = sdk.Map.getLonLatFromPixel(nodePos);
+        return [lonLatRes.lon, lonLatRes.lat];
     }
 
     function getFeatDistance(): FeatureDistance {
         const label_distance: FeatureDistance = {
-            start: undefined,
-            boxheight: undefined,
-            boxincwidth: undefined,
-            iconbordermargin: undefined,
-            iconborderheight: undefined,
-            iconborderwidth: undefined,
-            graphicHeight: undefined,
-            graphicWidth: undefined,
-            leftOffset: undefined
+            start: 10,
+            boxheight: 39.0,
+            boxincwidth: 28.0,
+            iconbordermargin: 1.0,
+            iconborderheight: 38.0,
+            iconborderwidth: 27.0,
+            graphicHeight: 42,
+            graphicWidth: 25,
+            leftOffset: 8
         };
-        switch (sdk.Map.getZoomLevel()) {
-            case 22:
-                label_distance.start = 2;
-                label_distance.boxheight = 1.7;
-                label_distance.boxincwidth = 1.1;
-                label_distance.iconbordermargin = 0.1;
-                label_distance.iconborderheight = 1.6;
-                label_distance.iconborderwidth = 1;
-                label_distance.graphicHeight = 42;
-                label_distance.graphicWidth = 25;
-                label_distance.leftOffset = 2;
-                break;
-            case 21:
-                label_distance.start = 2;
-                label_distance.boxheight = 3.2;
-                label_distance.boxincwidth = 2.2;
-                label_distance.iconbordermargin = 0.2;
-                label_distance.iconborderheight = 3;
-                label_distance.iconborderwidth = 2;
-                label_distance.graphicHeight = 42;
-                label_distance.graphicWidth = 25;
-                label_distance.leftOffset = 2;
-                break;
-            case 20:
-                label_distance.start = 2;
-                label_distance.boxheight = 5.2;
-                label_distance.boxincwidth = 3.8;
-                label_distance.iconbordermargin = 0.3;
-                label_distance.iconborderheight = 4.9;
-                label_distance.iconborderwidth = 3.5;
-                label_distance.graphicHeight = 42;
-                label_distance.graphicWidth = 25;
-                label_distance.leftOffset = 8;
-                break;
-            case 19:
-                label_distance.start = 3;
-                label_distance.boxheight = 10.0;
-                label_distance.boxincwidth = 7.2;
-                label_distance.iconbordermargin = 0.4;
-                label_distance.iconborderheight = 9.6;
-                label_distance.iconborderwidth = 6.8;
-                label_distance.graphicHeight = 42;
-                label_distance.graphicWidth = 25;
-                label_distance.leftOffset = 8;
-                break;
-            case 18:
-                label_distance.start = 3;
-                label_distance.boxheight = 20.0;
-                label_distance.boxincwidth = 14.0;
-                label_distance.iconbordermargin = 0.5;
-                label_distance.iconborderheight = 19.5;
-                label_distance.iconborderwidth = 13.5;
-                label_distance.graphicHeight = 42;
-                label_distance.graphicWidth = 25;
-                label_distance.leftOffset = 16;
-                break;
-            case 17:
-                label_distance.start = 10;
-                label_distance.boxheight = 39.0;
-                label_distance.boxincwidth = 28.0;
-                label_distance.iconbordermargin = 1.0;
-                label_distance.iconborderheight = 38.0;
-                label_distance.iconborderwidth = 27.0;
-                label_distance.graphicHeight = 42;
-                label_distance.graphicWidth = 25;
-                label_distance.leftOffset = 16;
-                break;
-            case 16:
-                label_distance.start = 15;
-                label_distance.boxheight = 80.0;
-                label_distance.boxincwidth = 55;
-                label_distance.iconbordermargin = 2.0;
-                label_distance.iconborderheight = 78.0;
-                label_distance.iconborderwidth = 53;
-                label_distance.graphicHeight = 42;
-                label_distance.graphicWidth = 25;
-                label_distance.leftOffset = 32;
-                break;
-            case 15:
-                label_distance.start = 2;
-                label_distance.boxheight = 120.0;
-                label_distance.boxincwidth = 90;
-                label_distance.iconbordermargin = 3.0;
-                label_distance.iconborderheight = 117.0;
-                label_distance.iconborderwidth = 87;
-                label_distance.graphicHeight = 42;
-                label_distance.graphicWidth = 25;
-                label_distance.leftOffset = 32;
-                break;
-            case 14:
-                label_distance.start = 2;
-                label_distance.boxheight = 5.2;
-                label_distance.boxincwidth = 3.8;
-                label_distance.iconbordermargin = 0.3;
-                label_distance.iconborderheight = 4.9;
-                label_distance.iconborderwidth = 3.5;
-                label_distance.graphicHeight = 42;
-                label_distance.graphicWidth = 25;
-                label_distance.leftOffset = 32;
-                break;
-            // case 13:
-            //     label_distance.start = 2;
-            //     label_distance.boxheight = 5.2;
-            //     label_distance.boxincwidth = 3.8;
-            //     label_distance.iconbordermargin = .3;
-            //     label_distance.iconborderheight = 4.9;
-            //     label_distance.iconborderwidth = 3.5;
-            //     label_distance.graphicHeight = 42;
-            //     label_distance.graphicWidth = 25;
-            //     break;
-        }
+        // switch (sdk.Map.getZoomLevel()) {
+        //     case 22:
+        //         label_distance.start = 10;
+        //         label_distance.boxheight = 39.0;
+        //         label_distance.boxincwidth = 28.0;
+        //         label_distance.iconbordermargin = 1.0;
+        //         label_distance.iconborderheight = 38.0;
+        //         label_distance.iconborderwidth = 27.0;
+        //         label_distance.graphicHeight = 42;
+        //         label_distance.graphicWidth = 25;
+        //         label_distance.leftOffset = 8;
+        //         break;
+        //     case 21:
+        //         label_distance.start = 10;
+        //         label_distance.boxheight = 39.0;
+        //         label_distance.boxincwidth = 28.0;
+        //         label_distance.iconbordermargin = 1.0;
+        //         label_distance.iconborderheight = 38.0;
+        //         label_distance.iconborderwidth = 27.0;
+        //         label_distance.graphicHeight = 42;
+        //         label_distance.graphicWidth = 25;
+        //         label_distance.leftOffset = 8;
+        //         break;
+        //     case 20:
+        //         label_distance.start = 10;
+        //         label_distance.boxheight = 39.0;
+        //         label_distance.boxincwidth = 28.0;
+        //         label_distance.iconbordermargin = 1.0;
+        //         label_distance.iconborderheight = 38.0;
+        //         label_distance.iconborderwidth = 27.0;
+        //         label_distance.graphicHeight = 42;
+        //         label_distance.graphicWidth = 25;
+        //         label_distance.leftOffset = 8;
+        //         break;
+        //     case 19:
+        //         label_distance.start = 10;
+        //         label_distance.boxheight = 39.0;
+        //         label_distance.boxincwidth = 28.0;
+        //         label_distance.iconbordermargin = 1.0;
+        //         label_distance.iconborderheight = 38.0;
+        //         label_distance.iconborderwidth = 27.0;
+        //         label_distance.graphicHeight = 42;
+        //         label_distance.graphicWidth = 25;
+        //         label_distance.leftOffset = 8;
+        //         break;
+        //     case 18:
+        //         label_distance.start = 10;
+        //         label_distance.boxheight = 39.0;
+        //         label_distance.boxincwidth = 28.0;
+        //         label_distance.iconbordermargin = 1;
+        //         label_distance.iconborderheight = 38;
+        //         label_distance.iconborderwidth = 27;
+        //         label_distance.graphicHeight = 42;
+        //         label_distance.graphicWidth = 25;
+        //         label_distance.leftOffset = 8;
+        //         break;
+        //     case 17:
+        //         label_distance.start = 10;
+        //         label_distance.boxheight = 39.0;
+        //         label_distance.boxincwidth = 28.0;
+        //         label_distance.iconbordermargin = 1.0;
+        //         label_distance.iconborderheight = 38.0;
+        //         label_distance.iconborderwidth = 27.0;
+        //         label_distance.graphicHeight = 42;
+        //         label_distance.graphicWidth = 25;
+        //         label_distance.leftOffset = 8;
+        //         break;
+        //     case 16:
+        //         label_distance.start = 10;
+        //         label_distance.boxheight = 39.0;
+        //         label_distance.boxincwidth = 28.0;
+        //         label_distance.iconbordermargin = 1.0;
+        //         label_distance.iconborderheight = 38.0;
+        //         label_distance.iconborderwidth = 27.0;
+        //         label_distance.graphicHeight = 42;
+        //         label_distance.graphicWidth = 25;
+        //         label_distance.leftOffset = 8;
+        //         break;
+        //     case 15:
+        //         label_distance.start = 2;
+        //         label_distance.boxheight = 120.0;
+        //         label_distance.boxincwidth = 90;
+        //         label_distance.iconbordermargin = 3.0;
+        //         label_distance.iconborderheight = 117.0;
+        //         label_distance.iconborderwidth = 87;
+        //         label_distance.graphicHeight = 42;
+        //         label_distance.graphicWidth = 25;
+        //         label_distance.leftOffset = 32;
+        //         break;
+        //     case 14:
+        //         label_distance.start = 2;
+        //         label_distance.boxheight = 5.2;
+        //         label_distance.boxincwidth = 3.8;
+        //         label_distance.iconbordermargin = 0.3;
+        //         label_distance.iconborderheight = 4.9;
+        //         label_distance.iconborderwidth = 3.5;
+        //         label_distance.graphicHeight = 42;
+        //         label_distance.graphicWidth = 25;
+        //         label_distance.leftOffset = 32;
+        //         break;
+        //     // case 13:
+        //     //     label_distance.start = 2;
+        //     //     label_distance.boxheight = 5.2;
+        //     //     label_distance.boxincwidth = 3.8;
+        //     //     label_distance.iconbordermargin = .3;
+        //     //     label_distance.iconborderheight = 4.9;
+        //     //     label_distance.iconborderwidth = 3.5;
+        //     //     label_distance.graphicHeight = 42;
+        //     //     label_distance.graphicWidth = 25;
+        //     //     break;
+        // }
         return label_distance;
     }
 
@@ -4276,8 +4266,7 @@ KNOWN ISSUE:<br>
 
         // let boxRotate = deg * -1;
 
-        const startPoint: Position = getStartPoints(node, featDis, numIcons, operatorSign, isLeftDrive );
-        if (!startPoint[0] || !startPoint[1]) return;
+        const startPoint: Position = getStartPoints(node, featDis, numIcons, operatorSign, isLeftDrive);
 
         // Box coords
         // var boxPoint1 = new OpenLayers.Geometry.Point(startPoint.x, startPoint.y + featDis.boxheight);
@@ -4287,19 +4276,25 @@ KNOWN ISSUE:<br>
         // );
         // var boxPoint3 = new OpenLayers.Geometry.Point(startPoint.x + featDis.boxincwidth * numIcons, startPoint.y);
         // var boxPoint4 = new OpenLayers.Geometry.Point(startPoint.x, startPoint.y);
-        let boxPoint1: Position = proj4("EPSG:4326", "EPSG:3857", startPoint);
-        boxPoint1[1] += !featDis || !featDis.boxheight ? 0 : featDis.boxheight;
-        boxPoint1 = proj4("EPSG:3857", "EPSG:4326", boxPoint1);
-        let boxPoint2: Position = proj4("EPSG:4326", "EPSG:3857", startPoint);
-        boxPoint2[0] += !featDis || !featDis.boxincwidth ? 0 : featDis.boxincwidth * numIcons;
-        boxPoint2[1] += !featDis || !featDis.boxheight ? 0 : featDis.boxheight;
-        boxPoint2 = proj4("EPSG:3857", "EPSG:4326", boxPoint2);
-        let boxPoint3: Position = proj4("EPSG:4326", "EPSG:3857", startPoint);
-        boxPoint3[0] += !featDis || !featDis.boxincwidth ? 0 : featDis.boxincwidth * numIcons;
-        boxPoint3 = proj4("EPSG:3857", "EPSG:4326", boxPoint3);
-        const boxPoint4: Position = startPoint;
+        const startPointCoords = sdk.Map.getPixelFromLonLat({ lonLat: { lon: startPoint[0], lat: startPoint[1] } });
+        let boxPoint1: Pixel = structuredClone(startPointCoords);
+        boxPoint1.y += (!featDis ? 0 : featDis.boxheight);
+        const boxPoint1LonLat = sdk.Map.getLonLatFromPixel(boxPoint1);
+        let boxPoint2: Pixel = structuredClone(startPointCoords);
+        boxPoint2.x += !featDis ? 0 : featDis.boxincwidth * numIcons;
+        boxPoint2.y += !featDis ? 0 : featDis.boxheight;
+        const boxPoint2LonLat = sdk.Map.getLonLatFromPixel(boxPoint2);
+        let boxPoint3: Pixel = structuredClone(startPointCoords);
+        boxPoint3.x += !featDis ? 0 : featDis.boxincwidth * numIcons;
+        const boxPoint3LonLat = sdk.Map.getLonLatFromPixel(boxPoint3);
 
-        points.push(boxPoint1, boxPoint2, boxPoint3, boxPoint4, boxPoint1);
+        points.push(
+            [boxPoint1LonLat.lon, boxPoint1LonLat.lat],
+            [boxPoint2LonLat.lon, boxPoint2LonLat.lat],
+            [boxPoint3LonLat.lon, boxPoint3LonLat.lat],
+            startPoint,
+            [boxPoint1LonLat.lon, boxPoint1LonLat.lat]
+        );
 
         // Object.assign(styleRules.boxStyle.style, {
         //     strokeColor: "#ffffff",
@@ -4326,56 +4321,59 @@ KNOWN ISSUE:<br>
         sdk.Map.addFeatureToLayer({ feature: boxRing, layerName: LTLaneGraphics.name });
 
         let num = 0;
+        const startPointPixel = sdk.Map.getPixelFromLonLat({ lonLat: { lon: startPoint[0], lat: startPoint[1] } });
         _.each(imgs, (img) => {
-            const iconPoints = [];
             // Icon Background
             // var iconPoint1 = new OpenLayers.Geometry.Point(
             //     startPoint.x + featDis.boxincwidth * num + featDis.iconbordermargin,
             //     startPoint.y + featDis.iconborderheight
             // );
-            let iconPoint1 = proj4("EPSG:4326", "EPSG:3857", startPoint);
-            iconPoint1[0] += !featDis
+            let iconPoint1Pixel = structuredClone(startPointPixel);
+            iconPoint1Pixel.x += !featDis
                 ? 0
                 : (!featDis.boxincwidth ? 0 : featDis.boxincwidth) * num +
                   (!featDis.iconbordermargin ? 0 : featDis.iconbordermargin);
-            iconPoint1[1] += !featDis || !featDis.iconborderheight ? 0 : featDis.iconborderheight;
-            iconPoint1 = proj4("EPSG:3857", "EPSG:4326", iconPoint1);
+            iconPoint1Pixel.y += !featDis || !featDis.iconborderheight ? 0 : featDis.iconborderheight;
+            const iconPoint1 = sdk.Map.getLonLatFromPixel(iconPoint1Pixel);
 
             // var iconPoint2 = new OpenLayers.Geometry.Point(
             //     startPoint.x + featDis.boxincwidth * num + featDis.iconborderwidth,
             //     startPoint.y + featDis.iconborderheight
             // );
-            let iconPoint2 = proj4("EPSG:4326", "EPSG:3857", startPoint);
-            iconPoint2[0] += !featDis
+            let iconPoint2Pixel = structuredClone(startPointPixel);
+            iconPoint2Pixel.x += !featDis
                 ? 0
                 : (!featDis.boxincwidth ? 0 : featDis.boxincwidth) * num +
                   (!featDis.iconborderwidth ? 0 : featDis.iconborderwidth);
-            iconPoint2[1] += !featDis || !featDis.iconborderheight ? 0 : featDis.iconborderheight;
-            iconPoint2 = proj4("EPSG:3857", "EPSG:4326", iconPoint2);
-            // var iconPoint3 = new OpenLayers.Geometry.Point(
-            //     startPoint.x + featDis.boxincwidth * num + featDis.iconborderwidth,
-            //     startPoint.y + featDis.iconbordermargin
-            // );
-            let iconPoint3 = proj4("EPSG:4326", "EPSG:3857", startPoint);
-            iconPoint3[0] += !featDis
+            iconPoint2Pixel.y += !featDis || !featDis.iconborderheight ? 0 : featDis.iconborderheight;
+            const iconPoint2 = sdk.Map.getLonLatFromPixel(iconPoint2Pixel);
+
+            let iconPoint3Pixel = structuredClone(startPointPixel);
+            iconPoint3Pixel.x += !featDis
                 ? 0
                 : (!featDis.boxincwidth ? 0 : featDis.boxincwidth) * num +
                   (!featDis.iconborderwidth ? 0 : featDis.iconborderwidth);
-            iconPoint3[1] += !featDis || !featDis.iconbordermargin ? 0 : featDis.iconbordermargin;
-            iconPoint3 = proj4("EPSG:3857", "EPSG:4326", iconPoint3);
+            iconPoint3Pixel.y += !featDis || !featDis.iconbordermargin ? 0 : featDis.iconbordermargin;
+            const iconPoint3 = sdk.Map.getLonLatFromPixel(iconPoint3Pixel);
 
             // var iconPoint4 = new OpenLayers.Geometry.Point(
             //     startPoint.x + featDis.boxincwidth * num + featDis.iconbordermargin,
             //     startPoint.y + featDis.iconbordermargin
             // );
-            let iconPoint4 = proj4("EPSG:4326", "EPSG:3857", startPoint);
-            iconPoint4[0] += !featDis
+            let iconPoint4Pixel = structuredClone(startPointPixel);
+            iconPoint4Pixel.x += !featDis
                 ? 0
                 : (!featDis.boxincwidth ? 0 : featDis.boxincwidth) * num +
                   (!featDis.iconbordermargin ? 0 : featDis.iconbordermargin);
-            iconPoint4[1] += !featDis || !featDis.iconbordermargin ? 0 : featDis.iconbordermargin;
-            iconPoint4 = proj4("EPSG:3857", "EPSG:4326", iconPoint4);
-            iconPoints.push(iconPoint1, iconPoint2, iconPoint3, iconPoint4, iconPoint1);
+            iconPoint4Pixel.y += !featDis || !featDis.iconbordermargin ? 0 : featDis.iconbordermargin;
+            const iconPoint4 = sdk.Map.getLonLatFromPixel(iconPoint4Pixel);
+            const iconPoints = [
+                [iconPoint1.lon, iconPoint1.lat],
+                [iconPoint2.lon, iconPoint2.lat],
+                [iconPoint3.lon, iconPoint3.lat],
+                [iconPoint4.lon, iconPoint4.lat],
+                [iconPoint1.lon, iconPoint1.lat],
+            ];
 
             // Object.assign(styleRules.iconBoxStyle.style, {
             //     strokeColor: "#000000",
@@ -4485,12 +4483,12 @@ KNOWN ISSUE:<br>
             return;
 
         let isLeftDrive = false;
-        if(seg.primaryStreetId) {
-            let primaryStreet = sdk.DataModel.Streets.getById({streetId: seg.primaryStreetId});
-            if(primaryStreet?.cityId) {
-                let city = sdk.DataModel.Cities.getById({cityId: primaryStreet.cityId});
-                if(city?.countryId) {
-                    let country = sdk.DataModel.Countries.getById({countryId: city.countryId});
+        if (seg.primaryStreetId) {
+            let primaryStreet = sdk.DataModel.Streets.getById({ streetId: seg.primaryStreetId });
+            if (primaryStreet?.cityId) {
+                let city = sdk.DataModel.Cities.getById({ cityId: primaryStreet.cityId });
+                if (city?.countryId) {
+                    let country = sdk.DataModel.Countries.getById({ countryId: city.countryId });
                     isLeftDrive = country?.isLeftHandTraffic || false;
                 }
             }
