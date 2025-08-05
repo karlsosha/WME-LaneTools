@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         WME LaneTools
 // @namespace    https://github.com/SkiDooGuy/WME-LaneTools
-// @version      2025.06.23.001
+// @version      2025.08.04.001
 // @description  Adds highlights and tools to WME to supplement the lanes feature
 // @author       SkiDooGuy, Click Saver by HBiede, Heuristics by kndcajun, assistance by jm6087
 // @updateURL    https://github.com/SkiDooGuy/WME-LaneTools/raw/master/WME-LaneTools.user.js
@@ -13,6 +13,7 @@
 // @exclude      https://www.waze.com/user/editor*
 // @require      https://greasyfork.org/scripts/24851-wazewrap/code/WazeWrap.js
 // @require      https://cdn.jsdelivr.net/npm/@turf/turf@7.2.0/turf.min.js
+// @require      https://cdn.jsdelivr.net/gh/TheEditorX/wme-sdk-plus@1.2.0/wme-sdk-plus.js
 // @grant        GM_xmlhttpRequest
 // @grant        unsafeWindow
 // @connect      greasyfork.org
@@ -27,6 +28,7 @@
 // import _ from "underscore";
 // import * as turf from "@turf/turf";
 // import WazeWrap from "https://greasyfork.org/scripts/24851-wazewrap/code/WazeWrap.js";
+// import { initWmeSdkPlus } from "https://cdn.jsdelivr.net/gh/TheEditorX/wme-sdk-plus@1.2.0/wme-sdk-plus.js";
 
 let sdk: WmeSDK;
 unsafeWindow.SDK_INITIALIZED.then(() => {
@@ -39,7 +41,10 @@ unsafeWindow.SDK_INITIALIZED.then(() => {
     });
 
     console.log(`SDK v ${sdk.getSDKVersion()} on ${sdk.getWMEVersion()} initialized`);
-    sdk.Events.once({ eventName: "wme-ready" }).then(ltInit);
+    Promise.all([
+        initWmeSdkPlus(sdk),
+        sdk.Events.once({ eventName: "wme-ready" })
+    ]).then(ltInit);
 });
 
 function ltInit() {
@@ -185,11 +190,13 @@ function ltInit() {
     const DOWNLOAD_URL = "https://greasyfork.org/en/scripts/537219-wme-lanetools";
     const FORUM_LINK = "https://www.waze.com/discuss/t/script-wme-lanetools/53136";
     const LT_UPDATE_NOTES = `NEW:<br>
-    - Conversion to WME SDK<br>
-    - <b>ENABLE LT Layers To See Markings on the Map</b><br>
-    - Point Updates to GF vs. GITHUB<br><br>
+    - Remove proj4 Package<br>
+    - Adjust generation of Icons with Lanes<br>
+    - Using WME SDK + due to limitations of native SDK<br><br>
 KNOWN ISSUE:<br>
-    - Some tab UI enhancements may not work as expected.<br>`;
+    - Some Icons Locations may display incorrectly<br><br>
+TODO:<br>
+    - Zoom doesn't currently reset the size of the icons<br>`;
 
     const LANETOOLS_DEBUG_LEVEL = 1;
     const configArray = {};
@@ -367,6 +374,9 @@ KNOWN ISSUE:<br>
     function applyIconStyle(properties: FeatureProperties): boolean {
         return properties.styleName === "iconStyle" && properties.layerName === LTLaneGraphics.name;
     }
+    function applyStartPointStyle(properties: FeatureProperties): boolean {
+        return properties.styleName === "startPointStyle" && properties.layerName === LTLaneGraphics.name;
+    }
 
     const styleConfig = {
         styleContext: {
@@ -450,6 +460,15 @@ KNOWN ISSUE:<br>
                     fillColor: "${highlightFillColor}",
                     pointRadius: "${highlightPointRadius}",
                     fillOpacity: 0.9,
+                    strokeWidth: 0,
+                },
+            },
+            {
+                predicate: applyStartPointStyle,
+                style: {
+                    fillColor: "red",
+                    pointRadius: 6,
+                    fillOpacity: 1,
                     strokeWidth: 0,
                 },
             },
@@ -997,6 +1016,16 @@ KNOWN ISSUE:<br>
                 displayLaneGraphics();
             },
         });
+
+        sdk.Events.on({
+            eventName: "wme-feature-editor-rendered",
+            eventHandler: () => {
+                scanArea();
+                lanesTabSetup();
+                displayLaneGraphics();
+            }
+        });
+
 
         // Add keyboard shortcuts
         try {
@@ -2412,31 +2441,45 @@ KNOWN ISSUE:<br>
     }
 
     // borrowed from JAI
-    function getCardinalAngle(nodeId: number | null, segment: Segment): number | null {
+    function getAzimuthAngle(nodeId: number | null, segment: Segment): number | null {
         if (nodeId == null || segment == null) {
             return null;
         }
-        let ja_dx: number | undefined;
-        let ja_dy: number | undefined;
-        if (segment.fromNodeId === nodeId) {
+        // let ja_dx: number | undefined;
+        // let ja_dy: number | undefined;
+        // if (segment.fromNodeId === nodeId) {
+        //     const sp: Position | undefined = lt_get_second_point(segment);
+        //     const fp: Position | undefined = lt_get_first_point(segment);
+        //     if (!sp || !fp) return null;
+        //     ja_dx = sp[0] - fp[0];
+        //     ja_dy = sp[1] - fp[1];
+        // } else {
+        //     const next_to_last: Position | undefined = lt_get_next_to_last_point(segment);
+        //     const last_point: Position | undefined = lt_get_last_point(segment);
+        //     if (!next_to_last || !last_point) return null;
+        //     ja_dx = next_to_last[0] - last_point[0];
+        //     ja_dy = next_to_last[1] - last_point[1];
+        // }
+
+        // const angle_rad = Math.atan2(ja_dy, ja_dx);
+        // let angle_deg = ((angle_rad * 180) / Math.PI) % 360;
+        // if (angle_deg < 0) angle_deg = angle_deg + 360;
+        // // console.log('Cardinal: ' + Math.round(angle_deg));
+        // return Math.round(angle_deg);
+        let bearing: number | null = null;
+        if(segment.fromNodeId === nodeId) {
             const sp: Position | undefined = lt_get_second_point(segment);
             const fp: Position | undefined = lt_get_first_point(segment);
             if (!sp || !fp) return null;
-            ja_dx = sp[0] - fp[0];
-            ja_dy = sp[1] - fp[1];
-        } else {
+            bearing = turf.bearing(turf.point(fp), turf.point(sp));
+        }
+        else {
             const next_to_last: Position | undefined = lt_get_next_to_last_point(segment);
             const last_point: Position | undefined = lt_get_last_point(segment);
             if (!next_to_last || !last_point) return null;
-            ja_dx = next_to_last[0] - last_point[0];
-            ja_dy = next_to_last[1] - last_point[1];
+            bearing = turf.bearing(turf.point(last_point), turf.point(next_to_last));
         }
-
-        const angle_rad = Math.atan2(ja_dy, ja_dx);
-        let angle_deg = ((angle_rad * 180) / Math.PI) % 360;
-        if (angle_deg < 0) angle_deg = angle_deg + 360;
-        // console.log('Cardinal: ' + Math.round(angle_deg));
-        return Math.round(angle_deg);
+        return turf.bearingToAzimuth(bearing);
     }
 
     // borrowed from JAI
@@ -4039,34 +4082,33 @@ KNOWN ISSUE:<br>
                 nodePos.x += leftDriveModifier * start * 2 - leftOffset;
                 nodePos.y += boxheight;
                 break;
-
             case 1:
-                nodePos.x += leftDriveModifier * featDis.boxheight - leftOffset;
-                nodePos.y += boxincwidth * numIcons;
+                nodePos.x -= leftDriveModifier * (start + (leftDriveModifier > 0 ? (boxincwidth * numIcons * 2) : 2*leftOffset));
+                nodePos.y -= start + boxheight;
                 break;
             case 2:
-                nodePos.x -= leftDriveModifier * (start + boxincwidth * numIcons);
-                nodePos.y += boxheight;
+                nodePos.x += start;
+                nodePos.y -= leftDriveModifier * (start + (leftDriveModifier > 0 ? boxincwidth * (numIcons+2) : (boxincwidth*numIcons)));
                 break;
             case 3:
-                nodePos.x += leftDriveModifier * (start + boxincwidth) - leftOffset;
-                nodePos.y -= (start + boxheight);
+                nodePos.x -= start + boxheight;
+                nodePos.y += leftDriveModifier * (start + boxincwidth*numIcons);
                 break;
             case 4:
-                nodePos.x -= leftDriveModifier * (start + boxheight * 3) - leftOffset;
-                nodePos.y += (boxincwidth + numIcons * 0.5);
-                break;
-            case 5:
-                nodePos.x += leftDriveModifier * (start + boxincwidth) - leftOffset;
+                nodePos.x += leftDriveModifier * (start + (leftDriveModifier > 0 ? boxincwidth : (boxincwidth * numIcons + leftOffset*2)));
                 nodePos.y += start;
                 break;
+            case 5:
+                nodePos.x -= leftDriveModifier * (start + (leftDriveModifier > 0 ? boxheight*2 : 0));
+                nodePos.y += (leftDriveModifier > 0 ? start : leftDriveModifier * (boxheight*2 + start));
+                break;
             case 6:
-                nodePos.x -= leftDriveModifier * start - leftOffset;
-                nodePos.y -= start * ((boxincwidth * numIcons) / 2);
+                nodePos.x -= (leftDriveModifier > 0 ? start : (boxincwidth * numIcons + start + leftOffset));
+                nodePos.y += leftDriveModifier * (start + boxheight);
                 break;
             case 7:
-                nodePos.x -= leftDriveModifier * start * boxincwidth * numIcons - leftOffset;
-                nodePos.y += start; 
+                nodePos.x += leftDriveModifier * (start + boxincwidth * (Math.log(numIcons)+1) + (leftDriveModifier > 0 ? 0 : leftOffset * 2));
+                nodePos.y -= leftDriveModifier * (start + boxheight); 
                 break;
             default:
                 return [];
@@ -4085,7 +4127,7 @@ KNOWN ISSUE:<br>
             iconborderwidth: 27.0,
             graphicHeight: 42,
             graphicWidth: 25,
-            leftOffset: 8
+            leftOffset: 12
         };
         // switch (sdk.Map.getZoomLevel()) {
         //     case 22:
@@ -4204,61 +4246,68 @@ KNOWN ISSUE:<br>
     function drawIcons(seg: Segment | null, node: Node | null, imgs: any, isLeftDrive: boolean = false) {
         if (!seg || !node) return;
         const featDis: FeatureDistance = getFeatDistance();
-        let deg = getCardinalAngle(node.id, seg);
+        let deg = getAzimuthAngle(node.id, seg);
         if (!deg) return;
         const points: Position[] = [];
         let operatorSign = 0;
         const numIcons = imgs.length;
 
-        // Orient all icons straight up if the rotate option isn't enabled
-        if (!getId("lt-IconsRotate")?.checked) deg = -90;
 
         // Rotate in the style is clockwise, the rotate() func is counterclockwise
         if (deg === 0) {
             deg += 180;
             operatorSign = 1;
         } else if (deg > 0 && deg <= 30) {
-            deg += 2 * (90 - deg);
+            deg += 90; //2 * (90 - deg);
             // console.log('Math stuff2: ' + deg);
             operatorSign = 1;
         } else if (deg >= 330 && deg <= 360) {
-            deg -= 180 - 2 * (360 - deg);
+            deg -= 270 // 180 - 2 * (360 - deg);
             // console.log('Math stuff2: ' + deg);
             operatorSign = 1;
         } else if (deg > 30 && deg < 60) {
-            deg -= 90 - 2 * (360 - deg);
+            deg += 90// - 2 * (360 - deg);
             // console.log('Math stuff3: ' + deg);
             operatorSign = 2;
         } else if (deg >= 60 && deg <= 120) {
-            deg -= 90 - 2 * (360 - deg);
+            deg += 90// - 2 * (360 - deg);
             // console.log('Math stuff4: ' + deg);
             operatorSign = 2;
         } else if (deg > 120 && deg < 150) {
-            deg -= 90 - 2 * (360 - deg);
+            deg += 90 //- 2 * (360 - deg);
             // console.log('Math stuff5: ' + deg);
             operatorSign = 7;
         } else if (deg >= 150 && deg <= 210) {
-            deg = 180 - deg;
+            // deg = 180 - deg;
+            deg += 90; // - 2 * (360 - deg);
             // console.log('Math stuff6: ' + deg);
             operatorSign = 4;
         } else if (deg > 210 && deg < 240) {
-            deg -= 90 - 2 * (360 - deg);
+            deg -= 270;// - 2 * (360 - deg);
             // console.log('Math stuff7: ' + deg);
             operatorSign = 6;
         } else if (deg >= 240 && deg <= 300) {
-            deg -= 180 - 2 * (360 - deg);
+            deg -= 270 //- 2 * (360 - deg);
             // console.log('Math stuff8: ' + deg);
             operatorSign = 3;
         } else if (deg > 300 && deg < 330) {
-            deg -= 180 - 2 * (360 - deg);
+            // deg -= 180 - 2 * (360 - deg);
+            deg -= 270;
             // console.log('Math stuff9: ' + deg);
             operatorSign = 5;
         } else {
             console.log("LT: icon angle is out of bounds");
         }
 
-        const iconRotate = deg > 315 ? deg : deg + 90;
-        const boxRotate = 360 - iconRotate;
+        // Orient all icons straight up if the rotate option isn't enabled
+        
+
+        let iconRotate = deg > 315 ? deg : deg + 90;
+        let boxRotate = 360 - iconRotate;
+        if (!getId("lt-IconsRotate")?.checked) {
+            iconRotate += 180;
+            boxRotate += 180;
+        }
 
         // console.log(deg);
         // console.log(operatorSign);
@@ -4317,8 +4366,11 @@ KNOWN ISSUE:<br>
             { id: `polygon_${points.toString()}` }
         );
 
+        const startPointFeature = turf.point( startPoint, { styleName: "startPointStyle", layerName: LTLaneGraphics.name }, { id: `point_${startPoint.toString()}` });
+
         // LTLaneGraphics.addFeatures([boxVector]);
         sdk.Map.addFeatureToLayer({ feature: boxRing, layerName: LTLaneGraphics.name });
+        sdk.Map.addFeatureToLayer({ feature: startPointFeature, layerName: LTLaneGraphics.name });
 
         let num = 0;
         const startPointPixel = sdk.Map.getPixelFromLonLat({ lonLat: { lon: startPoint[0], lat: startPoint[1] } });
