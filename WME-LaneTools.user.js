@@ -104,7 +104,7 @@ KNOWN ISSUE:<br>
     - Some Icons Locations may display incorrectly<br><br>
 TODO:<br>
     - Zoom doesn't currently reset the size of the icons<br>`;
-    const LANETOOLS_DEBUG_LEVEL = 1;
+    const LANETOOLS_DEBUG_LEVEL = 5;
     const configArray = {};
     const RBSArray = { failed: false };
     const IsBeta = location.href.indexOf("beta.waze.com") !== -1;
@@ -3540,23 +3540,23 @@ TODO:<br>
                 nodePos.y += boxheight;
                 break;
             case 1:
-                nodePos.x -= leftDriveModifier * (start + (leftDriveModifier > 0 ? (boxincwidth * numIcons * 2) : 2 * leftOffset));
+                nodePos.x -= leftDriveModifier * (start + (leftDriveModifier > 0 ? (boxincwidth * numIcons) : 2 * leftOffset));
                 nodePos.y -= start + boxheight;
                 break;
             case 2:
                 nodePos.x += start;
-                nodePos.y -= leftDriveModifier * (start + (leftDriveModifier > 0 ? boxincwidth * (numIcons + 2) : (boxincwidth * numIcons)));
+                nodePos.y -= leftDriveModifier * (start + (leftDriveModifier > 0 ? boxincwidth * numIcons : (boxincwidth * numIcons)));
                 break;
             case 3:
                 nodePos.x -= start + boxheight;
-                nodePos.y += leftDriveModifier * (start + boxincwidth * numIcons);
+                nodePos.y += leftDriveModifier * (start + (leftDriveModifier > 0 ? boxincwidth : boxincwidth * numIcons));
                 break;
             case 4:
                 nodePos.x += leftDriveModifier * (start + (leftDriveModifier > 0 ? boxincwidth : (boxincwidth * numIcons + leftOffset * 2)));
                 nodePos.y += start;
                 break;
             case 5:
-                nodePos.x -= leftDriveModifier * (start + (leftDriveModifier > 0 ? boxheight * 2 : 0));
+                nodePos.x -= leftDriveModifier * (start + (leftDriveModifier > 0 ? boxincwidth * numIcons : 0));
                 nodePos.y += (leftDriveModifier > 0 ? start : leftDriveModifier * (boxheight * 2 + start));
                 break;
             case 6:
@@ -3564,8 +3564,16 @@ TODO:<br>
                 nodePos.y += leftDriveModifier * (start + boxheight);
                 break;
             case 7:
-                nodePos.x += leftDriveModifier * (start + boxincwidth * (Math.log(numIcons) + 1) + (leftDriveModifier > 0 ? 0 : leftOffset * 2));
+                nodePos.x += leftDriveModifier * (start + (leftDriveModifier > 0 ? boxincwidth / 2 : boxincwidth * numIcons + leftOffset * 2));
                 nodePos.y -= leftDriveModifier * (start + boxheight);
+                break;
+            case 8:
+                nodePos.x -= leftDriveModifier * (start + boxincwidth * numIcons);
+                nodePos.y -= leftDriveModifier * (start + boxheight);
+                break;
+            case 9:
+                nodePos.x -= leftDriveModifier * (start + (leftDriveModifier > 0 ? (boxincwidth * numIcons * 1.25) : 2 * leftOffset));
+                nodePos.y -= start + boxheight;
                 break;
             default:
                 return [];
@@ -3721,12 +3729,12 @@ TODO:<br>
         else if (deg >= 330 && deg <= 360) {
             deg -= 270; // 180 - 2 * (360 - deg);
             // console.log('Math stuff2: ' + deg);
-            operatorSign = 1;
+            operatorSign = 9;
         }
         else if (deg > 30 && deg < 60) {
             deg += 90; // - 2 * (360 - deg);
             // console.log('Math stuff3: ' + deg);
-            operatorSign = 2;
+            operatorSign = 8;
         }
         else if (deg >= 60 && deg <= 120) {
             deg += 90; // - 2 * (360 - deg);
