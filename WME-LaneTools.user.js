@@ -2,7 +2,7 @@
 // ==UserScript==
 // @name         WME LaneTools
 // @namespace    https://github.com/SkiDooGuy/WME-LaneTools
-// @version      2025.06.23.001
+// @version      2025.08.04.001
 // @description  Adds highlights and tools to WME to supplement the lanes feature
 // @author       SkiDooGuy, Click Saver by HBiede, Heuristics by kndcajun, assistance by jm6087
 // @updateURL    https://github.com/SkiDooGuy/WME-LaneTools/raw/master/WME-LaneTools.user.js
@@ -14,7 +14,7 @@
 // @exclude      https://www.waze.com/user/editor*
 // @require      https://greasyfork.org/scripts/24851-wazewrap/code/WazeWrap.js
 // @require      https://cdn.jsdelivr.net/npm/@turf/turf@7.2.0/turf.min.js
-// @require      https://cdn.jsdelivr.net/npm/proj4@2.17.0/dist/proj4.min.js
+// @require      https://cdn.jsdelivr.net/gh/TheEditorX/wme-sdk-plus@1.2.0/wme-sdk-plus.js
 // @grant        GM_xmlhttpRequest
 // @grant        unsafeWindow
 // @connect      greasyfork.org
@@ -22,12 +22,12 @@
 // ==/UserScript==
 /* global W */
 /* global WazeWrap */
-// import type { KeyboardShortcut, Node, Segment, Selection, Turn, UserSession, WmeSDK } from "wme-sdk-typings";
+// import type { KeyboardShortcut, Node, Pixel, Segment, Selection, Turn, UserSession, WmeSDK } from "wme-sdk-typings";
 // import type { Position } from "geojson";
 // import _ from "underscore";
 // import * as turf from "@turf/turf";
 // import WazeWrap from "https://greasyfork.org/scripts/24851-wazewrap/code/WazeWrap.js";
-// import proj4 from "proj4";
+// import { initWmeSdkPlus } from "https://cdn.jsdelivr.net/gh/TheEditorX/wme-sdk-plus@1.2.0/wme-sdk-plus.js";
 let sdk;
 unsafeWindow.SDK_INITIALIZED.then(() => {
     if (!unsafeWindow.getWmeSdk) {
@@ -38,7 +38,10 @@ unsafeWindow.SDK_INITIALIZED.then(() => {
         scriptName: "WME LaneTools",
     });
     console.log(`SDK v ${sdk.getSDKVersion()} on ${sdk.getWMEVersion()} initialized`);
-    sdk.Events.once({ eventName: "wme-ready" }).then(ltInit);
+    Promise.all([
+        initWmeSdkPlus(sdk),
+        sdk.Events.once({ eventName: "wme-ready" })
+    ]).then(ltInit);
 });
 function ltInit() {
     let Direction;
@@ -93,13 +96,15 @@ function ltInit() {
     const GF_LINK = "https://greasyfork.org/en/scripts/537219-wme-lanetools";
     const DOWNLOAD_URL = "https://greasyfork.org/en/scripts/537219-wme-lanetools";
     const FORUM_LINK = "https://www.waze.com/discuss/t/script-wme-lanetools/53136";
-    const LI_UPDATE_NOTES = `NEW:<br>
-    - Conversion to WME SDK<br>
-    - <b>ENABLE LT Layers To See Markings on the Map</b><br>
-    - Point Updates to GF vs. GITHUB<br><br>
+    const LT_UPDATE_NOTES = `NEW:<br>
+    - Remove proj4 Package<br>
+    - Adjust generation of Icons with Lanes<br>
+    - Using WME SDK + due to limitations of native SDK<br><br>
 KNOWN ISSUE:<br>
-    - Some tab UI enhancements may not work as expected.<br>`;
-    const LANETOOLS_DEBUG_LEVEL = 1;
+    - Some Icons Locations may display incorrectly<br><br>
+TODO:<br>
+    - Zoom doesn't currently reset the size of the icons<br>`;
+    const LANETOOLS_DEBUG_LEVEL = 5;
     const configArray = {};
     const RBSArray = { failed: false };
     const IsBeta = location.href.indexOf("beta.waze.com") !== -1;
@@ -248,9 +253,6 @@ KNOWN ISSUE:<br>
     let langLocality = "default";
     let LANG;
     let seaPickle;
-    function applyNamesStyle(properties) {
-        return properties.layerName === LTNamesLayer.name;
-    }
     function applyNodeHightlightStyle(properties) {
         return properties.styleName === "nodeStyle" && properties.layerName === LTHighlightLayer.name;
     }
@@ -265,6 +267,9 @@ KNOWN ISSUE:<br>
     }
     function applyIconStyle(properties) {
         return properties.styleName === "iconStyle" && properties.layerName === LTLaneGraphics.name;
+    }
+    function applyStartPointStyle(properties) {
+        return properties.styleName === "startPointStyle" && properties.layerName === LTLaneGraphics.name;
     }
     const styleConfig = {
         styleContext: {
@@ -322,7 +327,7 @@ KNOWN ISSUE:<br>
         },
         styleRules: [
             {
-                predicate: applyNamesStyle,
+                predicate: (properties) => { return properties.layerName === LTNamesLayer.name; },
                 style: {
                     fontFamily: "Open Sans, Alef, helvetica, sans-serif, monospace",
                     labelColor: "${nameStyleLabelColor}",
@@ -346,6 +351,15 @@ KNOWN ISSUE:<br>
                     fillColor: "${highlightFillColor}",
                     pointRadius: "${highlightPointRadius}",
                     fillOpacity: 0.9,
+                    strokeWidth: 0,
+                },
+            },
+            {
+                predicate: applyStartPointStyle,
+                style: {
+                    fillColor: "red",
+                    pointRadius: 6,
+                    fillOpacity: 1,
                     strokeWidth: 0,
                 },
             },
@@ -672,7 +686,7 @@ KNOWN ISSUE:<br>
             });
             $(`<style type="text/css">${ltCss}</style>`).appendTo("head");
             $("#map").append($ltButtons.html());
-            WazeWrap.Interface.ShowScriptUpdate(GM_info.script.name, GM_info.script.version, LI_UPDATE_NOTES, GF_LINK, FORUM_LINK);
+            WazeWrap.Interface.ShowScriptUpdate(GM_info.script.name, GM_info.script.version, LT_UPDATE_NOTES, GF_LINK, FORUM_LINK);
             console.log("LaneTools: loaded");
         }
         else {
@@ -856,6 +870,14 @@ KNOWN ISSUE:<br>
                 lanesTabSetup();
                 displayLaneGraphics();
             },
+        });
+        sdk.Events.on({
+            eventName: "wme-feature-editor-rendered",
+            eventHandler: () => {
+                scanArea();
+                lanesTabSetup();
+                displayLaneGraphics();
+            }
         });
         // Add keyboard shortcuts
         try {
@@ -2103,34 +2125,46 @@ KNOWN ISSUE:<br>
         return false;
     }
     // borrowed from JAI
-    function getCardinalAngle(nodeId, segment) {
+    function getAzimuthAngle(nodeId, segment) {
         if (nodeId == null || segment == null) {
             return null;
         }
-        let ja_dx;
-        let ja_dy;
+        // let ja_dx: number | undefined;
+        // let ja_dy: number | undefined;
+        // if (segment.fromNodeId === nodeId) {
+        //     const sp: Position | undefined = lt_get_second_point(segment);
+        //     const fp: Position | undefined = lt_get_first_point(segment);
+        //     if (!sp || !fp) return null;
+        //     ja_dx = sp[0] - fp[0];
+        //     ja_dy = sp[1] - fp[1];
+        // } else {
+        //     const next_to_last: Position | undefined = lt_get_next_to_last_point(segment);
+        //     const last_point: Position | undefined = lt_get_last_point(segment);
+        //     if (!next_to_last || !last_point) return null;
+        //     ja_dx = next_to_last[0] - last_point[0];
+        //     ja_dy = next_to_last[1] - last_point[1];
+        // }
+        // const angle_rad = Math.atan2(ja_dy, ja_dx);
+        // let angle_deg = ((angle_rad * 180) / Math.PI) % 360;
+        // if (angle_deg < 0) angle_deg = angle_deg + 360;
+        // // console.log('Cardinal: ' + Math.round(angle_deg));
+        // return Math.round(angle_deg);
+        let bearing = null;
         if (segment.fromNodeId === nodeId) {
             const sp = lt_get_second_point(segment);
             const fp = lt_get_first_point(segment);
             if (!sp || !fp)
                 return null;
-            ja_dx = sp[0] - fp[0];
-            ja_dy = sp[1] - fp[1];
+            bearing = turf.bearing(turf.point(fp), turf.point(sp));
         }
         else {
             const next_to_last = lt_get_next_to_last_point(segment);
             const last_point = lt_get_last_point(segment);
             if (!next_to_last || !last_point)
                 return null;
-            ja_dx = next_to_last[0] - last_point[0];
-            ja_dy = next_to_last[1] - last_point[1];
+            bearing = turf.bearing(turf.point(last_point), turf.point(next_to_last));
         }
-        const angle_rad = Math.atan2(ja_dy, ja_dx);
-        let angle_deg = ((angle_rad * 180) / Math.PI) % 360;
-        if (angle_deg < 0)
-            angle_deg = angle_deg + 360;
-        // console.log('Cardinal: ' + Math.round(angle_deg));
-        return Math.round(angle_deg);
+        return turf.bearingToAzimuth(bearing);
     }
     // borrowed from JAI
     function lt_get_first_point(segment) {
@@ -2493,7 +2527,7 @@ KNOWN ISSUE:<br>
             if (onScreen(s, zoomLevel)) {
                 // const sAtts = s.getAttributes();
                 const tryRedo = false;
-                const segLength = lt_segment_length(s);
+                const segLength = s.length; //lt_segment_length(s);
                 // FORWARD
                 tryRedo || scanSegment_Inner(s, Direction.FORWARD, segLength, tryRedo);
                 // If errors encountered, scan again. (Usually this is an issue with first loading of DOM after zoom or long pan)
@@ -2917,29 +2951,16 @@ KNOWN ISSUE:<br>
         }
         // Get current segment heading at the node
         const segId = segCandidate.id;
-        const segEndAzm = lt_getMathAzimuth_to_node(curNodeExit.id, segCandidate);
-        const segBeginAzm = lt_getMathAzimuth_from_node(curNodeEntry.id, segCandidate);
+        const segEndAzm = lt_getBearing(curNodeExit.id, segCandidate, true);
+        const segBeginAzm = lt_getBearing(curNodeEntry.id, segCandidate);
         let out1TargetAngle = -90.0; // For right-hand side of the road countries  (right-turn)
         let out2TargetAngle = 90.0; // (left-turn)
-        if (segCandidate.primaryStreetId === null) {
+        const segAddress = sdk.DataModel.Segments.getAddress({ segmentId: segCandidate.id });
+        if (segAddress.street === null) {
             lt_log(`Unable to process Heuristics on Segment: ${segCandidate.id} as it has no Primary Street Set`, 1);
             return HeuristicsCandidate.NONE;
         }
-        const street = sdk.DataModel.Streets.getById({ streetId: segCandidate.primaryStreetId });
-        if (!street) {
-            lt_log(`Unable to Process Heuristics on Street: ${segCandidate.primaryStreetId} as street with this id doesn't exist`, 1);
-            return HeuristicsCandidate.NONE;
-        }
-        const city = street?.cityId ? sdk.DataModel.Cities.getById({ cityId: street.cityId }) : null;
-        if (!city) {
-            lt_log(`Unable to Process Heuristics on City ${street?.cityId} as it doesn't exist`, 1);
-            return HeuristicsCandidate.NONE;
-        }
-        const segmentCountry = city.countryId ? sdk.DataModel.Countries.getById({ countryId: city?.countryId }) : null;
-        if (!segmentCountry) {
-            lt_log(`Unable to Process Heuristics on Country ${city.countryId}`, 1);
-        }
-        if (segmentCountry?.isLeftHandTraffic) {
+        if (segAddress.country?.isLeftHandTraffic) {
             out1TargetAngle = 90.0; // left turn
             out2TargetAngle = -90.0; // right turn
         }
@@ -2957,8 +2978,9 @@ KNOWN ISSUE:<br>
             if (is !== null && !lt_is_turn_allowed(is, curNodeEntry, segCandidate)) {
                 continue;
             }
-            const ia = lt_getMathAzimuth_to_node(curNodeEntry.id, is); // absolute math azimuth
-            const ita = lt_turn_angle(ia, segBeginAzm); // turn angle
+            const ia = lt_getBearing(curNodeEntry.id, is, true); // absolute math azimuth
+            // const ita: number | null = lt_turn_angle(ia, segBeginAzm); // turn angle
+            const ita = lt_turn_angle_seg_to_seg(is, curNodeEntry, segCandidate);
             lt_log(`Turn angle from inseg ${nodeEntrySegIds[ii]}: ${ita}(${ia},${segBeginAzm})`, 3);
             if (ita !== null && Math.abs(ita) > MAX_STRAIGHT_DIF) {
                 // tolerance met?
@@ -3034,8 +3056,8 @@ KNOWN ISSUE:<br>
             if (!lt_is_turn_allowed(segCandidate, curNodeExit, os)) {
                 continue;
             }
-            const oa = lt_getMathAzimuth_from_node(curNodeExit.id, os); // absolute math azimuth
-            const ota = lt_turn_angle(segEndAzm, oa); // turn angle
+            const oa = lt_getBearing(curNodeExit.id, os); // absolute math azimuth
+            const ota = lt_turn_angle_seg_to_seg(segCandidate, curNodeExit, os); // turn angle
             lt_log(`Turn angle to outseg2 ${nodeExitSegIds[ii]}: ${ota}(${segEndAzm},${oa})`, 2);
             // Just to be sure, we can't do Heuristics if there's a chance to turn right (RH)
             if (ota !== null && Math.abs(out1TargetAngle - ota) < MAX_PERP_TO_CONSIDER) {
@@ -3063,7 +3085,7 @@ KNOWN ISSUE:<br>
             outTurnAngle2 = ota;
             outSeg2IsHeurFail = thisTimeFail;
         }
-        if (outSeg2 == null) {
+        if (outSeg2 === null) {
             lt_log("== No Outseg2 found ==================================================================", 2);
             return 0;
         }
@@ -3077,15 +3099,21 @@ KNOWN ISSUE:<br>
             const ai1 = getSegObj(nodeEntrySegIds[ii]);
             let thisTimeFail = 0;
             // Ensure the segment is one-way TOWARD the node (incoming direction)
-            if ((ai1?.isAtoB && ai1.toNodeId !== curNodeEntry.id) ||
-                (ai1?.isBtoA && ai1.fromNodeId !== curNodeEntry.id)) {
+            const sourceSegment = ((ai1?.isBtoA && ai1.fromNodeId === curNodeEntry.id) || (ai1?.isAtoB && ai1.toNodeId === curNodeEntry.id));
+            if ((ai1?.isAtoB && ai1.toNodeId !== curNodeEntry.id) || (ai1?.isBtoA && ai1.fromNodeId !== curNodeEntry.id)) {
                 continue;
             }
             // Check turn from this seg to our segment
-            const ia = lt_getMathAzimuth_to_node(curNodeEntry.id, ai1); // absolute math azimuth
+            const ia = lt_getBearing(curNodeEntry.id, ai1, true); // absolute math azimuth
             // 12. Check angle from inseg to this seg (se)
             //  Since we already have azm of this seg TOWARD the node, just check the supplementary turn angle. Must also be within tolerance. (See Geometry proof :)
-            const tta = lt_turn_angle(inAzm, ia);
+            // const tta: number | null = lt_turn_angle(inAzm, ia);
+            let tta;
+            if (sourceSegment) {
+                tta = lt_turn_angle_seg_to_seg(ai1, curNodeEntry, inSeg);
+            }
+            else
+                tta = lt_turn_angle_seg_to_seg(inSeg, curNodeEntry, ai1);
             lt_log(`Turn angle from inseg (supplementary) ${nodeEntrySegIds[ii]}: ${tta}(${inAzm},${ia})`, 3);
             if (tta !== null && Math.abs(out1TargetAngle - tta) > MAX_PERP_DIF_ALT) {
                 // tolerance met?
@@ -3113,7 +3141,7 @@ KNOWN ISSUE:<br>
             altInAzm = ia;
             altInIsHeurFail = thisTimeFail;
         }
-        if (altIncomingSeg == null) {
+        if (altIncomingSeg === null) {
             lt_log("== No alt incoming-1 segment found ==================================================================", 2);
             return 0;
         }
@@ -3134,20 +3162,29 @@ KNOWN ISSUE:<br>
         return 1;
         ////////////////////////////////////////////// end of func /////////////////////////////////////////////////////////
         // get the absolute angle for a segment at an end point - borrowed from JAI
-        function lt_getMathAzimuth_from_node(nodeId, segment) {
+        function lt_getBearing(nodeId, segment, toNode = false) {
             if (nodeId === null || segment === null) {
                 return null;
             }
-            let ja_dx;
-            let ja_dy;
+            // let ja_dx: number;
+            // let ja_dy: number;
+            let startPos, endPos;
             if (segment.fromNodeId === nodeId) {
                 const secondPoint = lt_get_second_point(segment);
                 const firstPoint = lt_get_first_point(segment);
                 if (!secondPoint || !firstPoint) {
                     throw new Error("Missing Start and end Point of the Segment");
                 }
-                ja_dx = secondPoint[0] - firstPoint[0];
-                ja_dy = secondPoint[1] - firstPoint[1];
+                // ja_dx = secondPoint[0] - firstPoint[0];
+                // ja_dy = secondPoint[1] - firstPoint[1];
+                if (toNode) {
+                    startPos = secondPoint;
+                    endPos = firstPoint;
+                }
+                else {
+                    startPos = firstPoint;
+                    endPos = secondPoint;
+                }
             }
             else {
                 const nextToLastPoint = lt_get_next_to_last_point(segment);
@@ -3155,27 +3192,34 @@ KNOWN ISSUE:<br>
                 if (!nextToLastPoint || !lastPoint) {
                     throw new Error("Missing Points at the End of the Segment");
                 }
-                ja_dx = nextToLastPoint[0] - lastPoint[0];
-                ja_dy = nextToLastPoint[1] - lastPoint[1];
+                // ja_dx = nextToLastPoint[0] - lastPoint[0];
+                // ja_dy = nextToLastPoint[1] - lastPoint[1];
+                if (toNode) {
+                    endPos = lastPoint;
+                    startPos = nextToLastPoint;
+                }
+                else {
+                    startPos = lastPoint;
+                    endPos = nextToLastPoint;
+                }
             }
-            const angle_rad = Math.atan2(ja_dy, ja_dx);
-            const angle_deg = ((angle_rad * 180) / Math.PI) % 360;
+            // const angle_rad = Math.atan2(ja_dy, ja_dx);
+            // const angle_deg = ((angle_rad * 180) / Math.PI) % 360;
+            const angle_deg = turf.bearing(startPos, endPos);
             lt_log(`Azm from node ${nodeId} / ${segment.id}: ${angle_deg}`, 3);
             return angle_deg;
         }
-        function lt_getMathAzimuth_to_node(nodeId, segment) {
-            if (!nodeId || !segment)
-                return null;
-            const fromAzm = lt_getMathAzimuth_from_node(nodeId, segment);
-            if (fromAzm === null)
-                return null;
-            let toAzm = fromAzm + 180.0;
-            if (toAzm >= 180.0) {
-                toAzm -= 360.0;
-            }
-            lt_log(`Azm to node ${nodeId} / ${segment.id}: ${toAzm}`, 3);
-            return toAzm;
-        }
+        // function lt_getBearing_to_node(nodeId: number | null, segment: Segment | null) {
+        //     if (!nodeId || !segment) return null;
+        //     const fromAzm = lt_getBearing(nodeId, segment);
+        //     if (fromAzm === null) return null;
+        //     let toAzm = fromAzm + 180.0;
+        //     if (toAzm >= 180.0) {
+        //         toAzm -= 360.0;
+        //     }
+        //     lt_log(`Azm to node ${nodeId} / ${segment.id}: ${toAzm}`, 3);
+        //     return toAzm;
+        // }
         /** Get absolute angle between 2 inputs.
          * @param aIn absolute s_in angle (to node)
          * @param aOut absolute s_out angle (from node)
@@ -3202,6 +3246,28 @@ KNOWN ISSUE:<br>
             a += a > 180 ? -360 : a < -180 ? 360 : 0;
             lt_log(`Turn ${angleInAdjusted},${angleOutAdjusted}: ${a}`, 3);
             return a;
+        }
+        function lt_turn_angle_seg_to_seg(inSeg, connectorNode, outSeg) {
+            let inPoint;
+            let outPoint;
+            if (inSeg.fromNodeId === connectorNode.id) {
+                inPoint = lt_get_second_point(inSeg);
+            }
+            else if (inSeg.toNodeId === connectorNode.id) {
+                inPoint = lt_get_next_to_last_point(inSeg);
+            }
+            if (outSeg.fromNodeId === connectorNode.id) {
+                outPoint = lt_get_second_point(outSeg);
+            }
+            else if (outSeg.toNodeId === connectorNode.id) {
+                outPoint = lt_get_next_to_last_point(outSeg);
+            }
+            if (!inPoint || !outPoint)
+                return null;
+            let turnAngle = turf.angle(inPoint, connectorNode.geometry.coordinates, outPoint);
+            turnAngle -= (turnAngle > 180 ? 360 : 0);
+            turnAngle = (turnAngle > 0) ? 180 - turnAngle : -180 - turnAngle;
+            return turnAngle;
         }
         function lt_is_turn_allowed(s_from, via_node, s_to) {
             const turnsThrough = sdk.DataModel.Turns.getTurnsThroughNode({ nodeId: via_node.id });
@@ -3245,14 +3311,14 @@ KNOWN ISSUE:<br>
         }
     }
     // Segment Length - borrowed from JAI
-    function lt_segment_length(segment) {
-        // let len = segment.geometry.getGeodesicLength(W.map.olMap.projection);
-        // let len = olSphere.getLength(segment.geometry);
-        const len = 0;
-        //    let len = segment.geometry.getGeodesicLength(W.map.olMap.projection);
-        lt_log(`segment: ${segment.id} computed len: ${len} `, 3);
-        return len;
-    }
+    // function lt_segment_length(segment: Segment) {
+    //     // let len = segment.geometry.getGeodesicLength(W.map.olMap.projection);
+    //     // let len = olSphere.getLength(segment.geometry);
+    //     const len = 0;
+    //     //    let len = segment.geometry.getGeodesicLength(W.map.olMap.projection);
+    //     lt_log(`segment: ${segment.id} computed len: ${len} `, 3);
+    //     return len;
+    // }
     function lt_log(lt_log_msg, lt_log_level = 1) {
         // ##NO_FF_START##
         // Firefox addons should not use console.(log|error|debug), so these lines
@@ -3465,262 +3531,258 @@ KNOWN ISSUE:<br>
         const start = !featDis || !featDis.start ? 0 : featDis.start;
         const boxheight = !featDis || !featDis.boxheight ? 0 : featDis.boxheight;
         const boxincwidth = !featDis || !featDis.boxincwidth ? 0 : featDis.boxincwidth;
-        const nodePos = proj4("EPSG:4326", "EPSG:3857", node.geometry.coordinates);
+        let nodePos = sdk.Map.getPixelFromLonLat({ lonLat: { lon: node.geometry.coordinates[0], lat: node.geometry.coordinates[1] } });
         const leftDriveModifier = isLeftDrive ? -1 : 1;
         const leftOffset = isLeftDrive ? featDis.leftOffset : 0;
         switch (sign) {
             case 0:
-                return proj4("EPSG:3857", "EPSG:4326", [nodePos[0] + leftDriveModifier * start * 2 - leftOffset, nodePos[1] + boxheight]);
-            //                x: node.geometry.x + (featDis.start * 2),
-            //                y: node.geometry.y + (featDis.boxheight)
-            case 1:
-                return proj4("EPSG:3857", "EPSG:4326", [nodePos[0] + leftDriveModifier * boxheight - leftOffset, nodePos[1] + boxincwidth * numIcons]);
-            //                x: node.geometry.x + featDis.boxheight,
-            //                y: node.geometry.y + (featDis.boxincwidth * numIcons/1.8)
-            case 2:
-                return proj4("EPSG:3857", "EPSG:4326", [
-                    nodePos[0] - leftDriveModifier * (start + boxincwidth * numIcons),
-                    nodePos[1] + boxheight,
-                ]);
-            //                x: node.geometry.x - (featDis.start + (featDis.boxincwidth * numIcons)),
-            //                y: node.geometry.y + (featDis.start + featDis.boxheight)
-            case 3:
-                return proj4("EPSG:3857", "EPSG:4326", [
-                    nodePos[0] + leftDriveModifier * (start + boxincwidth) - leftOffset,
-                    nodePos[1] - (start + boxheight),
-                ]);
-            //                x: node.geometry.x + (featDis.start + featDis.boxincwidth),
-            //                y: node.geometry.y - (featDis.start + featDis.boxheight)
-            case 4:
-                return proj4("EPSG:3857", "EPSG:4326", [
-                    nodePos[0] - leftDriveModifier * (start + boxheight * 3) - leftOffset,
-                    nodePos[1] + (boxincwidth + numIcons * 0.5),
-                ]);
-            //                x: node.geometry.x - (featDis.start + (featDis.boxheight * 1.5)),
-            //                y: node.geometry.y - (featDis.start + (featDis.boxincwidth * numIcons * 1.5))
-            case 5:
-                return proj4("EPSG:3857", "EPSG:4326", [nodePos[0] + leftDriveModifier * (start + boxincwidth) - leftOffset, nodePos[1] + start]);
-            //                x: node.geometry.x + (featDis.start + featDis.boxincwidth/2),
-            //                y: node.geometry.y + (featDis.start/2)
-            case 6:
-                return proj4("EPSG:3857", "EPSG:4326", [
-                    nodePos[0] - leftDriveModifier * start - leftOffset,
-                    nodePos[1] - start * ((boxincwidth * numIcons) / 2),
-                ]);
-            //                x: node.geometry.x - (featDis.start),
-            //                y: node.geometry.y - (featDis.start * (featDis.boxincwidth * numIcons/2))
-            case 7:
-                return proj4("EPSG:3857", "EPSG:4326", [
-                    nodePos[0] - leftDriveModifier * start * boxincwidth * numIcons - leftOffset,
-                    nodePos[1] + start,
-                ]);
-            //                x: node.geometry.x - (featDis.start * (featDis.boxincwidth * numIcons/2)),
-            //                y: node.geometry.y - (featDis.start)
-            default:
+                nodePos.x += leftDriveModifier * start * 2 - leftOffset;
+                nodePos.y += boxheight;
                 break;
+            case 1:
+                nodePos.x -= leftDriveModifier * (start + (leftDriveModifier > 0 ? (boxincwidth * numIcons) : 2 * leftOffset));
+                nodePos.y -= start + boxheight;
+                break;
+            case 2:
+                nodePos.x += start;
+                nodePos.y -= leftDriveModifier * (start + (leftDriveModifier > 0 ? boxincwidth * numIcons : (boxincwidth * numIcons)));
+                break;
+            case 3:
+                nodePos.x -= start + boxheight;
+                nodePos.y += leftDriveModifier * (start + (leftDriveModifier > 0 ? boxincwidth : boxincwidth * numIcons));
+                break;
+            case 4:
+                nodePos.x += leftDriveModifier * (start + (leftDriveModifier > 0 ? boxincwidth : (boxincwidth * numIcons + leftOffset * 2)));
+                nodePos.y += start;
+                break;
+            case 5:
+                nodePos.x -= leftDriveModifier * (start + (leftDriveModifier > 0 ? boxincwidth * numIcons : 0));
+                nodePos.y += (leftDriveModifier > 0 ? start : leftDriveModifier * (boxheight * 2 + start));
+                break;
+            case 6:
+                nodePos.x -= (leftDriveModifier > 0 ? start : (boxincwidth * numIcons + start + leftOffset));
+                nodePos.y += leftDriveModifier * (start + boxheight);
+                break;
+            case 7:
+                nodePos.x += leftDriveModifier * (start + (leftDriveModifier > 0 ? boxincwidth / 2 : boxincwidth * numIcons + leftOffset * 2));
+                nodePos.y -= leftDriveModifier * (start + boxheight);
+                break;
+            case 8:
+                nodePos.x -= leftDriveModifier * (start + boxincwidth * numIcons);
+                nodePos.y -= leftDriveModifier * (start + boxheight);
+                break;
+            case 9:
+                nodePos.x -= leftDriveModifier * (start + (leftDriveModifier > 0 ? (boxincwidth * numIcons * 1.25) : 2 * leftOffset));
+                nodePos.y -= start + boxheight;
+                break;
+            default:
+                return [];
         }
-        return [];
+        const lonLatRes = sdk.Map.getLonLatFromPixel(nodePos);
+        return [lonLatRes.lon, lonLatRes.lat];
     }
     function getFeatDistance() {
         const label_distance = {
-            start: undefined,
-            boxheight: undefined,
-            boxincwidth: undefined,
-            iconbordermargin: undefined,
-            iconborderheight: undefined,
-            iconborderwidth: undefined,
-            graphicHeight: undefined,
-            graphicWidth: undefined,
-            leftOffset: undefined
+            start: 10,
+            boxheight: 39.0,
+            boxincwidth: 28.0,
+            iconbordermargin: 1.0,
+            iconborderheight: 38.0,
+            iconborderwidth: 27.0,
+            graphicHeight: 42,
+            graphicWidth: 25,
+            leftOffset: 12
         };
-        switch (sdk.Map.getZoomLevel()) {
-            case 22:
-                label_distance.start = 2;
-                label_distance.boxheight = 1.7;
-                label_distance.boxincwidth = 1.1;
-                label_distance.iconbordermargin = 0.1;
-                label_distance.iconborderheight = 1.6;
-                label_distance.iconborderwidth = 1;
-                label_distance.graphicHeight = 42;
-                label_distance.graphicWidth = 25;
-                label_distance.leftOffset = 2;
-                break;
-            case 21:
-                label_distance.start = 2;
-                label_distance.boxheight = 3.2;
-                label_distance.boxincwidth = 2.2;
-                label_distance.iconbordermargin = 0.2;
-                label_distance.iconborderheight = 3;
-                label_distance.iconborderwidth = 2;
-                label_distance.graphicHeight = 42;
-                label_distance.graphicWidth = 25;
-                label_distance.leftOffset = 2;
-                break;
-            case 20:
-                label_distance.start = 2;
-                label_distance.boxheight = 5.2;
-                label_distance.boxincwidth = 3.8;
-                label_distance.iconbordermargin = 0.3;
-                label_distance.iconborderheight = 4.9;
-                label_distance.iconborderwidth = 3.5;
-                label_distance.graphicHeight = 42;
-                label_distance.graphicWidth = 25;
-                label_distance.leftOffset = 8;
-                break;
-            case 19:
-                label_distance.start = 3;
-                label_distance.boxheight = 10.0;
-                label_distance.boxincwidth = 7.2;
-                label_distance.iconbordermargin = 0.4;
-                label_distance.iconborderheight = 9.6;
-                label_distance.iconborderwidth = 6.8;
-                label_distance.graphicHeight = 42;
-                label_distance.graphicWidth = 25;
-                label_distance.leftOffset = 8;
-                break;
-            case 18:
-                label_distance.start = 3;
-                label_distance.boxheight = 20.0;
-                label_distance.boxincwidth = 14.0;
-                label_distance.iconbordermargin = 0.5;
-                label_distance.iconborderheight = 19.5;
-                label_distance.iconborderwidth = 13.5;
-                label_distance.graphicHeight = 42;
-                label_distance.graphicWidth = 25;
-                label_distance.leftOffset = 16;
-                break;
-            case 17:
-                label_distance.start = 10;
-                label_distance.boxheight = 39.0;
-                label_distance.boxincwidth = 28.0;
-                label_distance.iconbordermargin = 1.0;
-                label_distance.iconborderheight = 38.0;
-                label_distance.iconborderwidth = 27.0;
-                label_distance.graphicHeight = 42;
-                label_distance.graphicWidth = 25;
-                label_distance.leftOffset = 16;
-                break;
-            case 16:
-                label_distance.start = 15;
-                label_distance.boxheight = 80.0;
-                label_distance.boxincwidth = 55;
-                label_distance.iconbordermargin = 2.0;
-                label_distance.iconborderheight = 78.0;
-                label_distance.iconborderwidth = 53;
-                label_distance.graphicHeight = 42;
-                label_distance.graphicWidth = 25;
-                label_distance.leftOffset = 32;
-                break;
-            case 15:
-                label_distance.start = 2;
-                label_distance.boxheight = 120.0;
-                label_distance.boxincwidth = 90;
-                label_distance.iconbordermargin = 3.0;
-                label_distance.iconborderheight = 117.0;
-                label_distance.iconborderwidth = 87;
-                label_distance.graphicHeight = 42;
-                label_distance.graphicWidth = 25;
-                label_distance.leftOffset = 32;
-                break;
-            case 14:
-                label_distance.start = 2;
-                label_distance.boxheight = 5.2;
-                label_distance.boxincwidth = 3.8;
-                label_distance.iconbordermargin = 0.3;
-                label_distance.iconborderheight = 4.9;
-                label_distance.iconborderwidth = 3.5;
-                label_distance.graphicHeight = 42;
-                label_distance.graphicWidth = 25;
-                label_distance.leftOffset = 32;
-                break;
-            // case 13:
-            //     label_distance.start = 2;
-            //     label_distance.boxheight = 5.2;
-            //     label_distance.boxincwidth = 3.8;
-            //     label_distance.iconbordermargin = .3;
-            //     label_distance.iconborderheight = 4.9;
-            //     label_distance.iconborderwidth = 3.5;
-            //     label_distance.graphicHeight = 42;
-            //     label_distance.graphicWidth = 25;
-            //     break;
-        }
+        // switch (sdk.Map.getZoomLevel()) {
+        //     case 22:
+        //         label_distance.start = 10;
+        //         label_distance.boxheight = 39.0;
+        //         label_distance.boxincwidth = 28.0;
+        //         label_distance.iconbordermargin = 1.0;
+        //         label_distance.iconborderheight = 38.0;
+        //         label_distance.iconborderwidth = 27.0;
+        //         label_distance.graphicHeight = 42;
+        //         label_distance.graphicWidth = 25;
+        //         label_distance.leftOffset = 8;
+        //         break;
+        //     case 21:
+        //         label_distance.start = 10;
+        //         label_distance.boxheight = 39.0;
+        //         label_distance.boxincwidth = 28.0;
+        //         label_distance.iconbordermargin = 1.0;
+        //         label_distance.iconborderheight = 38.0;
+        //         label_distance.iconborderwidth = 27.0;
+        //         label_distance.graphicHeight = 42;
+        //         label_distance.graphicWidth = 25;
+        //         label_distance.leftOffset = 8;
+        //         break;
+        //     case 20:
+        //         label_distance.start = 10;
+        //         label_distance.boxheight = 39.0;
+        //         label_distance.boxincwidth = 28.0;
+        //         label_distance.iconbordermargin = 1.0;
+        //         label_distance.iconborderheight = 38.0;
+        //         label_distance.iconborderwidth = 27.0;
+        //         label_distance.graphicHeight = 42;
+        //         label_distance.graphicWidth = 25;
+        //         label_distance.leftOffset = 8;
+        //         break;
+        //     case 19:
+        //         label_distance.start = 10;
+        //         label_distance.boxheight = 39.0;
+        //         label_distance.boxincwidth = 28.0;
+        //         label_distance.iconbordermargin = 1.0;
+        //         label_distance.iconborderheight = 38.0;
+        //         label_distance.iconborderwidth = 27.0;
+        //         label_distance.graphicHeight = 42;
+        //         label_distance.graphicWidth = 25;
+        //         label_distance.leftOffset = 8;
+        //         break;
+        //     case 18:
+        //         label_distance.start = 10;
+        //         label_distance.boxheight = 39.0;
+        //         label_distance.boxincwidth = 28.0;
+        //         label_distance.iconbordermargin = 1;
+        //         label_distance.iconborderheight = 38;
+        //         label_distance.iconborderwidth = 27;
+        //         label_distance.graphicHeight = 42;
+        //         label_distance.graphicWidth = 25;
+        //         label_distance.leftOffset = 8;
+        //         break;
+        //     case 17:
+        //         label_distance.start = 10;
+        //         label_distance.boxheight = 39.0;
+        //         label_distance.boxincwidth = 28.0;
+        //         label_distance.iconbordermargin = 1.0;
+        //         label_distance.iconborderheight = 38.0;
+        //         label_distance.iconborderwidth = 27.0;
+        //         label_distance.graphicHeight = 42;
+        //         label_distance.graphicWidth = 25;
+        //         label_distance.leftOffset = 8;
+        //         break;
+        //     case 16:
+        //         label_distance.start = 10;
+        //         label_distance.boxheight = 39.0;
+        //         label_distance.boxincwidth = 28.0;
+        //         label_distance.iconbordermargin = 1.0;
+        //         label_distance.iconborderheight = 38.0;
+        //         label_distance.iconborderwidth = 27.0;
+        //         label_distance.graphicHeight = 42;
+        //         label_distance.graphicWidth = 25;
+        //         label_distance.leftOffset = 8;
+        //         break;
+        //     case 15:
+        //         label_distance.start = 2;
+        //         label_distance.boxheight = 120.0;
+        //         label_distance.boxincwidth = 90;
+        //         label_distance.iconbordermargin = 3.0;
+        //         label_distance.iconborderheight = 117.0;
+        //         label_distance.iconborderwidth = 87;
+        //         label_distance.graphicHeight = 42;
+        //         label_distance.graphicWidth = 25;
+        //         label_distance.leftOffset = 32;
+        //         break;
+        //     case 14:
+        //         label_distance.start = 2;
+        //         label_distance.boxheight = 5.2;
+        //         label_distance.boxincwidth = 3.8;
+        //         label_distance.iconbordermargin = 0.3;
+        //         label_distance.iconborderheight = 4.9;
+        //         label_distance.iconborderwidth = 3.5;
+        //         label_distance.graphicHeight = 42;
+        //         label_distance.graphicWidth = 25;
+        //         label_distance.leftOffset = 32;
+        //         break;
+        //     // case 13:
+        //     //     label_distance.start = 2;
+        //     //     label_distance.boxheight = 5.2;
+        //     //     label_distance.boxincwidth = 3.8;
+        //     //     label_distance.iconbordermargin = .3;
+        //     //     label_distance.iconborderheight = 4.9;
+        //     //     label_distance.iconborderwidth = 3.5;
+        //     //     label_distance.graphicHeight = 42;
+        //     //     label_distance.graphicWidth = 25;
+        //     //     break;
+        // }
         return label_distance;
     }
     function drawIcons(seg, node, imgs, isLeftDrive = false) {
         if (!seg || !node)
             return;
         const featDis = getFeatDistance();
-        let deg = getCardinalAngle(node.id, seg);
+        let deg = getAzimuthAngle(node.id, seg);
         if (!deg)
             return;
         const points = [];
         let operatorSign = 0;
         const numIcons = imgs.length;
-        // Orient all icons straight up if the rotate option isn't enabled
-        if (!getId("lt-IconsRotate")?.checked)
-            deg = -90;
         // Rotate in the style is clockwise, the rotate() func is counterclockwise
         if (deg === 0) {
             deg += 180;
             operatorSign = 1;
         }
         else if (deg > 0 && deg <= 30) {
-            deg += 2 * (90 - deg);
+            deg += 90; //2 * (90 - deg);
             // console.log('Math stuff2: ' + deg);
             operatorSign = 1;
         }
         else if (deg >= 330 && deg <= 360) {
-            deg -= 180 - 2 * (360 - deg);
+            deg -= 270; // 180 - 2 * (360 - deg);
             // console.log('Math stuff2: ' + deg);
-            operatorSign = 1;
+            operatorSign = 9;
         }
         else if (deg > 30 && deg < 60) {
-            deg -= 90 - 2 * (360 - deg);
+            deg += 90; // - 2 * (360 - deg);
             // console.log('Math stuff3: ' + deg);
-            operatorSign = 2;
+            operatorSign = 8;
         }
         else if (deg >= 60 && deg <= 120) {
-            deg -= 90 - 2 * (360 - deg);
+            deg += 90; // - 2 * (360 - deg);
             // console.log('Math stuff4: ' + deg);
             operatorSign = 2;
         }
         else if (deg > 120 && deg < 150) {
-            deg -= 90 - 2 * (360 - deg);
+            deg += 90; //- 2 * (360 - deg);
             // console.log('Math stuff5: ' + deg);
             operatorSign = 7;
         }
         else if (deg >= 150 && deg <= 210) {
-            deg = 180 - deg;
+            // deg = 180 - deg;
+            deg += 90; // - 2 * (360 - deg);
             // console.log('Math stuff6: ' + deg);
             operatorSign = 4;
         }
         else if (deg > 210 && deg < 240) {
-            deg -= 90 - 2 * (360 - deg);
+            deg -= 270; // - 2 * (360 - deg);
             // console.log('Math stuff7: ' + deg);
             operatorSign = 6;
         }
         else if (deg >= 240 && deg <= 300) {
-            deg -= 180 - 2 * (360 - deg);
+            deg -= 270; //- 2 * (360 - deg);
             // console.log('Math stuff8: ' + deg);
             operatorSign = 3;
         }
         else if (deg > 300 && deg < 330) {
-            deg -= 180 - 2 * (360 - deg);
+            // deg -= 180 - 2 * (360 - deg);
+            deg -= 270;
             // console.log('Math stuff9: ' + deg);
             operatorSign = 5;
         }
         else {
             console.log("LT: icon angle is out of bounds");
         }
-        const iconRotate = deg > 315 ? deg : deg + 90;
-        const boxRotate = 360 - iconRotate;
+        // Orient all icons straight up if the rotate option isn't enabled
+        let iconRotate = deg > 315 ? deg : deg + 90;
+        let boxRotate = 360 - iconRotate;
+        if (!getId("lt-IconsRotate")?.checked) {
+            iconRotate += 180;
+            boxRotate += 180;
+        }
         // console.log(deg);
         // console.log(operatorSign);
         // Determine start point respective to node based on segment angle
         // let boxRotate = deg * -1;
         const startPoint = getStartPoints(node, featDis, numIcons, operatorSign, isLeftDrive);
-        if (!startPoint[0] || !startPoint[1])
-            return;
         // Box coords
         // var boxPoint1 = new OpenLayers.Geometry.Point(startPoint.x, startPoint.y + featDis.boxheight);
         // var boxPoint2 = new OpenLayers.Geometry.Point(
@@ -3729,18 +3791,18 @@ KNOWN ISSUE:<br>
         // );
         // var boxPoint3 = new OpenLayers.Geometry.Point(startPoint.x + featDis.boxincwidth * numIcons, startPoint.y);
         // var boxPoint4 = new OpenLayers.Geometry.Point(startPoint.x, startPoint.y);
-        let boxPoint1 = proj4("EPSG:4326", "EPSG:3857", startPoint);
-        boxPoint1[1] += !featDis || !featDis.boxheight ? 0 : featDis.boxheight;
-        boxPoint1 = proj4("EPSG:3857", "EPSG:4326", boxPoint1);
-        let boxPoint2 = proj4("EPSG:4326", "EPSG:3857", startPoint);
-        boxPoint2[0] += !featDis || !featDis.boxincwidth ? 0 : featDis.boxincwidth * numIcons;
-        boxPoint2[1] += !featDis || !featDis.boxheight ? 0 : featDis.boxheight;
-        boxPoint2 = proj4("EPSG:3857", "EPSG:4326", boxPoint2);
-        let boxPoint3 = proj4("EPSG:4326", "EPSG:3857", startPoint);
-        boxPoint3[0] += !featDis || !featDis.boxincwidth ? 0 : featDis.boxincwidth * numIcons;
-        boxPoint3 = proj4("EPSG:3857", "EPSG:4326", boxPoint3);
-        const boxPoint4 = startPoint;
-        points.push(boxPoint1, boxPoint2, boxPoint3, boxPoint4, boxPoint1);
+        const startPointCoords = sdk.Map.getPixelFromLonLat({ lonLat: { lon: startPoint[0], lat: startPoint[1] } });
+        let boxPoint1 = structuredClone(startPointCoords);
+        boxPoint1.y += (!featDis ? 0 : featDis.boxheight);
+        const boxPoint1LonLat = sdk.Map.getLonLatFromPixel(boxPoint1);
+        let boxPoint2 = structuredClone(startPointCoords);
+        boxPoint2.x += !featDis ? 0 : featDis.boxincwidth * numIcons;
+        boxPoint2.y += !featDis ? 0 : featDis.boxheight;
+        const boxPoint2LonLat = sdk.Map.getLonLatFromPixel(boxPoint2);
+        let boxPoint3 = structuredClone(startPointCoords);
+        boxPoint3.x += !featDis ? 0 : featDis.boxincwidth * numIcons;
+        const boxPoint3LonLat = sdk.Map.getLonLatFromPixel(boxPoint3);
+        points.push([boxPoint1LonLat.lon, boxPoint1LonLat.lat], [boxPoint2LonLat.lon, boxPoint2LonLat.lat], [boxPoint3LonLat.lon, boxPoint3LonLat.lat], startPoint, [boxPoint1LonLat.lon, boxPoint1LonLat.lat]);
         // Object.assign(styleRules.boxStyle.style, {
         //     strokeColor: "#ffffff",
         //     strokeOpacity: 1,
@@ -3756,57 +3818,61 @@ KNOWN ISSUE:<br>
         turfBoxRing = turf.transformRotate(turfBoxRing, -1 * boxRotate);
         const centerPoint = turf.centroid(turfBoxRing);
         const boxRing = turf.polygon(turfBoxRing.geometry.coordinates, { styleName: "boxStyle", layerName: LTLaneGraphics.name }, { id: `polygon_${points.toString()}` });
+        const startPointFeature = turf.point(startPoint, { styleName: "startPointStyle", layerName: LTLaneGraphics.name }, { id: `point_${startPoint.toString()}` });
         // LTLaneGraphics.addFeatures([boxVector]);
         sdk.Map.addFeatureToLayer({ feature: boxRing, layerName: LTLaneGraphics.name });
+        sdk.Map.addFeatureToLayer({ feature: startPointFeature, layerName: LTLaneGraphics.name });
         let num = 0;
+        const startPointPixel = sdk.Map.getPixelFromLonLat({ lonLat: { lon: startPoint[0], lat: startPoint[1] } });
         _.each(imgs, (img) => {
-            const iconPoints = [];
             // Icon Background
             // var iconPoint1 = new OpenLayers.Geometry.Point(
             //     startPoint.x + featDis.boxincwidth * num + featDis.iconbordermargin,
             //     startPoint.y + featDis.iconborderheight
             // );
-            let iconPoint1 = proj4("EPSG:4326", "EPSG:3857", startPoint);
-            iconPoint1[0] += !featDis
+            let iconPoint1Pixel = structuredClone(startPointPixel);
+            iconPoint1Pixel.x += !featDis
                 ? 0
                 : (!featDis.boxincwidth ? 0 : featDis.boxincwidth) * num +
                     (!featDis.iconbordermargin ? 0 : featDis.iconbordermargin);
-            iconPoint1[1] += !featDis || !featDis.iconborderheight ? 0 : featDis.iconborderheight;
-            iconPoint1 = proj4("EPSG:3857", "EPSG:4326", iconPoint1);
+            iconPoint1Pixel.y += !featDis || !featDis.iconborderheight ? 0 : featDis.iconborderheight;
+            const iconPoint1 = sdk.Map.getLonLatFromPixel(iconPoint1Pixel);
             // var iconPoint2 = new OpenLayers.Geometry.Point(
             //     startPoint.x + featDis.boxincwidth * num + featDis.iconborderwidth,
             //     startPoint.y + featDis.iconborderheight
             // );
-            let iconPoint2 = proj4("EPSG:4326", "EPSG:3857", startPoint);
-            iconPoint2[0] += !featDis
+            let iconPoint2Pixel = structuredClone(startPointPixel);
+            iconPoint2Pixel.x += !featDis
                 ? 0
                 : (!featDis.boxincwidth ? 0 : featDis.boxincwidth) * num +
                     (!featDis.iconborderwidth ? 0 : featDis.iconborderwidth);
-            iconPoint2[1] += !featDis || !featDis.iconborderheight ? 0 : featDis.iconborderheight;
-            iconPoint2 = proj4("EPSG:3857", "EPSG:4326", iconPoint2);
-            // var iconPoint3 = new OpenLayers.Geometry.Point(
-            //     startPoint.x + featDis.boxincwidth * num + featDis.iconborderwidth,
-            //     startPoint.y + featDis.iconbordermargin
-            // );
-            let iconPoint3 = proj4("EPSG:4326", "EPSG:3857", startPoint);
-            iconPoint3[0] += !featDis
+            iconPoint2Pixel.y += !featDis || !featDis.iconborderheight ? 0 : featDis.iconborderheight;
+            const iconPoint2 = sdk.Map.getLonLatFromPixel(iconPoint2Pixel);
+            let iconPoint3Pixel = structuredClone(startPointPixel);
+            iconPoint3Pixel.x += !featDis
                 ? 0
                 : (!featDis.boxincwidth ? 0 : featDis.boxincwidth) * num +
                     (!featDis.iconborderwidth ? 0 : featDis.iconborderwidth);
-            iconPoint3[1] += !featDis || !featDis.iconbordermargin ? 0 : featDis.iconbordermargin;
-            iconPoint3 = proj4("EPSG:3857", "EPSG:4326", iconPoint3);
+            iconPoint3Pixel.y += !featDis || !featDis.iconbordermargin ? 0 : featDis.iconbordermargin;
+            const iconPoint3 = sdk.Map.getLonLatFromPixel(iconPoint3Pixel);
             // var iconPoint4 = new OpenLayers.Geometry.Point(
             //     startPoint.x + featDis.boxincwidth * num + featDis.iconbordermargin,
             //     startPoint.y + featDis.iconbordermargin
             // );
-            let iconPoint4 = proj4("EPSG:4326", "EPSG:3857", startPoint);
-            iconPoint4[0] += !featDis
+            let iconPoint4Pixel = structuredClone(startPointPixel);
+            iconPoint4Pixel.x += !featDis
                 ? 0
                 : (!featDis.boxincwidth ? 0 : featDis.boxincwidth) * num +
                     (!featDis.iconbordermargin ? 0 : featDis.iconbordermargin);
-            iconPoint4[1] += !featDis || !featDis.iconbordermargin ? 0 : featDis.iconbordermargin;
-            iconPoint4 = proj4("EPSG:3857", "EPSG:4326", iconPoint4);
-            iconPoints.push(iconPoint1, iconPoint2, iconPoint3, iconPoint4, iconPoint1);
+            iconPoint4Pixel.y += !featDis || !featDis.iconbordermargin ? 0 : featDis.iconbordermargin;
+            const iconPoint4 = sdk.Map.getLonLatFromPixel(iconPoint4Pixel);
+            const iconPoints = [
+                [iconPoint1.lon, iconPoint1.lat],
+                [iconPoint2.lon, iconPoint2.lat],
+                [iconPoint3.lon, iconPoint3.lat],
+                [iconPoint4.lon, iconPoint4.lat],
+                [iconPoint1.lon, iconPoint1.lat],
+            ];
             // Object.assign(styleRules.iconBoxStyle.style, {
             //     strokeColor: "#000000",
             //     strokeOpacity: 1,
