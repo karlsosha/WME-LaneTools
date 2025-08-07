@@ -4405,7 +4405,7 @@ TODO:<br>
 
         // LTLaneGraphics.addFeatures([boxVector]);
         sdk.Map.addFeatureToLayer({ feature: boxRing, layerName: LTLaneGraphics.name });
-        sdk.Map.addFeatureToLayer({ feature: startPointFeature, layerName: LTLaneGraphics.name });
+        // sdk.Map.addFeatureToLayer({ feature: startPointFeature, layerName: LTLaneGraphics.name });
 
         let num = 0;
         const startPointPixel = sdk.Map.getPixelFromLonLat({ lonLat: { lon: startPoint[0], lat: startPoint[1] } });
