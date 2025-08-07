@@ -1043,7 +1043,7 @@ TODO:<br>
             scanArea();
         });
         $("#lt-ScriptEnabled").on("click", () => {
-            if (getId("lt-ScriptEnabled")?.checked) {
+            if (LtSettings.ScriptEnabled) {
                 scanArea();
             }
             else {
@@ -1052,7 +1052,7 @@ TODO:<br>
             }
         });
         highlights.on("click", () => {
-            if (getId("lt-HighlightsEnable")?.checked) {
+            if (LtSettings.HighlightsEnable) {
                 scanArea();
             }
             else {
@@ -1061,7 +1061,7 @@ TODO:<br>
             scanArea();
         });
         $("#lt-LabelsEnable").on("click", () => {
-            if (getId("lt-LabelsEnable")?.checked) {
+            if (LtSettings.LabelsEnable) {
                 scanArea();
             }
             else {
@@ -1070,7 +1070,7 @@ TODO:<br>
             }
         });
         $("#lt-NodesEnable").on("click", () => {
-            if (getId("lt-NodesEnable")?.checked) {
+            if (LtSettings.NodesEnable) {
                 scanArea();
             }
             else {
@@ -1088,7 +1088,7 @@ TODO:<br>
             }
         });
         $("#lt-IconsEnable").on("click", () => {
-            if (getId("lt-IconsEnable")?.checked) {
+            if (LtSettings.IconsEnable) {
                 displayLaneGraphics();
             }
             else {
@@ -1096,7 +1096,7 @@ TODO:<br>
             }
         });
         $("#lt-highlightOverride").on("click", () => {
-            if (getId("lt-highlightOverride")?.checked) {
+            if (LtSettings.highlightOverride) {
                 scanArea();
             }
             else {
@@ -1130,7 +1130,7 @@ TODO:<br>
             }
         });
         $("#lt-LaneHeurPosHighlight").on("click", () => {
-            if (getId("lt-LaneHeurPosHighlight")?.checked) {
+            if (LtSettings.LaneHeurPosHighlight) {
                 scanArea();
             }
             else {
@@ -1139,7 +1139,7 @@ TODO:<br>
             }
         });
         $("#lt-LaneHeurNegHighlight").on("click", () => {
-            if (getId("lt-LaneHeurNegHighlight")?.checked) {
+            if (LtSettings.LaneHeurNegHighlight) {
                 scanArea();
             }
             else {
@@ -1454,7 +1454,7 @@ TODO:<br>
         if (RBSArray.failed) {
             return;
         }
-        const angles = isRBS && getId("lt-serverSelect").checked ? configArray.RBS : configArray.RPS;
+        const angles = isRBS && LtSettings.serverSelect ? configArray.RBS : configArray.RPS;
         MAX_LEN_HEUR = angles.MAX_LEN_HEUR;
         MAX_PERP_DIF = angles.MAX_PERP_DIF;
         MAX_PERP_DIF_ALT = angles.MAX_PERP_DIF_ALT;
@@ -1635,7 +1635,7 @@ TODO:<br>
             //        if (getId('lt-ReverseLanesIcon').checked && !isRotated) {
             //            rotateArrows();
             //        }
-            if (getId("lt-highlightCSIcons")?.checked) {
+            if (LtSettings.highlightCSIcons) {
                 colorCSDir();
             }
             // Add delete buttons and preselected lane number buttons to UI
@@ -1762,13 +1762,13 @@ TODO:<br>
         }
         function expandEdit() {
             expandEditTriggered = true;
-            if (getId("lt-AutoExpandLanes")?.checked) {
+            if (LtSettings.AutoExpandLanes) {
                 if (!fwdDone) {
                 }
                 if (!revDone) {
                 }
             }
-            if (getId("lt-AutoOpenWidth")?.checked) {
+            if (LtSettings.AutoOpenWidth) {
                 if (!fwdDone) {
                     $(".fwd-lanes").find(".set-road-width > wz-button").trigger("click"); // ADDED
                 }
@@ -1936,7 +1936,7 @@ TODO:<br>
         }
         function focusEle() {
             // Places the focus on the relevant lanes # input if the direction exists
-            const autoFocusLanes = getId("lt-AutoFocusLanes");
+            const autoFocusLanes = LtSettings.AutoFocusLanes;
             if (autoFocusLanes?.checked) {
                 const fwdLanes = $(".fwd-lanes");
                 const revLanes = $(".rev-lanes");
@@ -1949,7 +1949,7 @@ TODO:<br>
             }
         }
         function insertSelAll(dir) {
-            const setAllEnable = getId("lt-SelAllEnable");
+            const setAllEnable = LtSettings.SelAllEnable;
             if (setAllEnable?.checked) {
                 $(".street-name").css("user-select", "none");
                 const inputDirection = dir === "fwd" ? $(".fwd-lanes").find(".form-control")[0] : $(".rev-lanes").find(".form-control")[0];
@@ -2028,11 +2028,11 @@ TODO:<br>
             isRotated = true;
         }
         // Begin lanes tab enhancements
-        if (getId("lt-UIEnable")?.checked && getId("lt-ScriptEnabled")?.checked) {
+        if (LtSettings.UIEnable && LtSettings.ScriptEnabled) {
             if (isSegmentSelected(selection)) {
                 // Check to ensure that there is only one segment object selected, then setup click event
                 waitForElementLoaded(".lanes-tab").then((elm) => {
-                    formatLanesTab(getId("lt-AutoLanesTab")?.checked || elm.isActive);
+                    formatLanesTab(LtSettings.AutoLanesTab || elm.isActive);
                 });
                 //$('.lanes-tab').on("click",(event) => {
                 //    fwdDone = false;
@@ -2086,8 +2086,8 @@ TODO:<br>
     }
     function displayToolbar() {
         const objSelected = sdk.Editing.getSelection();
-        const scriptEnabled = getId("lt-ScriptEnabled");
-        const copyEnable = getId("lt-CopyEnable");
+        const scriptEnabled = LtSettings.ScriptEnabled;
+        const copyEnable = LtSettings.CopyEnable;
         if (scriptEnabled?.checked && copyEnable && copyEnable.checked && objSelected && objSelected.ids.length === 1) {
             if (objSelected.objectType === "segment") {
                 const map = sdk.Map.getMapViewportElement();
@@ -2248,7 +2248,7 @@ TODO:<br>
         // fwdLnsCount = !fwdLnsCount ? 0 : fwdLnsCount;
         // revLnsCount = !revLnsCount ? 0 : revLnsCount;
         // const geo = objGeo.clone();
-        const applyCSHighlight = getId("lt-CSEnable")?.checked;
+        const applyCSHighlight = LtSettings.CSEnable;
         // Need to rework this to account for segment length, cause of geo adjustment and such
         if (objGeo.length > 2) {
             const geoLength = objGeo.length;
@@ -2464,12 +2464,12 @@ TODO:<br>
         scanArea_real();
     }
     function scanArea_real() {
-        const isEnabled = getId("lt-ScriptEnabled")?.checked;
-        const mapHighlights = getId("lt-HighlightsEnable")?.checked;
-        const heurChecks = getId("lt-LaneHeuristicsChecks")?.checked;
+        const isEnabled = LtSettings.ScriptEnabled;
+        const mapHighlights = LtSettings.HighlightsEnable;
+        const heurChecks = LtSettings.LaneHeuristicsChecks;
         // const zoomLevel = W.map.getZoom() != null ? W.map.getZoom() : 16;
         const zoomLevel = sdk.Map.getZoomLevel();
-        const highOverride = getId("lt-highlightOverride")?.checked; // jm6087
+        const highOverride = LtSettings.highlightOverride;
         const layerCheck = W.layerSwitcherController.getTogglerState("ITEM_ROAD") ||
             W.layerSwitcherController.getTogglerState("ITEM_ROAD_V2"); //jm6087
         removeHighlights();
@@ -2514,12 +2514,12 @@ TODO:<br>
     }
     // Check all given segments for heuristics qualification
     function scanSegments(segments, selectedSegsOverride = false) {
-        const heurChecks = getId("lt-LaneHeuristicsChecks")?.checked ?? false;
-        const heurScan_PosHighlight = heurChecks && (getId("lt-LaneHeurPosHighlight")?.checked ?? false);
-        const heurScan_NegHighlight = heurChecks && (getId("lt-LaneHeurNegHighlight")?.checked ?? false);
-        const mapHighlights = getId("lt-HighlightsEnable")?.checked ?? false;
-        const applyLioHighlight = mapHighlights && (getId("lt-LIOEnable")?.checked ?? false);
-        const applyLabels = mapHighlights && (getId("lt-LabelsEnable")?.checked ?? false);
+        const heurChecks = LtSettings.LaneHeuristicsChecks ?? false;
+        const heurScan_PosHighlight = heurChecks && (LtSettings.LaneHeurPosHighlight ?? false);
+        const heurScan_NegHighlight = heurChecks && (LtSettings.LaneHeurNegHighlight ?? false);
+        const mapHighlights = LtSettings.HighlightsEnable ?? false;
+        const applyLioHighlight = mapHighlights && (LtSettings.LIOEnable ?? false);
+        const applyLabels = mapHighlights && (LtSettings.LabelsEnable ?? false);
         const zoomLevel = sdk.Map.getZoomLevel();
         // const turnGraph = W.model.getTurnGraph();
         // console.log(zoomLevel);
@@ -2614,7 +2614,7 @@ TODO:<br>
                     highlightSegment(seg.geometry.coordinates, direction, mapHighlights, applyLabels, fwdLaneCount, revLaneCount, lio && applyLioHighlight, csMode, badLn, heur, false);
                 }
                 // Nodes highlights
-                if (mapHighlights && getId("lt-NodesEnable")?.checked) {
+                if (mapHighlights && LtSettings.NodesEnable) {
                     if (tlns) {
                         highlightNode(node?.geometry.coordinates, LtSettings.NodeColor);
                         //                    highlightNode(node.geometry, `${LtSettings.NodeColor}`);
@@ -2752,7 +2752,7 @@ TODO:<br>
         return laneConfig;
     }
     function setTurns(direction) {
-        const clickSaveEnabled = getId("lt-ClickSaveEnable");
+        const clickSaveEnabled = LtSettings.ClickSaveEnable;
         if (!clickSaveEnabled?.checked) {
             return;
         }
@@ -2784,7 +2784,7 @@ TODO:<br>
                 // Check if the lanes are already set. If already set, don't change anything.
                 const laneCheckboxes = turnSection.getElementsByTagName("wz-checkbox");
                 if (laneCheckboxes && laneCheckboxes.length > 0) {
-                    if (getId("lt-ClickSaveTurns")?.checked) {
+                    if (LtSettings.ClickSaveTurns) {
                         if (turnSection.getElementsByClassName(left).length > 0 &&
                             laneCheckboxes[0].checked !== undefined &&
                             laneCheckboxes[0].checked === false) {
@@ -2903,7 +2903,7 @@ TODO:<br>
             //     getId("lt-ScriptEnabled").checked
             // )
             const selection = sdk.Editing.getSelection();
-            if (selection?.objectType === "segment" && getId("lt-ScriptEnabled")?.checked) {
+            if (selection?.objectType === "segment" && LtSettings.ScriptEnabled) {
                 const laneCountElement = document.getElementsByName("laneCount");
                 for (let idx = 0; idx < laneCountElement.length; idx++) {
                     laneCountElement[idx].addEventListener("keyup", processLaneNumberChange, false);
@@ -3774,7 +3774,7 @@ TODO:<br>
         // Orient all icons straight up if the rotate option isn't enabled
         let iconRotate = deg > 315 ? deg : deg + 90;
         let boxRotate = 360 - iconRotate;
-        if (!getId("lt-IconsRotate")?.checked) {
+        if (!LtSettings.IconsRotate) {
             iconRotate += 180;
             boxRotate += 180;
         }
@@ -3943,8 +3943,8 @@ TODO:<br>
     function displayLaneGraphics() {
         removeLaneGraphics();
         const selection = sdk.Editing.getSelection();
-        if (!getId("lt-ScriptEnabled")?.checked ||
-            !getId("lt-IconsEnable")?.checked ||
+        if (!LtSettings.ScriptEnabled ||
+            !LtSettings.UIEnable ||
             selection == null ||
             selection?.objectType !== "segment" ||
             (selection.ids && selection.ids.length !== 1))
