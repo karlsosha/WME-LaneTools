@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         WME LaneTools
 // @namespace    https://github.com/SkiDooGuy/WME-LaneTools
-// @version      2025.08.04.001
+// @version      2025.08.14.001
 // @description  Adds highlights and tools to WME to supplement the lanes feature
 // @author       SkiDooGuy, Click Saver by HBiede, Heuristics by kndcajun, assistance by jm6087
 // @updateURL    https://github.com/SkiDooGuy/WME-LaneTools/raw/master/WME-LaneTools.user.js
@@ -2205,8 +2205,8 @@ TODO:<br>
 
         function focusEle() {
             // Places the focus on the relevant lanes # input if the direction exists
-            const autoFocusLanes: HTMLInputElement | null = LtSettings.AutoFocusLanes;
-            if (autoFocusLanes?.checked) {
+            const autoFocusLanes = LtSettings.AutoFocusLanes;
+            if (autoFocusLanes) {
                 const fwdLanes = $(".fwd-lanes");
                 const revLanes = $(".rev-lanes");
                 if (fwdLanes.find(".edit-region").children().length > 0 && !fwdDone) {
@@ -2218,8 +2218,8 @@ TODO:<br>
         }
 
         function insertSelAll(dir: LaneDirection) {
-            const setAllEnable: HTMLInputElement | null = LtSettings.SelAllEnable;
-            if (setAllEnable?.checked) {
+            const setAllEnable = LtSettings.SelAllEnable;
+            if (setAllEnable) {
                 $(".street-name").css("user-select", "none");
                 const inputDirection =
                     dir === "fwd" ? $(".fwd-lanes").find(".form-control")[0] : $(".rev-lanes").find(".form-control")[0];
@@ -2392,9 +2392,9 @@ TODO:<br>
 
     function displayToolbar() {
         const objSelected: Selection | null = sdk.Editing.getSelection();
-        const scriptEnabled: HTMLInputElement | null = LtSettings.ScriptEnabled;
-        const copyEnable: HTMLInputElement | null = LtSettings.CopyEnable;
-        if (scriptEnabled?.checked && copyEnable && copyEnable.checked && objSelected && objSelected.ids.length === 1) {
+        const scriptEnabled = LtSettings.ScriptEnabled;
+        const copyEnable = LtSettings.CopyEnable;
+        if (scriptEnabled && copyEnable && copyEnable && objSelected && objSelected.ids.length === 1) {
             if (objSelected.objectType === "segment") {
                 const map = sdk.Map.getMapViewportElement();
                 $("#lt-toolbar-container").css({
@@ -3200,7 +3200,7 @@ TODO:<br>
 
     function setTurns(direction: LaneDirection) {
         const clickSaveEnabled = LtSettings.ClickSaveEnable;
-        if (!clickSaveEnabled?.checked) {
+        if (!clickSaveEnabled) {
             return;
         }
         const lanesPane = document.getElementsByClassName(direction)[0];
