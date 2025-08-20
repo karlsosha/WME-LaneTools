@@ -198,7 +198,7 @@ KNOWN ISSUE:<br>
 TODO:<br>
     - Zoom doesn't currently reset the size of the icons<br>`;
 
-    const LANETOOLS_DEBUG_LEVEL = 5;
+    const LANETOOLS_DEBUG_LEVEL = 1;
     const configArray = {};
     const RBSArray = { failed: false };
     const IsBeta = location.href.indexOf("beta.waze.com") !== -1;
