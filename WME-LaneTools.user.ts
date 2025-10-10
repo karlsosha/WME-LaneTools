@@ -23,12 +23,12 @@
 /* global W */
 /* global WazeWrap */
 
-// import type { KeyboardShortcut, Node, Pixel, Segment, Selection, Turn, UserSession, WmeSDK } from "wme-sdk-typings";
-// import type { Position } from "geojson";
-// import _ from "underscore";
-// import * as turf from "@turf/turf";
-// import WazeWrap from "https://greasyfork.org/scripts/24851-wazewrap/code/WazeWrap.js";
-// import { initWmeSdkPlus } from "https://cdn.jsdelivr.net/gh/TheEditorX/wme-sdk-plus@1.2.0/wme-sdk-plus.js";
+import type { KeyboardShortcut, Node, Pixel, Segment, Selection, Turn, UserSession, WmeSDK } from "wme-sdk-typings";
+import type { Position } from "geojson";
+import _ from "underscore";
+import * as turf from "@turf/turf";
+import WazeWrap from "https://greasyfork.org/scripts/24851-wazewrap/code/WazeWrap.js";
+import { initWmeSdkPlus } from "https://cdn.jsdelivr.net/gh/TheEditorX/wme-sdk-plus@1.2.0/wme-sdk-plus.js";
 
 let sdk: WmeSDK;
 unsafeWindow.SDK_INITIALIZED.then(() => {
@@ -1670,34 +1670,11 @@ TODO:<br>
     // Checks the WME value of a shortcut (from the shortcut menu) against the scripts value and saves if they are different
     function checkShortcutsChanged() {
         let triggerSave = false;
-        for (const name in W.accelerators.Actions) {
-            const { shortcut, group } = W.accelerators.Actions[name];
-            if (group === "wmelt") {
-                let TempKeys = "";
-                if (shortcut) {
-                    if (shortcut.altKey === true) {
-                        TempKeys += "A";
-                    }
-                    if (shortcut.shiftKey === true) {
-                        TempKeys += "S";
-                    }
-                    if (shortcut.ctrlKey === true) {
-                        TempKeys += "C";
-                    }
-                    if (TempKeys !== "") {
-                        TempKeys += "+";
-                    }
-                    if (shortcut.keyCode) {
-                        TempKeys += shortcut.keyCode;
-                    }
-                } else {
-                    TempKeys = "-1";
-                }
-                if (LtSettings[name] !== TempKeys) {
-                    triggerSave = true;
-                    console.log(`LaneTools: Stored shortcut ${name}: ${LtSettings[name]} changed to ${TempKeys}`);
-                    break;
-                }
+        for (const shortcut of sdk.Shortcuts.getAllShortcuts()) {
+            if (LtSettings[shortcut.shortcutId] !== shortcut.shortcutKeys) {
+                triggerSave = true;
+                console.log(`LaneTools: Stored shortcut ${name}: ${LtSettings[shortcut.shortcutId]} changed to ${shortcut.shortcutKeys}`);
+                break;
             }
         }
         if (triggerSave) {
