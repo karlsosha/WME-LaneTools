@@ -23,12 +23,12 @@
 /* global W */
 /* global WazeWrap */
 
-import type { KeyboardShortcut, Node, Pixel, Segment, Selection, Turn, UserSession, WmeSDK } from "wme-sdk-typings";
-import type { Position } from "geojson";
-import _ from "underscore";
-import * as turf from "@turf/turf";
-import WazeWrap from "https://greasyfork.org/scripts/24851-wazewrap/code/WazeWrap.js";
-import { initWmeSdkPlus } from "https://cdn.jsdelivr.net/gh/TheEditorX/wme-sdk-plus@1.2.0/wme-sdk-plus.js";
+// import type { KeyboardShortcut, Node, Pixel, Segment, Selection, Turn, UserSession, WmeSDK } from "wme-sdk-typings";
+// import type { Position } from "geojson";
+// import _ from "underscore";
+// import * as turf from "@turf/turf";
+// import WazeWrap from "https://greasyfork.org/scripts/24851-wazewrap/code/WazeWrap.js";
+// import { initWmeSdkPlus } from "https://cdn.jsdelivr.net/gh/TheEditorX/wme-sdk-plus@1.2.0/wme-sdk-plus.js";
 
 let sdk: WmeSDK;
 unsafeWindow.SDK_INITIALIZED.then(() => {
@@ -135,7 +135,21 @@ function ltInit() {
         REVERSE = -1,
         ANY = 0,
         FORWARD = 1,
-    }
+    };
+
+    enum VERBOSITY {
+        INFO = 0,
+        DEBUG = 1,
+        VERBOSE = 2,
+        TRACE = 3
+    };
+
+    const verbosity_mnemonic: string[] = [
+        "INFO",
+        "DEBUG",
+        "VERBOSE",
+        "TRACE"
+    ];
 
     interface SegmentReference {
         seg: number;
@@ -198,7 +212,7 @@ KNOWN ISSUE:<br>
 TODO:<br>
     - Zoom doesn't currently reset the size of the icons<br>`;
 
-    const LANETOOLS_DEBUG_LEVEL = 1;
+    let LANETOOLS_DEBUG_LEVEL = 0; // 0=Info, 1=Debug, 2=Trace, 3=Trace Verbose
     const configArray = {};
     const RBSArray = { failed: false };
     const IsBeta = location.href.indexOf("beta.waze.com") !== -1;
@@ -244,6 +258,7 @@ TODO:<br>
             heurPosCol: "Lane heuristics likely",
             heurNegCol: "Lane heuristics - not qualified",
             advTools: "Advanced Tools",
+            debugMsg: "Debug Logging Level (Beta Only)",
             quickTog: "Quick toggle all lanes",
             showRBS: "Use RBS heuristics",
             delFwd: "Delete FWD Lanes",
@@ -265,6 +280,10 @@ TODO:<br>
             uturnTIO: "U-Turn",
             enIcons: "Display lane icons on map",
             IconsRotate: "Rotate map icons with segment direction",
+            DebugLevel: "Debug",
+            InfoLevel: "Info",
+            TraceLevel: "Trace",
+            VerboseLevel: "Verbose"
         },
         "en-us": {
             enabled: "Enabled",
@@ -302,6 +321,7 @@ TODO:<br>
             heurPosCol: "Lane heuristics likely",
             heurNegCol: "Lane heuristics - not qualified",
             advTools: "Advanced Tools",
+            debugMsg: "Debug Logging Level (Beta Only)",
             quickTog: "Quick toggle all lanes",
             showRBS: "Use RBS heuristics",
             delFwd: "Delete FWD Lanes",
@@ -323,6 +343,10 @@ TODO:<br>
             uturnTIO: "U-Turn",
             enIcons: "Display lane icons on map",
             IconsRotate: "Rotate map icons with segment direction",
+            DebugLevel: "Debug",
+            InfoLevel: "Info",
+            TraceLevel: "Trace",
+            VerboseLevel: "Verbose",
         },
     };
 
@@ -742,7 +766,7 @@ TODO:<br>
                 </div>
                 <div class='lt-section-wrapper' id='lt-adv-tools' style='display:none;'>
                     <div class='lt-section-wrapper border'>
-                        <span style='font-weight:bold;'><span id='lt-trans-advTools'>></span></span>
+                        <span style='font-weight:bold;'><span id='lt-trans-advTools'></span></span>
                     </div>
                     <div class='lt-option-container'>
                         <input type=checkbox class='lt-checkbox' id='lt-SelAllEnable' />
@@ -759,6 +783,27 @@ TODO:<br>
                     </div>
                     <div id='lt-sheet-link' style='display:none;'>
                         <a href='https://docs.google.com/spreadsheets/d/1_3sF09sMOid_us37j5CQqJZlBGGr1vI_3Rrmp5K-KCQ/edit?usp=sharing' target='_blank'>LT Config Sheet</a>
+                    </div>
+                </div>
+                <div class='lt-section-wrapper' id='lt-debug-msg' style='display:none;'>
+                    <div class='lt-section-wrapper border'>
+                        <span style='font-weight:bold;'><span id='lt-trans-debugMsg'></span></span>
+                    </div>
+                    <div class='lt-option-container sub'>
+                        <input type=radio class='lt-checkbox' value='0' name='VerbosityLevel' id='lt-InfoLevel' checked/>
+                        <label class='lt-label' for='lt-InfoLevel'><span id='lt-trans-InfoLevel'></span></label>
+                    </div>
+                    <div class='lt-option-container sub'>
+                        <input type=radio class='lt-checkbox' value='1' name='VerbosityLevel' id='lt-DebugLevel' />
+                        <label class='lt-label' for='lt-DebugLevel'><span id='lt-trans-DebugLevel'></span></label>
+                    </div>
+                    <div class='lt-option-container sub'>
+                        <input type=radio class='lt-checkbox' value='2' name='VerbosityLevel' id='lt-TraceLevel' />
+                        <label class='lt-label' for='lt-TraceLevel'><span id='lt-trans-TraceLevel'></span></label>
+                    </div>
+                    <div class='lt-option-container sub'>
+                        <input type=radio class='lt-checkbox' value='3' name='VerbosityLevel' id='lt-VerboseLevel' />
+                        <label class='lt-label' for='lt-VerboseLevel'><span id='lt-trans-VerboseLevel'></span></label>
                     </div>
                 </div>
             </div>
@@ -889,6 +934,32 @@ TODO:<br>
             if (!getId("lt-LaneHeuristicsChecks")?.checked) {
                 $("#lt-heur-wrapper").hide();
             }
+
+            if(IsBeta) {
+                $("#lt-debug-msg").show();
+            }
+            else {
+                $("#lt-debug-msg").hide();
+            }
+            $("input[type=radio][name=VerbosityLevel]").on("change", () => {
+                if($("#lt-InfoLevel").is(":checked")) {
+                    LtSettings.VerbosityLevel = VERBOSITY.INFO;
+                    LANETOOLS_DEBUG_LEVEL = VERBOSITY.INFO;
+                    lt_log("Info level messages enabled.", VERBOSITY.INFO);
+                } else if($("#lt-DebugLevel").is(":checked")) {
+                    LtSettings.VerbosityLevel = VERBOSITY.DEBUG;
+                    LANETOOLS_DEBUG_LEVEL = VERBOSITY.DEBUG;
+                    lt_log("DEBUG level messages enabled.", VERBOSITY.DEBUG);
+                } else if($("#lt-TraceLevel").is(":checked")) {
+                    LtSettings.VerbosityLevel = VERBOSITY.TRACE;
+                    LANETOOLS_DEBUG_LEVEL = VERBOSITY.TRACE;
+                    lt_log("Trace level messages enabled.", VERBOSITY.TRACE);
+                } else if($("#lt-VerboseLevel").is(":checked")) {
+                    LtSettings.VerbosityLevel = VERBOSITY.VERBOSE;
+                    LANETOOLS_DEBUG_LEVEL = VERBOSITY.VERBOSE;
+                    lt_log("VERBOSE level messages enabled.", VERBOSITY.VERBOSE);
+                }
+            });
 
             function setChecked(checkboxId: string, checked: boolean) {
                 $(`#${checkboxId}`).prop("checked", checked);
@@ -1470,7 +1541,7 @@ TODO:<br>
         //     const { shortcut, group } = W.accelerators.Actions[name];
         //     if (group === "wmelt") {
         for (const shortcut of sdk.Shortcuts.getAllShortcuts()) {
-            localSettings[shortcut.shortcutId] = shortcut.shortcutKeys;
+            if(shortcut.shortcutKeys !== null) localSettings[shortcut.shortcutId] = shortcut.shortcutKeys;
         }
 
         // Required for the instant update of changes to the keyboard shortcuts on the UI
@@ -1642,6 +1713,11 @@ TODO:<br>
         $("#lt-trans-AddTIO").text(strings.addTIO);
         $("#lt-trans-enIcons").text(strings.enIcons);
         $("#lt-trans-IconsRotate").text(strings.IconsRotate);
+        $("#lt-trans-debugMsg").text(strings.debugMsg);
+        $("#lt-trans-InfoLevel").text(strings.InfoLevel);
+        $("#lt-trans-DebugLevel").text(strings.DebugLevel);
+        $("#lt-trans-TraceLevel").text(strings.TraceLevel);
+        $("#lt-trans-VerboseLevel").text(strings.VerboseLevel);
 
         $("#lt-color-title").attr("data-original-title", strings.colTooltip);
 
@@ -2861,7 +2937,7 @@ TODO:<br>
         let count: number = 0;
         for (let idx = 0; selection && idx < selection.ids.length; ++idx) {
             if (typeof selection.ids[idx] === "string") {
-                lt_log(`Segment ID: ${selection.ids[idx]} reported as Segment ID incorrectly`, 1);
+                lt_log(`Segment ID: ${selection.ids[idx]} reported as Segment ID incorrectly`, VERBOSITY.DEBUG);
             }
             const seg: Segment | null = sdk.DataModel.Segments.getById({ segmentId: selection.ids[idx] });
             if (!seg) continue;
@@ -2900,7 +2976,7 @@ TODO:<br>
 
                 // If errors encountered, scan again. (Usually this is an issue with first loading of DOM after zoom or long pan)
                 if (tryRedo && lt_scanArea_recursive > 0) {
-                    lt_log("LT errors found, scanning again", 2);
+                    lt_log("LT errors found, scanning again", VERBOSITY.TRACE);
                     removeHighlights();
                     lt_scanArea_recursive--;
                     lt_scanArea_timer.start();
@@ -2911,7 +2987,7 @@ TODO:<br>
 
                 // If errors encountered, scan again. (Usually this is an issue with first loading of DOM after zoom or long pan)
                 if (tryRedo && lt_scanArea_recursive > 0) {
-                    lt_log("LT errors found, scanning again", 2);
+                    lt_log("LT errors found, scanning again", VERBOSITY.TRACE);
                     removeHighlights();
                     lt_scanArea_recursive--;
                     lt_scanArea_timer.start();
@@ -3383,7 +3459,7 @@ TODO:<br>
         // 12. That alt-incoming segment must be within perpendicular tolerance to BOTH the median segment and the incoming segment.
 
         if (nodeExitSegIds == null || curNodeEntry == null || laneCount == null || inSegRef == null) {
-            lt_log("isHeuristicsCandidate received bad argument (null)", 1);
+            lt_log("isHeuristicsCandidate received bad argument (null)", VERBOSITY.DEBUG);
             return HeuristicsCandidate.NONE;
         }
 
@@ -3418,7 +3494,7 @@ TODO:<br>
 
         const segAddress = sdk.DataModel.Segments.getAddress({segmentId: segCandidate.id});
         if (segAddress.street === null) {
-            lt_log(`Unable to process Heuristics on Segment: ${segCandidate.id} as it has no Primary Street Set`, 1);
+            lt_log(`Unable to process Heuristics on Segment: ${segCandidate.id} as it has no Primary Street Set`, VERBOSITY.DEBUG);
             return HeuristicsCandidate.NONE;
         }
         if (segAddress.country?.isLeftHandTraffic) {
@@ -3426,10 +3502,10 @@ TODO:<br>
             out2TargetAngle = -90.0; // right turn
         }
 
-        lt_log("==================================================================================", 2);
+        lt_log("==================================================================================", VERBOSITY.TRACE);
         lt_log(
             `Checking heuristics candidate: seg ${segId} node ${curNodeExit.id} azm ${segEndAzm} nodeExitSegIds:${nodeExitSegIds.length}`,
-            2
+            VERBOSITY.TRACE
         );
 
         // Find the incoming segment, and validate angle to cursegment
@@ -3448,14 +3524,14 @@ TODO:<br>
             const ia = lt_getBearing(curNodeEntry.id, is, true); // absolute math azimuth
             // const ita: number | null = lt_turn_angle(ia, segBeginAzm); // turn angle
             const ita: number | null = lt_turn_angle_seg_to_seg(is, curNodeEntry, segCandidate);
-            lt_log(`Turn angle from inseg ${nodeEntrySegIds[ii]}: ${ita}(${ia},${segBeginAzm})`, 3);
+            lt_log(`Turn angle from inseg ${nodeEntrySegIds[ii]}: ${ita}(${ia},${segBeginAzm})`, VERBOSITY.VERBOSE);
 
             if (ita !== null && Math.abs(ita) > MAX_STRAIGHT_DIF) {
                 // tolerance met?
                 if (Math.abs(ita) > MAX_STRAIGHT_TO_CONSIDER) {
                     continue;
                 }
-                lt_log(`   Not eligible as inseg: ${ita}`, 2);
+                lt_log(`   Not eligible as inseg: ${ita}`, VERBOSITY.TRACE);
                 thisTimeFail = HeuristicsCandidate.FAIL;
             }
 
@@ -3474,7 +3550,7 @@ TODO:<br>
             }
             const turnData = getMatchingTurn(curNodeEntry, is, segCandidate);
             if (turnData === null || !turnData.lanes) {
-                lt_log(`Straight turn has no lanes:${nodeEntrySegIds[ii]} to ${segId}`, 3);
+                lt_log(`Straight turn has no lanes:${nodeEntrySegIds[ii]} to ${segId}`, VERBOSITY.VERBOSE);
                 continue; // No lanes? Don't even think about it. (Not a candidate)
             }
 
@@ -3482,15 +3558,15 @@ TODO:<br>
             //  1/1/21: One exception. If laneCount is 0, and there is exactly 1 straight incoming lane, then treat it as equal. (Conversation with @jm6087)
             const nl = turnData.lanes.toLaneIndex - turnData.lanes.fromLaneIndex + 1;
             if (nl !== laneCount && !(laneCount === 0 && nl === 1)) {
-                lt_log("Straight turn lane count does not match", 2);
+                lt_log("Straight turn lane count does not match", VERBOSITY.TRACE);
                 thisTimeFail = HeuristicsCandidate.ERROR; // Failed lane match should give us an ERROR
             }
 
             // Only one segment allowed  // TBD ???    For now, don't allow more than one.
             if (inSeg !== null && thisTimeFail >= inSegIsHeurFail) {
                 if (inSegIsHeurFail === 0 && thisTimeFail === 0) {
-                    lt_log(`Error: >1 qualifying entry segment for ${segCandidate.id}: ${inSeg.id},${is?.id}`, 2);
-                    lt_log("==================================================================================", 2);
+                    lt_log(`Error: >1 qualifying entry segment for ${segCandidate.id}: ${inSeg.id},${is?.id}`, VERBOSITY.TRACE);
+                    lt_log("==================================================================================", VERBOSITY.TRACE);
                     return 0; // just stop here
                 }
             }
@@ -3510,10 +3586,10 @@ TODO:<br>
             inSegRef.direction = inSeg?.toNodeId === curNodeEntry.id ? Direction.FORWARD : Direction.REVERSE;
         }
         if (inSeg === null) {
-            lt_log("== No inseg found ==================================================================", 2);
+            lt_log("== No inseg found ==================================================================", VERBOSITY.TRACE);
             return 0; // otherwise wait for later
         }
-        lt_log(`Found inseg candidate: ${inSeg.id} ${inSegIsHeurFail === 0 ? "" : "(failed)"}`, 2);
+        lt_log(`Found inseg candidate: ${inSeg.id} ${inSegIsHeurFail === 0 ? "" : "(failed)"}`, VERBOSITY.TRACE);
 
         // #3(a) Determine the outgoing segment 2 (the 2nd turn) and validate turn angle
         for (let ii = 0; ii < nodeExitSegIds.length; ii++) {
@@ -3530,7 +3606,7 @@ TODO:<br>
 
             const oa: number | null = lt_getBearing(curNodeExit.id, os); // absolute math azimuth
             const ota: number | null = lt_turn_angle_seg_to_seg(segCandidate, curNodeExit, os); // turn angle
-            lt_log(`Turn angle to outseg2 ${nodeExitSegIds[ii]}: ${ota}(${segEndAzm},${oa})`, 2);
+            lt_log(`Turn angle to outseg2 ${nodeExitSegIds[ii]}: ${ota}(${segEndAzm},${oa})`, VERBOSITY.TRACE);
 
             // Just to be sure, we can't do Heuristics if there's a chance to turn right (RH)
             if (ota !== null && Math.abs(out1TargetAngle - ota) < MAX_PERP_TO_CONSIDER) {
@@ -3551,8 +3627,8 @@ TODO:<br>
             // Only one segment allowed  // TBD ???    For now, don't allow more than one.
             if (outSeg2 !== null && thisTimeFail >= outSeg2IsHeurFail) {
                 if (outSeg2IsHeurFail === 0 && thisTimeFail === 0) {
-                    lt_log(`Error: >1 qualifying exit2 segment for ${segCandidate.id}: ${outSeg2.id},${os?.id}`, 2);
-                    lt_log("==================================================================================", 2);
+                    lt_log(`Error: >1 qualifying exit2 segment for ${segCandidate.id}: ${outSeg2.id},${os?.id}`, VERBOSITY.TRACE);
+                    lt_log("==================================================================================", VERBOSITY.TRACE);
                     return 0; // just stop here
                 }
             }
@@ -3562,10 +3638,10 @@ TODO:<br>
             outSeg2IsHeurFail = thisTimeFail;
         }
         if (outSeg2 === null) {
-            lt_log("== No Outseg2 found ==================================================================", 2);
+            lt_log("== No Outseg2 found ==================================================================", VERBOSITY.TRACE);
             return 0;
         }
-        lt_log(`Found outseg2 candidate: ${outSeg2.id} ${outSeg2IsHeurFail === 0 ? "" : "(failed)"}`, 2);
+        lt_log(`Found outseg2 candidate: ${outSeg2.id} ${outSeg2IsHeurFail === 0 ? "" : "(failed)"}`, VERBOSITY.TRACE);
 
         // #11 & 12: The Segment 1 that matters is the incoming (parallel to outgoing seg2)
         for (let ii = 0; ii < nodeEntrySegIds.length; ii++) {
@@ -3595,14 +3671,14 @@ TODO:<br>
                 tta = lt_turn_angle_seg_to_seg(ai1, curNodeEntry, inSeg);
             }
             else tta = lt_turn_angle_seg_to_seg(inSeg, curNodeEntry, ai1);
-            lt_log(`Turn angle from inseg (supplementary) ${nodeEntrySegIds[ii]}: ${tta}(${inAzm},${ia})`, 3);
+            lt_log(`Turn angle from inseg (supplementary) ${nodeEntrySegIds[ii]}: ${tta}(${inAzm},${ia})`, VERBOSITY.VERBOSE);
             if (tta !== null && Math.abs(out1TargetAngle - tta) > MAX_PERP_DIF_ALT) {
                 // tolerance met?
                 if (Math.abs(out1TargetAngle - tta) > MAX_PERP_TO_CONSIDER) {
                     // too far out of tolerance to care (don't consider it a candidate at all)
                     continue;
                 }
-                lt_log(`   Not eligible as altIn1: ${tta}`, 3);
+                lt_log(`   Not eligible as altIn1: ${tta}`, VERBOSITY.VERBOSE);
                 thisTimeFail = HeuristicsCandidate.FAIL;
             }
 
@@ -3615,8 +3691,8 @@ TODO:<br>
 
                 // If they both are good, then error
                 if (altInIsHeurFail === 0 && thisTimeFail === 0) {
-                    lt_log(`Error: >1 qualifying segment for ${segCandidate.id}: ${altIncomingSeg.id},${ai1?.id}`, 2);
-                    lt_log("==================================================================================", 2);
+                    lt_log(`Error: >1 qualifying segment for ${segCandidate.id}: ${altIncomingSeg.id},${ai1?.id}`, VERBOSITY.TRACE);
+                    lt_log("==================================================================================", VERBOSITY.TRACE);
                     return HeuristicsCandidate.FAIL;
                 }
             } // If the new candidate is better than the old, then assign our candidate to the new one (below)
@@ -3628,17 +3704,17 @@ TODO:<br>
         if (altIncomingSeg === null) {
             lt_log(
                 "== No alt incoming-1 segment found ==================================================================",
-                2
+                VERBOSITY.TRACE
             );
             return 0;
         }
-        lt_log(`Alt incoming-1 segment found: ${altIncomingSeg.id} ${altInIsHeurFail === 0 ? "" : "(failed)"}`, 2);
+        lt_log(`Alt incoming-1 segment found: ${altIncomingSeg.id} ${altInIsHeurFail === 0 ? "" : "(failed)"}`, VERBOSITY.TRACE);
 
         // Have we found a failure candidate?
         if (inSegIsHeurFail < 0 || altInIsHeurFail < 0 || outSeg2IsHeurFail < 0) {
             lt_log(
                 `Found a failed candidate for ${segId} ( ${Math.min(inSegIsHeurFail, altInIsHeurFail, outSeg2IsHeurFail)})`,
-                2
+                VERBOSITY.TRACE
             );
             // NOTE: IF any seg is a FAIL, then return FAIL (not Error)
             if (
@@ -3652,7 +3728,7 @@ TODO:<br>
         }
 
         // We have a winner!!!
-        lt_log(`Found a heuristics candidate! ${segId} to ${outSeg2.id} at ${outTurnAngle2}`, 2);
+        lt_log(`Found a heuristics candidate! ${segId} to ${outSeg2.id} at ${outTurnAngle2}`, VERBOSITY.TRACE);
         return 1;
 
         ////////////////////////////////////////////// end of func /////////////////////////////////////////////////////////
@@ -3702,7 +3778,7 @@ TODO:<br>
             // const angle_rad = Math.atan2(ja_dy, ja_dx);
             // const angle_deg = ((angle_rad * 180) / Math.PI) % 360;
             const angle_deg = turf.bearing(startPos, endPos);
-            lt_log(`Azm from node ${nodeId} / ${segment.id}: ${angle_deg}`, 3);
+            lt_log(`Azm from node ${nodeId} / ${segment.id}: ${angle_deg}`, VERBOSITY.VERBOSE);
             return angle_deg;
         }
 
@@ -3742,7 +3818,7 @@ TODO:<br>
 
             let a = angleOutAdjusted - angleInAdjusted;
             a += a > 180 ? -360 : a < -180 ? 360 : 0;
-            lt_log(`Turn ${angleInAdjusted},${angleOutAdjusted}: ${a}`, 3);
+            lt_log(`Turn ${angleInAdjusted},${angleOutAdjusted}: ${a}`, VERBOSITY.VERBOSE);
             return a;
         }
 
@@ -3793,18 +3869,18 @@ TODO:<br>
             const permissions: TurnPermissions = isTurnAllowedBySegDirections(s_from, s_to);
             lt_log(
                 `Allow from ${s_from.id} to ${s_to !== null ? s_to.id : 0} via ${via_node.id}? ${permissions.allowedBySegDirections} | ${permissions.allowed}`,
-                3
+                VERBOSITY.VERBOSE
             );
 
             // Is there a driving direction restriction?
             if (!permissions.allowedBySegDirections) {
-                lt_log("Driving direction restriction applies", 3);
+                lt_log("Driving direction restriction applies", VERBOSITY.VERBOSE);
                 return false;
             }
 
             // Is turn allowed by other means (e.g. turn restrictions)?
             if (!permissions.allowed) {
-                lt_log("Other restriction applies", 3);
+                lt_log("Other restriction applies", VERBOSITY.VERBOSE);
                 return false;
             }
 
@@ -3830,12 +3906,12 @@ TODO:<br>
     //     return len;
     // }
 
-    function lt_log(lt_log_msg: string, lt_log_level = 1) {
+    function lt_log(lt_log_msg: string, verbosity_level: VERBOSITY = VERBOSITY.INFO) {
         // ##NO_FF_START##
         // Firefox addons should not use console.(log|error|debug), so these lines
         // are removed by the FF addon packaging script.
-        if (lt_log_level <= LANETOOLS_DEBUG_LEVEL) {
-            console.log("LaneTools Dev Msg: ", lt_log_msg);
+        if (verbosity_level <= LANETOOLS_DEBUG_LEVEL) {
+            console.log(`LaneTools ${verbosity_mnemonic[verbosity_level]} Dev Msg: `, lt_log_msg);
         }
         // ##NO_FF_END##
     }
