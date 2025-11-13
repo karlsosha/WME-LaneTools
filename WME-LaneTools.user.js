@@ -14,7 +14,7 @@
 // @exclude      https://www.waze.com/user/editor*
 // @require      https://greasyfork.org/scripts/24851-wazewrap/code/WazeWrap.js
 // @require      https://cdn.jsdelivr.net/npm/@turf/turf@7.2.0/turf.min.js
-// @require      https://cdn.jsdelivr.net/gh/TheEditorX/wme-sdk-plus@1.2.0/wme-sdk-plus.js
+// @require      https://cdn.jsdelivr.net/gh/TheEditorX/wme-sdk-plus@4527424b5d6768c0621b0af799cae3b30ee19bb7/wme-sdk-plus.js 
 // @grant        GM_xmlhttpRequest
 // @grant        unsafeWindow
 // @connect      greasyfork.org
@@ -27,7 +27,7 @@
 // import _ from "underscore";
 // import * as turf from "@turf/turf";
 // import WazeWrap from "https://greasyfork.org/scripts/24851-wazewrap/code/WazeWrap.js";
-// import { initWmeSdkPlus } from "https://cdn.jsdelivr.net/gh/TheEditorX/wme-sdk-plus@1.2.0/wme-sdk-plus.js";
+// import { initWmeSdkPlus } from "https://cdn.jsdelivr.net/gh/TheEditorX/wme-sdk-plus@4527424b5d6768c0621b0af799cae3b30ee19bb7/wme-sdk-plus.js ";
 let sdk;
 unsafeWindow.SDK_INITIALIZED.then(() => {
     if (!unsafeWindow.getWmeSdk) {
