@@ -23,12 +23,12 @@
 /* global W */
 /* global WazeWrap */
 
-// import type { KeyboardShortcut, Node, Pixel, Segment, Selection, Turn, UserSession, WmeSDK } from "wme-sdk-typings";
+// import type { KeyboardShortcut, Node, Pixel, Segment, Selection, Turn, UserSession, WmeSDK, SegmentLaneGuidanceDirection } from "wme-sdk-typings";
 // import type { Position } from "geojson";
 // import _ from "underscore";
 // import * as turf from "@turf/turf";
 // import WazeWrap from "https://greasyfork.org/scripts/24851-wazewrap/code/WazeWrap.js";
-// import { initWmeSdkPlus } from "https://cdn.jsdelivr.net/gh/TheEditorX/wme-sdk-plus@4527424b5d6768c0621b0af799cae3b30ee19bb7/wme-sdk-plus.js ";
+// import { initWmeSdkPlus } from "https://cdn.jsdelivr.net/gh/TheEditorX/wme-sdk-plus@4527424b5d6768c0621b0af799cae3b30ee19bb7/wme-sdk-plus.js";
 
 let sdk: WmeSDK;
 unsafeWindow.SDK_INITIALIZED.then(() => {
@@ -2469,8 +2469,8 @@ TODO:<br>
         return obj && "roadType" in obj;
     }
 
-    function isSegmentSelected(selection: Selection | null): boolean {
-        return (selection && selection.objectType === "segment") || false;
+    function isSegmentSelected(selection: Selection | null | undefined): boolean {
+        return (selection && selection !== null && selection.objectType === "segment") || false;
     }
     // returns true if object is within window  bounds and above zoom threshold
     function onScreen(obj: Segment | Node | null | undefined, curZoomLevel: number) {
@@ -2556,49 +2556,73 @@ TODO:<br>
     }
 
     function delLanes(dir: LaneDirection) {
-        const selObjs = W.selectionManager.getSelectedWMEFeatures();
-        const selSeg = selObjs[0]._wmeObject;
-        const turnGraph = W.model.getTurnGraph();
-        const mAction = new MultiAction();
-        let node;
-        let conSegs;
-        let updates = {};
+        // const selObjs = W.selectionManager.getSelectedWMEFeatures();
+        // const selSeg = selObjs[0]._wmeObject;
+        // const turnGraph = W.model.getTurnGraph();
+        // const mAction = new MultiAction();
+        const selection: Selection | null = sdk.Editing.getSelection();
+        const selSeg: Segment | null = isSegmentSelected(selection) ? sdk.DataModel.Segments.getById({ segmentId: selection?.ids[0] }) : null;
+        if(selSeg === null) return;
+        // let node;
+        // let conSegs;;
+        // let turns: Turn[] | null = null;
+        let laneDirection: SegmentLaneGuidanceDirection | undefined;
 
         //    mAction.setModel(W.model);
 
         if (dir === "fwd") {
-            updates.fwdLaneCount = 0;
-            node = getLegacyNodeObj(selSeg.attributes.toNodeID);
-            conSegs = node.getSegmentIds();
+            laneDirection = "A_TO_B";
+            // updates.fwdLaneCount = 0;
+            // node = getLegacyNodeObj(selSeg.attributes.toNodeID);
+            // conSegs = node.getSegmentIds();
+            // if(selSeg.toNodeId === null){
+            //     lt_log("Segment has no toNodeId, cannot delete forward lanes", VERBOSITY.INFO);
+            //     return;
+            // }
+            // turns = sdk.DataModel.Turns.getTurnsThroughNode({nodeId: selSeg.toNodeId});
+
             // const fwdLanes = $('.fwd-lanes');
             // fwdLanes.find('.form-control').val(0);
             // fwdLanes.find('.form-control').trigger("change");
         }
         if (dir === "rev") {
-            updates.revLaneCount = 0;
-            node = getLegacyNodeObj(selSeg.attributes.fromNodeID);
-            conSegs = node.getSegmentIds();
+            laneDirection = "B_TO_A";
+            // if(selSeg.fromNodeId === null){
+            //     lt_log("Segment has no toNodeId, cannot delete forward lanes", VERBOSITY.INFO);
+            //     return;
+            // }
+            // turns = sdk.DataModel.Turns.getTurnsThroughNode({nodeId: selSeg.fromNodeId});
+
+            // updates.revLaneCount = 0;
+            // node = getLegacyNodeObj(selSeg.attributes.fromNodeID);
+            // conSegs = node.getSegmentIds();
             // const revLanes = $('.rev-lanes');
             // revLanes.find('.form-control').val(0);
             // revLanes.find('.form-control').trigger("change");
         }
 
-        mAction.doSubAction(W.model, new UpdateObj(selSeg, updates));
-
-        for (let i = 0; i < conSegs.length; i++) {
-            let turnStatus = turnGraph.getTurnThroughNode(node, selSeg, getLegacySegObj(conSegs[i]));
-            let turnData = turnStatus.getTurnData();
-
-            if (turnData.hasLanes()) {
-                turnData = turnData.withLanes();
-                turnStatus = turnStatus.withTurnData(turnData);
-
-                mAction.doSubAction(W.model, new SetTurn(turnGraph, turnStatus));
-            }
+        if(!laneDirection) {
+            lt_log("Invalid lane direction for deleting lanes", VERBOSITY.INFO);
+            return;
         }
+        // mAction.doSubAction(W.model, new UpdateObj(selSeg, updates));
+        sdk.DataModel.Turns.setSegmentTurnsLaneCount({laneCount: 0, laneDirection: laneDirection, segmentId: selSeg.id});
 
-        mAction._description = "Deleted lanes and turn associations";
-        W.model.actionManager.add(mAction);
+        // for (const turn of turns) {
+        //     turn.
+        //     let turnStatus = turnGraph.getTurnThroughNode(node, selSeg, getLegacySegObj(conSegs[i]));
+        //     let turnData = turnStatus.getTurnData();
+
+        //     if (turnData.hasLanes()) {
+        //         turnData = turnData.withLanes();
+        //         turnStatus = turnStatus.withTurnData(turnData);
+
+        //         mAction.doSubAction(W.model, new SetTurn(turnGraph, turnStatus));
+        //     }
+        // }
+
+        // mAction._description = "Deleted lanes and turn associations";
+        // W.model.actionManager.add(mAction);
     }
 
     function removeHighlights() {
