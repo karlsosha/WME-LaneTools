@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         WME LaneTools
 // @namespace    https://github.com/SkiDooGuy/WME-LaneTools
-// @version      2025.11.15.001
+// @version      2025.11.16.001
 // @description  Adds highlights and tools to WME to supplement the lanes feature
 // @author       SkiDooGuy, Click Saver by HBiede, Heuristics by kndcajun, assistance by jm6087
 // @updateURL    https://github.com/SkiDooGuy/WME-LaneTools/raw/master/WME-LaneTools.user.js
@@ -13,7 +13,6 @@
 // @exclude      https://www.waze.com/user/editor*
 // @require      https://greasyfork.org/scripts/24851-wazewrap/code/WazeWrap.js
 // @require      https://cdn.jsdelivr.net/npm/@turf/turf@7.2.0/turf.min.js
-// @require      https://cdn.jsdelivr.net/gh/TheEditorX/wme-sdk-plus@4527424b5d6768c0621b0af799cae3b30ee19bb7/wme-sdk-plus.js
 // @grant        GM_xmlhttpRequest
 // @grant        unsafeWindow
 // @connect      greasyfork.org
@@ -28,7 +27,6 @@
 // import _ from "underscore";
 // import * as turf from "@turf/turf";
 // import WazeWrap from "https://greasyfork.org/scripts/24851-wazewrap/code/WazeWrap.js";
-// import { initWmeSdkPlus } from "https://cdn.jsdelivr.net/gh/TheEditorX/wme-sdk-plus@4527424b5d6768c0621b0af799cae3b30ee19bb7/wme-sdk-plus.js";
 
 let sdk: WmeSDK;
 unsafeWindow.SDK_INITIALIZED.then(() => {
@@ -41,10 +39,7 @@ unsafeWindow.SDK_INITIALIZED.then(() => {
     });
 
     console.log(`SDK v ${sdk.getSDKVersion()} on ${sdk.getWMEVersion()} initialized`);
-    Promise.all([
-        initWmeSdkPlus(sdk),
-        sdk.Events.once({ eventName: "wme-ready" })
-    ]).then(ltInit);
+    sdk.Events.once({ eventName: "wme-ready" }).then(ltInit);
 });
 
 function ltInit() {
@@ -199,13 +194,12 @@ function ltInit() {
     const DOWNLOAD_URL = "https://greasyfork.org/en/scripts/537219-wme-lanetools";
     const FORUM_LINK = "https://www.waze.com/discuss/t/script-wme-lanetools/53136";
     const LT_UPDATE_NOTES = `NEW:<br>
-    - Remove proj4 Package<br>
-    - Adjust generation of Icons with Lanes<br>
-    - Using WME SDK + due to limitations of native SDK<br><br>
+UPDATES:<br>
+    - Move Lane Deletion to SDK Native<br>
+    - Fix issues with Selection and Reselection when Lane Tabs is open.<br>
 KNOWN ISSUE:<br>
-    - Some Icons Locations may display incorrectly<br><br>
 TODO:<br>
-    - Zoom doesn't currently reset the size of the icons<br>`;
+`;
 
     let LANETOOLS_DEBUG_LEVEL = 0; // 0=Info, 1=Debug, 2=Trace, 3=Trace Verbose
     const configArray = {};
@@ -984,14 +978,7 @@ TODO:<br>
             layerName: LTHighlightLayer.name,
             visibility: LtSettings.highlightsVisible && LtSettings.HighlightsEnable,
         });
-        // LTHighlightLayer = new OpenLayers.Layer.Vector("LTHighlightLayer", { uniqueName: "_LTHighlightLayer" });
-        // W.map.addLayer(LTHighlightLayer);
-        // LTHighlightLayer.setVisibility(true);
 
-        // Layer for future use of lane association icons...
-        // LTLaneGraphics = new OpenLayers.Layer.Vector("LTLaneGraphics", { uniqueName: "LTLaneGraphics" });
-        // W.map.addLayer(LTLaneGraphics);
-        // LTLaneGraphics.setVisibility(true);
         sdk.Map.addLayer({
             layerName: LTLaneGraphics.name,
             styleRules: styleConfig.styleRules,
@@ -1061,6 +1048,7 @@ TODO:<br>
             eventName: "wme-map-move-end",
             eventHandler: () => {
                 scanArea();
+                lanesTabSetup();
                 displayLaneGraphics();
             },
         });
@@ -1074,15 +1062,8 @@ TODO:<br>
         sdk.Events.on({
             eventName: "wme-selection-changed",
             eventHandler: () => {
-                scanArea();
-                lanesTabSetup();
-                displayLaneGraphics();
-            },
-        });
-
-        sdk.Events.on({
-            eventName: "wme-feature-editor-rendered",
-            eventHandler: () => {
+                const selected = sdk.Editing.getSelection();
+                if(selected === null) return;
                 scanArea();
                 lanesTabSetup();
                 displayLaneGraphics();
@@ -1098,15 +1079,7 @@ TODO:<br>
                 shortcutKeys: "",
             };
             sdk.Shortcuts.createShortcut(enableHighlightsShortcut);
-            // new WazeWrap.Interface.Shortcut(
-            //     "enableHighlights",
-            //     "Toggle lane highlights",
-            //     "wmelt",
-            //     "Lane Tools",
-            //     LtSettings.enableHighlights,
-            //     toggleHighlights,
-            //     null
-            // ).add();
+
             const enableUIEnhancementsShortcut: KeyboardShortcut = {
                 callback: toggleUIEnhancements,
                 shortcutId: "enableUIEnhancements",
@@ -1114,15 +1087,7 @@ TODO:<br>
                 shortcutKeys: "",
             };
             sdk.Shortcuts.createShortcut(enableUIEnhancementsShortcut);
-            // new WazeWrap.Interface.Shortcut(
-            //     "enableUIEnhancements",
-            //     "Toggle UI enhancements",
-            //     "wmelt",
-            //     "Lane Tools",
-            //     LtSettings.enableUIEnhancements,
-            //     toggleUIEnhancements,
-            //     null
-            // ).add();
+
             const enableHeuristicsShortcut: KeyboardShortcut = {
                 callback: toggleLaneHeuristicsChecks,
                 shortcutId: "enableHeuristics",
@@ -1130,15 +1095,7 @@ TODO:<br>
                 shortcutKeys: "",
             };
             sdk.Shortcuts.createShortcut(enableHeuristicsShortcut);
-            // new WazeWrap.Interface.Shortcut(
-            //     "enableHeuristics",
-            //     "Toggle heuristic highlights",
-            //     "wmelt",
-            //     "Lane Tools",
-            //     LtSettings.enableHeuristics,
-            //     toggleLaneHeuristicsChecks,
-            //     null
-            // ).add();
+
             const enableScriptShortcut: KeyboardShortcut = {
                 shortcutId: "enableScript",
                 description: "Toggle script",
@@ -1146,15 +1103,7 @@ TODO:<br>
                 shortcutKeys: "",
             };
             sdk.Shortcuts.createShortcut(enableScriptShortcut);
-            // new WazeWrap.Interface.Shortcut(
-            //     "enableScript",
-            //     "Toggle script",
-            //     "wmelt",
-            //     "Lane Tools",
-            //     LtSettings.enableScript,
-            //     toggleScript,
-            //     null
-            // ).add();
+
         } catch (e) {
             console.log("LT: Error creating shortcuts. This feature will be disabled.");
 
@@ -1813,9 +1762,9 @@ TODO:<br>
         }
     }
 
-    function getLegacySegObj(id) {
-        return W.model.segments.getObjectById(id);
-    }
+    // function getLegacySegObj(id) {
+    //     return W.model.segments.getObjectById(id);
+    // }
     function getSegObj(id: number | null | undefined): Segment | null {
         if (!id) return null;
         return sdk.DataModel.Segments.getById({ segmentId: id });
@@ -1826,9 +1775,9 @@ TODO:<br>
         return sdk.DataModel.Nodes.getById({ nodeId: id });
     }
 
-    function getLegacyNodeObj(id) {
-        return W.model.nodes.getObjectById(id);
-    }
+    // function getLegacyNodeObj(id) {
+    //     return W.model.nodes.getObjectById(id);
+    // }
 
     function lanesTabSetup() {
         // hook into edit panel on the left
@@ -1890,13 +1839,35 @@ TODO:<br>
             // if (getId("lt-AddTIO")?.checked) addTIOUI(laneDir);
         }
 
-        function updateUI() {
+        function updateUI(waitToFinish: boolean = true) {
             // if (eventInfo !== null) {
             //     eventInfo.stopPropagation();
             // }
             //        if (getId('lt-ReverseLanesIcon').checked && !isRotated) {
             //            rotateArrows();
             //        }
+            if(waitToFinish) {
+                waitForElementLoaded(
+                    ".fwd-lanes > div.lane-instruction.lane-instruction-to > div.instruction > div.lane-edit > .edit-lane-guidance"
+                ).then((elem) => {
+                    $(elem as HTMLButtonElement).off("click");
+                    $(elem as HTMLButtonElement).on("click", () => {
+                        showAddLaneGuidance("fwd");
+                    });
+                    updateUI(false);
+                });
+
+                waitForElementLoaded(
+                    ".rev-lanes > div.lane-instruction.lane-instruction-to > div.instruction > div.lane-edit > .edit-lane-guidance"
+                ).then((elem) => {
+                    $(elem as HTMLButtonElement).off("click");
+                    $(elem as HTMLButtonElement).on("click", () => {
+                        showAddLaneGuidance("rev");
+                    });
+                    updateUI(false);
+                });
+                return;
+            }
 
             if (LtSettings.highlightCSIcons) {
                 colorCSDir();
@@ -2012,23 +1983,6 @@ TODO:<br>
                     updateUI();
                 });
             }
-
-            waitForElementLoaded(
-                ".fwd-lanes > div.lane-instruction.lane-instruction-to > div.instruction > div.lane-edit > .edit-lane-guidance"
-            ).then((elem) => {
-                $(elem as HTMLButtonElement).off();
-                $(elem as HTMLButtonElement).on("click", () => {
-                    showAddLaneGuidance("fwd");
-                });
-            });
-            waitForElementLoaded(
-                ".rev-lanes > div.lane-instruction.lane-instruction-to > div.instruction > div.lane-edit > .edit-lane-guidance"
-            ).then((elem) => {
-                $(elem as HTMLButtonElement).off();
-                $(elem as HTMLButtonElement).on("click", () => {
-                    showAddLaneGuidance("rev");
-                });
-            });
 
             if (!fwdDone && !revDone && !expandEditTriggered) {
                 expandEdit();
@@ -2178,62 +2132,6 @@ TODO:<br>
                     });
                 });
             }
-            // if (revLanes.find(".direction-lanes").children().length > 0x0 && !getId("lt-rev-add-lanes")) {
-            //     let revLanesItem = $(
-            //             '<div style="display:inline-flex;flex-direction:row;justify-content:space-around;margin-top:4px;" id="lt-rev-add-lanes" />'),
-            //         classNamesList = [ "lt-add-lanes", "rev" ], laneCountsToAppend = getLaneItems(10, classNamesList);
-            //     for (let idx = 0; idx < laneCountsToAppend.length; ++idx) {
-            //         revLanesItem.append(laneCountsToAppend[idx]);
-            //     }
-            //     let prependSelector = '.rev-lanes > div > div > div.lane-instruction.lane-instruction-to > div.instruction > div.edit-region > div.controls.direction-lanes-edit > div.form-group > div.controls-container';
-            //     waitForElementLoaded(prependSelector).then((elm) => {
-            //         let revPrependTo = $(prependSelector);
-            //         revPrependTo.prepend(revLanesItem);
-            //         // revLanesItem.appendTo('.rev-lanes > div > div > div.lane-instruction.lane-instruction-to > div.instruction > div.edit-region > div > div > div:nth-child(1)');
-            //         setupLaneCountControls(revLanes, classNamesList);
-            //         $('.lt-add-lanes').on("click",function () {
-            //             let numAdd = $(this).text();
-            //             numAdd = Number.parseInt(numAdd, 10);
-            //             if ($(this).hasClass('lt-add-lanes rev')) {
-            //                 // As of React >=15.6.  Triggering change or input events on the input form cannot be
-            //                 // done via jquery selectors.  Which means that they have to be triggered via
-            //                 // React native calls.
-            //                 let nativeInputValueSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, "value").set;
-            //                 let inputForm = document.querySelector("div.rev-lanes input[name=laneCount]");
-            //                 nativeInputValueSetter.call(inputForm, numAdd);
-            //                 let inputEvent = new Event('input', {bubbles: true});
-            //                 inputForm.dispatchEvent(inputEvent);
-            //                 let changeEvent = new Event('change', {bubbles: true});
-            //                 inputForm.dispatchEvent(changeEvent);
-            //             }
-            //         });
-            //
-            //     })
-            // }
-
-            //if (lanes.find(".direction-lanes").children().length > 0 && !getId(addWidthTag)) {
-            //    let addFwdLanes =
-            //            $('<div style="display:inline-flex;flex-direction:row;width:100%;" id="'+addWidthTag+'" />'),
-            //        classNamesList = ["lt-add-Width", laneDir], laneCountsToAppend = getLaneItems(8, classNamesList);
-            //    for (let idx = 0; idx < laneCountsToAppend.length; ++idx) {
-            //        addFwdLanes.append(laneCountsToAppend[idx]);
-            //    }
-            //    let lnSelector = $(dirLanesClass + " > div > .lane-instruction.lane-instruction-from > .instruction > .road-width-edit > div > div > div > .lane-width-card")
-            //    addFwdLanes.prependTo(lnSelector);
-            //    setupLaneCountControls(lnSelector, classNamesList);
-            //}
-
-            // if (revLanes.find(".direction-lanes").children().length > 0 && !getId("lt-rev-add-Width")) {
-            //     let appendRevLanes =
-            //             $('<div style="display:inline-flex;flex-direction:row;width:100%;" id="lt-rev-add-Width" />'),
-            //         classNamesList = [ "lt-add-Width", "rev" ], laneCountsToAppend = getLaneItems(8, classNamesList);
-            //     for (let idx = 0; idx < laneCountsToAppend.length; ++idx) {
-            //         appendRevLanes.append(laneCountsToAppend[idx]);
-            //     }
-            //     let lnSelector = $(".rev-lanes > div > div > .lane-instruction.lane-instruction-from > .instruction > .road-width-edit > div > div > div > .lane-width-card");
-            //     appendRevLanes.prependTo(lnSelector);
-            //     setupLaneCountControls(lnSelector, classNamesList);
-            // }
 
             $(".lt-add-Width").on("click", function () {
                 const numAddStr: string = $(this).text();
@@ -2393,10 +2291,10 @@ TODO:<br>
         }
 
         function formatLanesTab(clickTab = false, tries = 0) {
-            if ($(".tabs-labels > div:nth-child(3)", $(".segment-edit-section > wz-tabs")[0].shadowRoot).length > 0) {
+            if ($(".tabs-labels > div:nth-child(3)", $(".segment-edit-section > wz-tabs")[0].shadowRoot?.getRootNode()).length > 0) {
                 fwdDone = false;
                 revDone = false;
-                $(".tabs-labels > div:nth-child(3)", $(".segment-edit-section > wz-tabs")[0].shadowRoot).on(
+                $(".tabs-labels > div:nth-child(3)", $(".segment-edit-section > wz-tabs")[0].shadowRoot?.getRootNode()).on(
                     "click",
                     () => {
                         fwdDone = false;
@@ -2406,12 +2304,9 @@ TODO:<br>
                 );
                 if (clickTab) {
                     // If the auto open lanes option is enabled, initiate a click event on the Lanes tab element
-                    waitForElementLoaded(".lanes-tab").then((elm) => {
-                        $(
-                            ".tabs-labels > div:nth-child(3)",
-                            $(".segment-edit-section > wz-tabs")[0].shadowRoot
-                        ).trigger("click");
-                    });
+                    $(".tabs-labels > div:nth-child(3)", $(".segment-edit-section > wz-tabs")[0].shadowRoot?.getRootNode()).trigger(
+                        "click"
+                    );
                 }
             } else if (tries < 500) {
                 setTimeout(() => {
