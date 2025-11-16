@@ -14,7 +14,7 @@
 // @exclude      https://www.waze.com/user/editor*
 // @require      https://greasyfork.org/scripts/24851-wazewrap/code/WazeWrap.js
 // @require      https://cdn.jsdelivr.net/npm/@turf/turf@7.2.0/turf.min.js
-// @require      https://cdn.jsdelivr.net/gh/TheEditorX/wme-sdk-plus@4527424b5d6768c0621b0af799cae3b30ee19bb7/wme-sdk-plus.js 
+// @require      https://cdn.jsdelivr.net/gh/TheEditorX/wme-sdk-plus@4527424b5d6768c0621b0af799cae3b30ee19bb7/wme-sdk-plus.js
 // @grant        GM_xmlhttpRequest
 // @grant        unsafeWindow
 // @connect      greasyfork.org
@@ -50,7 +50,6 @@ function ltInit() {
         Direction[Direction["ANY"] = 0] = "ANY";
         Direction[Direction["FORWARD"] = 1] = "FORWARD";
     })(Direction || (Direction = {}));
-    ;
     let VERBOSITY;
     (function (VERBOSITY) {
         VERBOSITY[VERBOSITY["INFO"] = 0] = "INFO";
@@ -58,13 +57,7 @@ function ltInit() {
         VERBOSITY[VERBOSITY["VERBOSE"] = 2] = "VERBOSE";
         VERBOSITY[VERBOSITY["TRACE"] = 3] = "TRACE";
     })(VERBOSITY || (VERBOSITY = {}));
-    ;
-    const verbosity_mnemonic = [
-        "INFO",
-        "DEBUG",
-        "VERBOSE",
-        "TRACE"
-    ];
+    const verbosity_mnemonic = ["INFO", "DEBUG", "VERBOSE", "TRACE"];
     let LT_ROAD_TYPE;
     (function (LT_ROAD_TYPE) {
         // Streets
@@ -187,7 +180,7 @@ TODO:<br>
             DebugLevel: "Debug",
             InfoLevel: "Info",
             TraceLevel: "Trace",
-            VerboseLevel: "Verbose"
+            VerboseLevel: "Verbose",
         },
         "en-us": {
             enabled: "Enabled",
@@ -352,7 +345,9 @@ TODO:<br>
         },
         styleRules: [
             {
-                predicate: (properties) => { return properties.layerName === LTNamesLayer.name; },
+                predicate: (properties) => {
+                    return properties.layerName === LTNamesLayer.name;
+                },
                 style: {
                     fontFamily: "Open Sans, Alef, helvetica, sans-serif, monospace",
                     labelColor: "${nameStyleLabelColor}",
@@ -951,7 +946,7 @@ TODO:<br>
                 scanArea();
                 lanesTabSetup();
                 displayLaneGraphics();
-            }
+            },
         });
         // Add keyboard shortcuts
         try {
@@ -2248,7 +2243,9 @@ TODO:<br>
         // const turnGraph = W.model.getTurnGraph();
         // const mAction = new MultiAction();
         const selection = sdk.Editing.getSelection();
-        const selSeg = isSegmentSelected(selection) ? sdk.DataModel.Segments.getById({ segmentId: selection?.ids[0] }) : null;
+        const selSeg = isSegmentSelected(selection)
+            ? sdk.DataModel.Segments.getById({ segmentId: selection?.ids[0] })
+            : null;
         if (selSeg === null)
             return;
         // let node;
@@ -2289,7 +2286,11 @@ TODO:<br>
             return;
         }
         // mAction.doSubAction(W.model, new UpdateObj(selSeg, updates));
-        sdk.DataModel.Turns.setSegmentTurnsLaneCount({ laneCount: 0, laneDirection: laneDirection, segmentId: selSeg.id });
+        sdk.DataModel.Turns.setSegmentTurnsLaneCount({
+            laneCount: 0,
+            laneDirection: laneDirection,
+            segmentId: selSeg.id,
+        });
         // for (const turn of turns) {
         //     turn.
         //     let turnStatus = turnGraph.getTurnThroughNode(node, selSeg, getLegacySegObj(conSegs[i]));
@@ -3178,8 +3179,10 @@ TODO:<br>
             const ai1 = getSegObj(nodeEntrySegIds[ii]);
             let thisTimeFail = 0;
             // Ensure the segment is one-way TOWARD the node (incoming direction)
-            const sourceSegment = ((ai1?.isBtoA && ai1.fromNodeId === curNodeEntry.id) || (ai1?.isAtoB && ai1.toNodeId === curNodeEntry.id));
-            if ((ai1?.isAtoB && ai1.toNodeId !== curNodeEntry.id) || (ai1?.isBtoA && ai1.fromNodeId !== curNodeEntry.id)) {
+            const sourceSegment = (ai1?.isBtoA && ai1.fromNodeId === curNodeEntry.id) ||
+                (ai1?.isAtoB && ai1.toNodeId === curNodeEntry.id);
+            if ((ai1?.isAtoB && ai1.toNodeId !== curNodeEntry.id) ||
+                (ai1?.isBtoA && ai1.fromNodeId !== curNodeEntry.id)) {
                 continue;
             }
             // Check turn from this seg to our segment
@@ -3344,8 +3347,8 @@ TODO:<br>
             if (!inPoint || !outPoint)
                 return null;
             let turnAngle = turf.angle(inPoint, connectorNode.geometry.coordinates, outPoint);
-            turnAngle -= (turnAngle > 180 ? 360 : 0);
-            turnAngle = (turnAngle > 0) ? 180 - turnAngle : -180 - turnAngle;
+            turnAngle -= turnAngle > 180 ? 360 : 0;
+            turnAngle = turnAngle > 0 ? 180 - turnAngle : -180 - turnAngle;
             return turnAngle;
         }
         function lt_is_turn_allowed(s_from, via_node, s_to) {
@@ -3610,7 +3613,9 @@ TODO:<br>
         const start = !featDis || !featDis.start ? 0 : featDis.start;
         const boxheight = !featDis || !featDis.boxheight ? 0 : featDis.boxheight;
         const boxincwidth = !featDis || !featDis.boxincwidth ? 0 : featDis.boxincwidth;
-        let nodePos = sdk.Map.getPixelFromLonLat({ lonLat: { lon: node.geometry.coordinates[0], lat: node.geometry.coordinates[1] } });
+        let nodePos = sdk.Map.getPixelFromLonLat({
+            lonLat: { lon: node.geometry.coordinates[0], lat: node.geometry.coordinates[1] },
+        });
         const leftDriveModifier = isLeftDrive ? -1 : 1;
         const leftOffset = isLeftDrive ? featDis.leftOffset : 0;
         switch (sign) {
@@ -3619,31 +3624,39 @@ TODO:<br>
                 nodePos.y += boxheight;
                 break;
             case 1:
-                nodePos.x -= leftDriveModifier * (start + (leftDriveModifier > 0 ? (boxincwidth * numIcons) : 2 * leftOffset));
+                nodePos.x -=
+                    leftDriveModifier * (start + (leftDriveModifier > 0 ? boxincwidth * numIcons : 2 * leftOffset));
                 nodePos.y -= start + boxheight;
                 break;
             case 2:
                 nodePos.x += start;
-                nodePos.y -= leftDriveModifier * (start + (leftDriveModifier > 0 ? boxincwidth * numIcons : (boxincwidth * numIcons)));
+                nodePos.y -=
+                    leftDriveModifier *
+                        (start + (leftDriveModifier > 0 ? boxincwidth * numIcons : boxincwidth * numIcons));
                 break;
             case 3:
                 nodePos.x -= start + boxheight;
-                nodePos.y += leftDriveModifier * (start + (leftDriveModifier > 0 ? boxincwidth : boxincwidth * numIcons));
+                nodePos.y +=
+                    leftDriveModifier * (start + (leftDriveModifier > 0 ? boxincwidth : boxincwidth * numIcons));
                 break;
             case 4:
-                nodePos.x += leftDriveModifier * (start + (leftDriveModifier > 0 ? boxincwidth : (boxincwidth * numIcons + leftOffset * 2)));
+                nodePos.x +=
+                    leftDriveModifier *
+                        (start + (leftDriveModifier > 0 ? boxincwidth : boxincwidth * numIcons + leftOffset * 2));
                 nodePos.y += start;
                 break;
             case 5:
                 nodePos.x -= leftDriveModifier * (start + (leftDriveModifier > 0 ? boxincwidth * numIcons : 0));
-                nodePos.y += (leftDriveModifier > 0 ? start : leftDriveModifier * (boxheight * 2 + start));
+                nodePos.y += leftDriveModifier > 0 ? start : leftDriveModifier * (boxheight * 2 + start);
                 break;
             case 6:
-                nodePos.x -= (leftDriveModifier > 0 ? start : (boxincwidth * numIcons + start + leftOffset));
+                nodePos.x -= leftDriveModifier > 0 ? start : boxincwidth * numIcons + start + leftOffset;
                 nodePos.y += leftDriveModifier * (start + boxheight);
                 break;
             case 7:
-                nodePos.x += leftDriveModifier * (start + (leftDriveModifier > 0 ? boxincwidth / 2 : boxincwidth * numIcons + leftOffset * 2));
+                nodePos.x +=
+                    leftDriveModifier *
+                        (start + (leftDriveModifier > 0 ? boxincwidth / 2 : boxincwidth * numIcons + leftOffset * 2));
                 nodePos.y -= leftDriveModifier * (start + boxheight);
                 break;
             case 8:
@@ -3651,7 +3664,9 @@ TODO:<br>
                 nodePos.y -= leftDriveModifier * (start + boxheight);
                 break;
             case 9:
-                nodePos.x -= leftDriveModifier * (start + (leftDriveModifier > 0 ? (boxincwidth * numIcons * 1.25) : 2 * leftOffset));
+                nodePos.x -=
+                    leftDriveModifier *
+                        (start + (leftDriveModifier > 0 ? boxincwidth * numIcons * 1.25 : 2 * leftOffset));
                 nodePos.y -= start + boxheight;
                 break;
             default:
@@ -3670,7 +3685,7 @@ TODO:<br>
             iconborderwidth: 27.0,
             graphicHeight: 42,
             graphicWidth: 25,
-            leftOffset: 12
+            leftOffset: 12,
         };
         // switch (sdk.Map.getZoomLevel()) {
         //     case 22:
@@ -3872,7 +3887,7 @@ TODO:<br>
         // var boxPoint4 = new OpenLayers.Geometry.Point(startPoint.x, startPoint.y);
         const startPointCoords = sdk.Map.getPixelFromLonLat({ lonLat: { lon: startPoint[0], lat: startPoint[1] } });
         let boxPoint1 = structuredClone(startPointCoords);
-        boxPoint1.y += (!featDis ? 0 : featDis.boxheight);
+        boxPoint1.y += !featDis ? 0 : featDis.boxheight;
         const boxPoint1LonLat = sdk.Map.getLonLatFromPixel(boxPoint1);
         let boxPoint2 = structuredClone(startPointCoords);
         boxPoint2.x += !featDis ? 0 : featDis.boxincwidth * numIcons;

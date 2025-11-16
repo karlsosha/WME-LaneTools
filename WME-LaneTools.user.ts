@@ -13,7 +13,7 @@
 // @exclude      https://www.waze.com/user/editor*
 // @require      https://greasyfork.org/scripts/24851-wazewrap/code/WazeWrap.js
 // @require      https://cdn.jsdelivr.net/npm/@turf/turf@7.2.0/turf.min.js
-// @require      https://cdn.jsdelivr.net/gh/TheEditorX/wme-sdk-plus@4527424b5d6768c0621b0af799cae3b30ee19bb7/wme-sdk-plus.js 
+// @require      https://cdn.jsdelivr.net/gh/TheEditorX/wme-sdk-plus@4527424b5d6768c0621b0af799cae3b30ee19bb7/wme-sdk-plus.js
 // @grant        GM_xmlhttpRequest
 // @grant        unsafeWindow
 // @connect      greasyfork.org
@@ -135,21 +135,16 @@ function ltInit() {
         REVERSE = -1,
         ANY = 0,
         FORWARD = 1,
-    };
+    }
 
     enum VERBOSITY {
         INFO = 0,
         DEBUG = 1,
         VERBOSE = 2,
-        TRACE = 3
-    };
+        TRACE = 3,
+    }
 
-    const verbosity_mnemonic: string[] = [
-        "INFO",
-        "DEBUG",
-        "VERBOSE",
-        "TRACE"
-    ];
+    const verbosity_mnemonic: string[] = ["INFO", "DEBUG", "VERBOSE", "TRACE"];
 
     interface SegmentReference {
         seg: number;
@@ -283,7 +278,7 @@ TODO:<br>
             DebugLevel: "Debug",
             InfoLevel: "Info",
             TraceLevel: "Trace",
-            VerboseLevel: "Verbose"
+            VerboseLevel: "Verbose",
         },
         "en-us": {
             enabled: "Enabled",
@@ -456,7 +451,9 @@ TODO:<br>
         },
         styleRules: [
             {
-                predicate: (properties) => {return properties.layerName === LTNamesLayer.name;},
+                predicate: (properties) => {
+                    return properties.layerName === LTNamesLayer.name;
+                },
                 style: {
                     fontFamily: "Open Sans, Alef, helvetica, sans-serif, monospace",
                     labelColor: "${nameStyleLabelColor}",
@@ -935,26 +932,25 @@ TODO:<br>
                 $("#lt-heur-wrapper").hide();
             }
 
-            if(IsBeta) {
+            if (IsBeta) {
                 $("#lt-debug-msg").show();
-            }
-            else {
+            } else {
                 $("#lt-debug-msg").hide();
             }
             $("input[type=radio][name=VerbosityLevel]").on("change", () => {
-                if($("#lt-InfoLevel").is(":checked")) {
+                if ($("#lt-InfoLevel").is(":checked")) {
                     LtSettings.VerbosityLevel = VERBOSITY.INFO;
                     LANETOOLS_DEBUG_LEVEL = VERBOSITY.INFO;
                     lt_log("Info level messages enabled.", VERBOSITY.INFO);
-                } else if($("#lt-DebugLevel").is(":checked")) {
+                } else if ($("#lt-DebugLevel").is(":checked")) {
                     LtSettings.VerbosityLevel = VERBOSITY.DEBUG;
                     LANETOOLS_DEBUG_LEVEL = VERBOSITY.DEBUG;
                     lt_log("DEBUG level messages enabled.", VERBOSITY.DEBUG);
-                } else if($("#lt-TraceLevel").is(":checked")) {
+                } else if ($("#lt-TraceLevel").is(":checked")) {
                     LtSettings.VerbosityLevel = VERBOSITY.TRACE;
                     LANETOOLS_DEBUG_LEVEL = VERBOSITY.TRACE;
                     lt_log("Trace level messages enabled.", VERBOSITY.TRACE);
-                } else if($("#lt-VerboseLevel").is(":checked")) {
+                } else if ($("#lt-VerboseLevel").is(":checked")) {
                     LtSettings.VerbosityLevel = VERBOSITY.VERBOSE;
                     LANETOOLS_DEBUG_LEVEL = VERBOSITY.VERBOSE;
                     lt_log("VERBOSE level messages enabled.", VERBOSITY.VERBOSE);
@@ -1090,9 +1086,8 @@ TODO:<br>
                 scanArea();
                 lanesTabSetup();
                 displayLaneGraphics();
-            }
+            },
         });
-
 
         // Add keyboard shortcuts
         try {
@@ -1541,7 +1536,7 @@ TODO:<br>
         //     const { shortcut, group } = W.accelerators.Actions[name];
         //     if (group === "wmelt") {
         for (const shortcut of sdk.Shortcuts.getAllShortcuts()) {
-            if(shortcut.shortcutKeys !== null) localSettings[shortcut.shortcutId] = shortcut.shortcutKeys;
+            if (shortcut.shortcutKeys !== null) localSettings[shortcut.shortcutId] = shortcut.shortcutKeys;
         }
 
         // Required for the instant update of changes to the keyboard shortcuts on the UI
@@ -1749,7 +1744,9 @@ TODO:<br>
         for (const shortcut of sdk.Shortcuts.getAllShortcuts()) {
             if (LtSettings[shortcut.shortcutId] !== shortcut.shortcutKeys) {
                 triggerSave = true;
-                console.log(`LaneTools: Stored shortcut ${name}: ${LtSettings[shortcut.shortcutId]} changed to ${shortcut.shortcutKeys}`);
+                console.log(
+                    `LaneTools: Stored shortcut ${name}: ${LtSettings[shortcut.shortcutId]} changed to ${shortcut.shortcutKeys}`
+                );
                 break;
             }
         }
@@ -2516,13 +2513,12 @@ TODO:<br>
         // // console.log('Cardinal: ' + Math.round(angle_deg));
         // return Math.round(angle_deg);
         let bearing: number | null = null;
-        if(segment.fromNodeId === nodeId) {
+        if (segment.fromNodeId === nodeId) {
             const sp: Position | undefined = lt_get_second_point(segment);
             const fp: Position | undefined = lt_get_first_point(segment);
             if (!sp || !fp) return null;
             bearing = turf.bearing(turf.point(fp), turf.point(sp));
-        }
-        else {
+        } else {
             const next_to_last: Position | undefined = lt_get_next_to_last_point(segment);
             const last_point: Position | undefined = lt_get_last_point(segment);
             if (!next_to_last || !last_point) return null;
@@ -2561,8 +2557,10 @@ TODO:<br>
         // const turnGraph = W.model.getTurnGraph();
         // const mAction = new MultiAction();
         const selection: Selection | null = sdk.Editing.getSelection();
-        const selSeg: Segment | null = isSegmentSelected(selection) ? sdk.DataModel.Segments.getById({ segmentId: selection?.ids[0] }) : null;
-        if(selSeg === null) return;
+        const selSeg: Segment | null = isSegmentSelected(selection)
+            ? sdk.DataModel.Segments.getById({ segmentId: selection?.ids[0] })
+            : null;
+        if (selSeg === null) return;
         // let node;
         // let conSegs;;
         // let turns: Turn[] | null = null;
@@ -2601,12 +2599,16 @@ TODO:<br>
             // revLanes.find('.form-control').trigger("change");
         }
 
-        if(!laneDirection) {
+        if (!laneDirection) {
             lt_log("Invalid lane direction for deleting lanes", VERBOSITY.INFO);
             return;
         }
         // mAction.doSubAction(W.model, new UpdateObj(selSeg, updates));
-        sdk.DataModel.Turns.setSegmentTurnsLaneCount({laneCount: 0, laneDirection: laneDirection, segmentId: selSeg.id});
+        sdk.DataModel.Turns.setSegmentTurnsLaneCount({
+            laneCount: 0,
+            laneDirection: laneDirection,
+            segmentId: selSeg.id,
+        });
 
         // for (const turn of turns) {
         //     turn.
@@ -3516,9 +3518,12 @@ TODO:<br>
         let out1TargetAngle = -90.0; // For right-hand side of the road countries  (right-turn)
         let out2TargetAngle = 90.0; // (left-turn)
 
-        const segAddress = sdk.DataModel.Segments.getAddress({segmentId: segCandidate.id});
+        const segAddress = sdk.DataModel.Segments.getAddress({ segmentId: segCandidate.id });
         if (segAddress.street === null) {
-            lt_log(`Unable to process Heuristics on Segment: ${segCandidate.id} as it has no Primary Street Set`, VERBOSITY.DEBUG);
+            lt_log(
+                `Unable to process Heuristics on Segment: ${segCandidate.id} as it has no Primary Street Set`,
+                VERBOSITY.DEBUG
+            );
             return HeuristicsCandidate.NONE;
         }
         if (segAddress.country?.isLeftHandTraffic) {
@@ -3589,8 +3594,14 @@ TODO:<br>
             // Only one segment allowed  // TBD ???    For now, don't allow more than one.
             if (inSeg !== null && thisTimeFail >= inSegIsHeurFail) {
                 if (inSegIsHeurFail === 0 && thisTimeFail === 0) {
-                    lt_log(`Error: >1 qualifying entry segment for ${segCandidate.id}: ${inSeg.id},${is?.id}`, VERBOSITY.TRACE);
-                    lt_log("==================================================================================", VERBOSITY.TRACE);
+                    lt_log(
+                        `Error: >1 qualifying entry segment for ${segCandidate.id}: ${inSeg.id},${is?.id}`,
+                        VERBOSITY.TRACE
+                    );
+                    lt_log(
+                        "==================================================================================",
+                        VERBOSITY.TRACE
+                    );
                     return 0; // just stop here
                 }
             }
@@ -3610,7 +3621,10 @@ TODO:<br>
             inSegRef.direction = inSeg?.toNodeId === curNodeEntry.id ? Direction.FORWARD : Direction.REVERSE;
         }
         if (inSeg === null) {
-            lt_log("== No inseg found ==================================================================", VERBOSITY.TRACE);
+            lt_log(
+                "== No inseg found ==================================================================",
+                VERBOSITY.TRACE
+            );
             return 0; // otherwise wait for later
         }
         lt_log(`Found inseg candidate: ${inSeg.id} ${inSegIsHeurFail === 0 ? "" : "(failed)"}`, VERBOSITY.TRACE);
@@ -3651,8 +3665,14 @@ TODO:<br>
             // Only one segment allowed  // TBD ???    For now, don't allow more than one.
             if (outSeg2 !== null && thisTimeFail >= outSeg2IsHeurFail) {
                 if (outSeg2IsHeurFail === 0 && thisTimeFail === 0) {
-                    lt_log(`Error: >1 qualifying exit2 segment for ${segCandidate.id}: ${outSeg2.id},${os?.id}`, VERBOSITY.TRACE);
-                    lt_log("==================================================================================", VERBOSITY.TRACE);
+                    lt_log(
+                        `Error: >1 qualifying exit2 segment for ${segCandidate.id}: ${outSeg2.id},${os?.id}`,
+                        VERBOSITY.TRACE
+                    );
+                    lt_log(
+                        "==================================================================================",
+                        VERBOSITY.TRACE
+                    );
                     return 0; // just stop here
                 }
             }
@@ -3662,7 +3682,10 @@ TODO:<br>
             outSeg2IsHeurFail = thisTimeFail;
         }
         if (outSeg2 === null) {
-            lt_log("== No Outseg2 found ==================================================================", VERBOSITY.TRACE);
+            lt_log(
+                "== No Outseg2 found ==================================================================",
+                VERBOSITY.TRACE
+            );
             return 0;
         }
         lt_log(`Found outseg2 candidate: ${outSeg2.id} ${outSeg2IsHeurFail === 0 ? "" : "(failed)"}`, VERBOSITY.TRACE);
@@ -3677,9 +3700,12 @@ TODO:<br>
             let thisTimeFail = 0;
 
             // Ensure the segment is one-way TOWARD the node (incoming direction)
-            const sourceSegment = ((ai1?.isBtoA && ai1.fromNodeId === curNodeEntry.id) || (ai1?.isAtoB && ai1.toNodeId === curNodeEntry.id));
+            const sourceSegment =
+                (ai1?.isBtoA && ai1.fromNodeId === curNodeEntry.id) ||
+                (ai1?.isAtoB && ai1.toNodeId === curNodeEntry.id);
             if (
-                (ai1?.isAtoB && ai1.toNodeId !== curNodeEntry.id) || (ai1?.isBtoA && ai1.fromNodeId !== curNodeEntry.id)
+                (ai1?.isAtoB && ai1.toNodeId !== curNodeEntry.id) ||
+                (ai1?.isBtoA && ai1.fromNodeId !== curNodeEntry.id)
             ) {
                 continue;
             }
@@ -3691,11 +3717,13 @@ TODO:<br>
             //  Since we already have azm of this seg TOWARD the node, just check the supplementary turn angle. Must also be within tolerance. (See Geometry proof :)
             // const tta: number | null = lt_turn_angle(inAzm, ia);
             let tta: number | null;
-            if(sourceSegment) {
+            if (sourceSegment) {
                 tta = lt_turn_angle_seg_to_seg(ai1, curNodeEntry, inSeg);
-            }
-            else tta = lt_turn_angle_seg_to_seg(inSeg, curNodeEntry, ai1);
-            lt_log(`Turn angle from inseg (supplementary) ${nodeEntrySegIds[ii]}: ${tta}(${inAzm},${ia})`, VERBOSITY.VERBOSE);
+            } else tta = lt_turn_angle_seg_to_seg(inSeg, curNodeEntry, ai1);
+            lt_log(
+                `Turn angle from inseg (supplementary) ${nodeEntrySegIds[ii]}: ${tta}(${inAzm},${ia})`,
+                VERBOSITY.VERBOSE
+            );
             if (tta !== null && Math.abs(out1TargetAngle - tta) > MAX_PERP_DIF_ALT) {
                 // tolerance met?
                 if (Math.abs(out1TargetAngle - tta) > MAX_PERP_TO_CONSIDER) {
@@ -3715,8 +3743,14 @@ TODO:<br>
 
                 // If they both are good, then error
                 if (altInIsHeurFail === 0 && thisTimeFail === 0) {
-                    lt_log(`Error: >1 qualifying segment for ${segCandidate.id}: ${altIncomingSeg.id},${ai1?.id}`, VERBOSITY.TRACE);
-                    lt_log("==================================================================================", VERBOSITY.TRACE);
+                    lt_log(
+                        `Error: >1 qualifying segment for ${segCandidate.id}: ${altIncomingSeg.id},${ai1?.id}`,
+                        VERBOSITY.TRACE
+                    );
+                    lt_log(
+                        "==================================================================================",
+                        VERBOSITY.TRACE
+                    );
                     return HeuristicsCandidate.FAIL;
                 }
             } // If the new candidate is better than the old, then assign our candidate to the new one (below)
@@ -3732,7 +3766,10 @@ TODO:<br>
             );
             return 0;
         }
-        lt_log(`Alt incoming-1 segment found: ${altIncomingSeg.id} ${altInIsHeurFail === 0 ? "" : "(failed)"}`, VERBOSITY.TRACE);
+        lt_log(
+            `Alt incoming-1 segment found: ${altIncomingSeg.id} ${altInIsHeurFail === 0 ? "" : "(failed)"}`,
+            VERBOSITY.TRACE
+        );
 
         // Have we found a failure candidate?
         if (inSegIsHeurFail < 0 || altInIsHeurFail < 0 || outSeg2IsHeurFail < 0) {
@@ -3773,11 +3810,10 @@ TODO:<br>
                 }
                 // ja_dx = secondPoint[0] - firstPoint[0];
                 // ja_dy = secondPoint[1] - firstPoint[1];
-                if(toNode) {
+                if (toNode) {
                     startPos = secondPoint;
                     endPos = firstPoint;
-                }
-                else {
+                } else {
                     startPos = firstPoint;
                     endPos = secondPoint;
                 }
@@ -3789,11 +3825,10 @@ TODO:<br>
                 }
                 // ja_dx = nextToLastPoint[0] - lastPoint[0];
                 // ja_dy = nextToLastPoint[1] - lastPoint[1];
-                if(toNode) {
+                if (toNode) {
                     endPos = lastPoint;
                     startPos = nextToLastPoint;
-                }
-                else {
+                } else {
                     startPos = lastPoint;
                     endPos = nextToLastPoint;
                 }
@@ -3849,22 +3884,20 @@ TODO:<br>
         function lt_turn_angle_seg_to_seg(inSeg: Segment, connectorNode: Node, outSeg: Segment): number | null {
             let inPoint: Position | undefined;
             let outPoint;
-            if(inSeg.fromNodeId === connectorNode.id) {
+            if (inSeg.fromNodeId === connectorNode.id) {
                 inPoint = lt_get_second_point(inSeg);
-            }
-            else if(inSeg.toNodeId === connectorNode.id) {
+            } else if (inSeg.toNodeId === connectorNode.id) {
                 inPoint = lt_get_next_to_last_point(inSeg);
             }
-            if(outSeg.fromNodeId === connectorNode.id) {
+            if (outSeg.fromNodeId === connectorNode.id) {
                 outPoint = lt_get_second_point(outSeg);
-            }
-            else if(outSeg.toNodeId === connectorNode.id) {
+            } else if (outSeg.toNodeId === connectorNode.id) {
                 outPoint = lt_get_next_to_last_point(outSeg);
             }
-            if(!inPoint || !outPoint) return null;
+            if (!inPoint || !outPoint) return null;
             let turnAngle = turf.angle(inPoint, connectorNode.geometry.coordinates, outPoint);
-            turnAngle -= (turnAngle > 180 ? 360 : 0);
-            turnAngle = (turnAngle > 0) ? 180 - turnAngle : -180 - turnAngle;
+            turnAngle -= turnAngle > 180 ? 360 : 0;
+            turnAngle = turnAngle > 0 ? 180 - turnAngle : -180 - turnAngle;
             return turnAngle;
         }
 
@@ -4178,7 +4211,9 @@ TODO:<br>
         const start: number = !featDis || !featDis.start ? 0 : featDis.start;
         const boxheight: number = !featDis || !featDis.boxheight ? 0 : featDis.boxheight;
         const boxincwidth: number = !featDis || !featDis.boxincwidth ? 0 : featDis.boxincwidth;
-        let nodePos = sdk.Map.getPixelFromLonLat({lonLat: {lon: node.geometry.coordinates[0], lat: node.geometry.coordinates[1]}});
+        let nodePos = sdk.Map.getPixelFromLonLat({
+            lonLat: { lon: node.geometry.coordinates[0], lat: node.geometry.coordinates[1] },
+        });
         const leftDriveModifier = isLeftDrive ? -1 : 1;
         const leftOffset = isLeftDrive ? featDis.leftOffset : 0;
         switch (sign) {
@@ -4187,39 +4222,49 @@ TODO:<br>
                 nodePos.y += boxheight;
                 break;
             case 1:
-                nodePos.x -= leftDriveModifier * (start + (leftDriveModifier > 0 ? (boxincwidth * numIcons) : 2*leftOffset));
+                nodePos.x -=
+                    leftDriveModifier * (start + (leftDriveModifier > 0 ? boxincwidth * numIcons : 2 * leftOffset));
                 nodePos.y -= start + boxheight;
                 break;
             case 2:
                 nodePos.x += start;
-                nodePos.y -= leftDriveModifier * (start + (leftDriveModifier > 0 ? boxincwidth * numIcons : (boxincwidth*numIcons)));
+                nodePos.y -=
+                    leftDriveModifier *
+                    (start + (leftDriveModifier > 0 ? boxincwidth * numIcons : boxincwidth * numIcons));
                 break;
             case 3:
                 nodePos.x -= start + boxheight;
-                nodePos.y += leftDriveModifier * (start + (leftDriveModifier > 0 ? boxincwidth : boxincwidth*numIcons));
+                nodePos.y +=
+                    leftDriveModifier * (start + (leftDriveModifier > 0 ? boxincwidth : boxincwidth * numIcons));
                 break;
             case 4:
-                nodePos.x += leftDriveModifier * (start + (leftDriveModifier > 0 ? boxincwidth : (boxincwidth * numIcons + leftOffset*2)));
+                nodePos.x +=
+                    leftDriveModifier *
+                    (start + (leftDriveModifier > 0 ? boxincwidth : boxincwidth * numIcons + leftOffset * 2));
                 nodePos.y += start;
                 break;
             case 5:
-                nodePos.x -= leftDriveModifier * (start + (leftDriveModifier > 0 ? boxincwidth*numIcons : 0));
-                nodePos.y += (leftDriveModifier > 0 ? start : leftDriveModifier * (boxheight*2 + start));
+                nodePos.x -= leftDriveModifier * (start + (leftDriveModifier > 0 ? boxincwidth * numIcons : 0));
+                nodePos.y += leftDriveModifier > 0 ? start : leftDriveModifier * (boxheight * 2 + start);
                 break;
             case 6:
-                nodePos.x -= (leftDriveModifier > 0 ? start : (boxincwidth * numIcons + start + leftOffset));
+                nodePos.x -= leftDriveModifier > 0 ? start : boxincwidth * numIcons + start + leftOffset;
                 nodePos.y += leftDriveModifier * (start + boxheight);
                 break;
             case 7:
-                nodePos.x += leftDriveModifier * (start + (leftDriveModifier > 0 ? boxincwidth / 2 : boxincwidth * numIcons + leftOffset * 2));
-                nodePos.y -= leftDriveModifier * (start + boxheight); 
+                nodePos.x +=
+                    leftDriveModifier *
+                    (start + (leftDriveModifier > 0 ? boxincwidth / 2 : boxincwidth * numIcons + leftOffset * 2));
+                nodePos.y -= leftDriveModifier * (start + boxheight);
                 break;
             case 8:
                 nodePos.x -= leftDriveModifier * (start + boxincwidth * numIcons);
                 nodePos.y -= leftDriveModifier * (start + boxheight);
                 break;
             case 9:
-                nodePos.x -= leftDriveModifier * (start + (leftDriveModifier > 0 ? (boxincwidth * numIcons * 1.25) : 2*leftOffset));
+                nodePos.x -=
+                    leftDriveModifier *
+                    (start + (leftDriveModifier > 0 ? boxincwidth * numIcons * 1.25 : 2 * leftOffset));
                 nodePos.y -= start + boxheight;
                 break;
             default:
@@ -4239,7 +4284,7 @@ TODO:<br>
             iconborderwidth: 27.0,
             graphicHeight: 42,
             graphicWidth: 25,
-            leftOffset: 12
+            leftOffset: 12,
         };
         // switch (sdk.Map.getZoomLevel()) {
         //     case 22:
@@ -4364,7 +4409,6 @@ TODO:<br>
         let operatorSign = 0;
         const numIcons = imgs.length;
 
-
         // Rotate in the style is clockwise, the rotate() func is counterclockwise
         if (deg === 0) {
             deg += 180;
@@ -4374,19 +4418,19 @@ TODO:<br>
             // console.log('Math stuff2: ' + deg);
             operatorSign = 1;
         } else if (deg >= 330 && deg <= 360) {
-            deg -= 270 // 180 - 2 * (360 - deg);
+            deg -= 270; // 180 - 2 * (360 - deg);
             // console.log('Math stuff2: ' + deg);
             operatorSign = 9;
         } else if (deg > 30 && deg < 60) {
-            deg += 90// - 2 * (360 - deg);
+            deg += 90; // - 2 * (360 - deg);
             // console.log('Math stuff3: ' + deg);
             operatorSign = 8;
         } else if (deg >= 60 && deg <= 120) {
-            deg += 90// - 2 * (360 - deg);
+            deg += 90; // - 2 * (360 - deg);
             // console.log('Math stuff4: ' + deg);
             operatorSign = 2;
         } else if (deg > 120 && deg < 150) {
-            deg += 90 //- 2 * (360 - deg);
+            deg += 90; //- 2 * (360 - deg);
             // console.log('Math stuff5: ' + deg);
             operatorSign = 7;
         } else if (deg >= 150 && deg <= 210) {
@@ -4395,11 +4439,11 @@ TODO:<br>
             // console.log('Math stuff6: ' + deg);
             operatorSign = 4;
         } else if (deg > 210 && deg < 240) {
-            deg -= 270;// - 2 * (360 - deg);
+            deg -= 270; // - 2 * (360 - deg);
             // console.log('Math stuff7: ' + deg);
             operatorSign = 6;
         } else if (deg >= 240 && deg <= 300) {
-            deg -= 270 //- 2 * (360 - deg);
+            deg -= 270; //- 2 * (360 - deg);
             // console.log('Math stuff8: ' + deg);
             operatorSign = 3;
         } else if (deg > 300 && deg < 330) {
@@ -4412,7 +4456,6 @@ TODO:<br>
         }
 
         // Orient all icons straight up if the rotate option isn't enabled
-        
 
         let iconRotate = deg > 315 ? deg : deg + 90;
         let boxRotate = 360 - iconRotate;
@@ -4439,7 +4482,7 @@ TODO:<br>
         // var boxPoint4 = new OpenLayers.Geometry.Point(startPoint.x, startPoint.y);
         const startPointCoords = sdk.Map.getPixelFromLonLat({ lonLat: { lon: startPoint[0], lat: startPoint[1] } });
         let boxPoint1: Pixel = structuredClone(startPointCoords);
-        boxPoint1.y += (!featDis ? 0 : featDis.boxheight);
+        boxPoint1.y += !featDis ? 0 : featDis.boxheight;
         const boxPoint1LonLat = sdk.Map.getLonLatFromPixel(boxPoint1);
         let boxPoint2: Pixel = structuredClone(startPointCoords);
         boxPoint2.x += !featDis ? 0 : featDis.boxincwidth * numIcons;
@@ -4478,7 +4521,11 @@ TODO:<br>
             { id: `polygon_${points.toString()}` }
         );
 
-        const startPointFeature = turf.point( startPoint, { styleName: "startPointStyle", layerName: LTLaneGraphics.name }, { id: `point_${startPoint.toString()}` });
+        const startPointFeature = turf.point(
+            startPoint,
+            { styleName: "startPointStyle", layerName: LTLaneGraphics.name },
+            { id: `point_${startPoint.toString()}` }
+        );
 
         // LTLaneGraphics.addFeatures([boxVector]);
         sdk.Map.addFeatureToLayer({ feature: boxRing, layerName: LTLaneGraphics.name });
