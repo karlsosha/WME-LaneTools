@@ -2,7 +2,7 @@
 // ==UserScript==
 // @name         WME LaneTools
 // @namespace    https://github.com/SkiDooGuy/WME-LaneTools
-// @version      2025.11.10.001
+// @version      2025.11.16.001
 // @description  Adds highlights and tools to WME to supplement the lanes feature
 // @author       SkiDooGuy, Click Saver by HBiede, Heuristics by kndcajun, assistance by jm6087
 // @updateURL    https://github.com/SkiDooGuy/WME-LaneTools/raw/master/WME-LaneTools.user.js
@@ -14,7 +14,6 @@
 // @exclude      https://www.waze.com/user/editor*
 // @require      https://greasyfork.org/scripts/24851-wazewrap/code/WazeWrap.js
 // @require      https://cdn.jsdelivr.net/npm/@turf/turf@7.2.0/turf.min.js
-// @require      https://cdn.jsdelivr.net/gh/TheEditorX/wme-sdk-plus@4527424b5d6768c0621b0af799cae3b30ee19bb7/wme-sdk-plus.js 
 // @grant        GM_xmlhttpRequest
 // @grant        unsafeWindow
 // @connect      greasyfork.org
@@ -22,12 +21,11 @@
 // ==/UserScript==
 /* global W */
 /* global WazeWrap */
-// import type { KeyboardShortcut, Node, Pixel, Segment, Selection, Turn, UserSession, WmeSDK } from "wme-sdk-typings";
+// import type { KeyboardShortcut, Node, Pixel, Segment, Selection, Turn, UserSession, WmeSDK, SegmentLaneGuidanceDirection } from "wme-sdk-typings";
 // import type { Position } from "geojson";
 // import _ from "underscore";
 // import * as turf from "@turf/turf";
 // import WazeWrap from "https://greasyfork.org/scripts/24851-wazewrap/code/WazeWrap.js";
-// import { initWmeSdkPlus } from "https://cdn.jsdelivr.net/gh/TheEditorX/wme-sdk-plus@4527424b5d6768c0621b0af799cae3b30ee19bb7/wme-sdk-plus.js ";
 let sdk;
 unsafeWindow.SDK_INITIALIZED.then(() => {
     if (!unsafeWindow.getWmeSdk) {
@@ -38,10 +36,7 @@ unsafeWindow.SDK_INITIALIZED.then(() => {
         scriptName: "WME LaneTools",
     });
     console.log(`SDK v ${sdk.getSDKVersion()} on ${sdk.getWMEVersion()} initialized`);
-    Promise.all([
-        initWmeSdkPlus(sdk),
-        sdk.Events.once({ eventName: "wme-ready" })
-    ]).then(ltInit);
+    sdk.Events.once({ eventName: "wme-ready" }).then(ltInit);
 });
 function ltInit() {
     let Direction;
@@ -50,7 +45,6 @@ function ltInit() {
         Direction[Direction["ANY"] = 0] = "ANY";
         Direction[Direction["FORWARD"] = 1] = "FORWARD";
     })(Direction || (Direction = {}));
-    ;
     let VERBOSITY;
     (function (VERBOSITY) {
         VERBOSITY[VERBOSITY["INFO"] = 0] = "INFO";
@@ -58,13 +52,7 @@ function ltInit() {
         VERBOSITY[VERBOSITY["VERBOSE"] = 2] = "VERBOSE";
         VERBOSITY[VERBOSITY["TRACE"] = 3] = "TRACE";
     })(VERBOSITY || (VERBOSITY = {}));
-    ;
-    const verbosity_mnemonic = [
-        "INFO",
-        "DEBUG",
-        "VERBOSE",
-        "TRACE"
-    ];
+    const verbosity_mnemonic = ["INFO", "DEBUG", "VERBOSE", "TRACE"];
     let LT_ROAD_TYPE;
     (function (LT_ROAD_TYPE) {
         // Streets
@@ -112,13 +100,12 @@ function ltInit() {
     const DOWNLOAD_URL = "https://greasyfork.org/en/scripts/537219-wme-lanetools";
     const FORUM_LINK = "https://www.waze.com/discuss/t/script-wme-lanetools/53136";
     const LT_UPDATE_NOTES = `NEW:<br>
-    - Remove proj4 Package<br>
-    - Adjust generation of Icons with Lanes<br>
-    - Using WME SDK + due to limitations of native SDK<br><br>
+UPDATES:<br>
+    - Move Lane Deletion to SDK Native<br>
+    - Fix issues with Selection and Reselection when Lane Tabs is open.<br>
 KNOWN ISSUE:<br>
-    - Some Icons Locations may display incorrectly<br><br>
 TODO:<br>
-    - Zoom doesn't currently reset the size of the icons<br>`;
+`;
     let LANETOOLS_DEBUG_LEVEL = 0; // 0=Info, 1=Debug, 2=Trace, 3=Trace Verbose
     const configArray = {};
     const RBSArray = { failed: false };
@@ -187,7 +174,7 @@ TODO:<br>
             DebugLevel: "Debug",
             InfoLevel: "Info",
             TraceLevel: "Trace",
-            VerboseLevel: "Verbose"
+            VerboseLevel: "Verbose",
         },
         "en-us": {
             enabled: "Enabled",
@@ -352,7 +339,9 @@ TODO:<br>
         },
         styleRules: [
             {
-                predicate: (properties) => { return properties.layerName === LTNamesLayer.name; },
+                predicate: (properties) => {
+                    return properties.layerName === LTNamesLayer.name;
+                },
                 style: {
                     fontFamily: "Open Sans, Alef, helvetica, sans-serif, monospace",
                     labelColor: "${nameStyleLabelColor}",
@@ -853,13 +842,6 @@ TODO:<br>
             layerName: LTHighlightLayer.name,
             visibility: LtSettings.highlightsVisible && LtSettings.HighlightsEnable,
         });
-        // LTHighlightLayer = new OpenLayers.Layer.Vector("LTHighlightLayer", { uniqueName: "_LTHighlightLayer" });
-        // W.map.addLayer(LTHighlightLayer);
-        // LTHighlightLayer.setVisibility(true);
-        // Layer for future use of lane association icons...
-        // LTLaneGraphics = new OpenLayers.Layer.Vector("LTLaneGraphics", { uniqueName: "LTLaneGraphics" });
-        // W.map.addLayer(LTLaneGraphics);
-        // LTLaneGraphics.setVisibility(true);
         sdk.Map.addLayer({
             layerName: LTLaneGraphics.name,
             styleRules: styleConfig.styleRules,
@@ -927,6 +909,7 @@ TODO:<br>
             eventName: "wme-map-move-end",
             eventHandler: () => {
                 scanArea();
+                lanesTabSetup();
                 displayLaneGraphics();
             },
         });
@@ -940,18 +923,13 @@ TODO:<br>
         sdk.Events.on({
             eventName: "wme-selection-changed",
             eventHandler: () => {
+                const selected = sdk.Editing.getSelection();
+                if (selected === null)
+                    return;
                 scanArea();
                 lanesTabSetup();
                 displayLaneGraphics();
             },
-        });
-        sdk.Events.on({
-            eventName: "wme-feature-editor-rendered",
-            eventHandler: () => {
-                scanArea();
-                lanesTabSetup();
-                displayLaneGraphics();
-            }
         });
         // Add keyboard shortcuts
         try {
@@ -962,15 +940,6 @@ TODO:<br>
                 shortcutKeys: "",
             };
             sdk.Shortcuts.createShortcut(enableHighlightsShortcut);
-            // new WazeWrap.Interface.Shortcut(
-            //     "enableHighlights",
-            //     "Toggle lane highlights",
-            //     "wmelt",
-            //     "Lane Tools",
-            //     LtSettings.enableHighlights,
-            //     toggleHighlights,
-            //     null
-            // ).add();
             const enableUIEnhancementsShortcut = {
                 callback: toggleUIEnhancements,
                 shortcutId: "enableUIEnhancements",
@@ -978,15 +947,6 @@ TODO:<br>
                 shortcutKeys: "",
             };
             sdk.Shortcuts.createShortcut(enableUIEnhancementsShortcut);
-            // new WazeWrap.Interface.Shortcut(
-            //     "enableUIEnhancements",
-            //     "Toggle UI enhancements",
-            //     "wmelt",
-            //     "Lane Tools",
-            //     LtSettings.enableUIEnhancements,
-            //     toggleUIEnhancements,
-            //     null
-            // ).add();
             const enableHeuristicsShortcut = {
                 callback: toggleLaneHeuristicsChecks,
                 shortcutId: "enableHeuristics",
@@ -994,15 +954,6 @@ TODO:<br>
                 shortcutKeys: "",
             };
             sdk.Shortcuts.createShortcut(enableHeuristicsShortcut);
-            // new WazeWrap.Interface.Shortcut(
-            //     "enableHeuristics",
-            //     "Toggle heuristic highlights",
-            //     "wmelt",
-            //     "Lane Tools",
-            //     LtSettings.enableHeuristics,
-            //     toggleLaneHeuristicsChecks,
-            //     null
-            // ).add();
             const enableScriptShortcut = {
                 shortcutId: "enableScript",
                 description: "Toggle script",
@@ -1010,15 +961,6 @@ TODO:<br>
                 shortcutKeys: "",
             };
             sdk.Shortcuts.createShortcut(enableScriptShortcut);
-            // new WazeWrap.Interface.Shortcut(
-            //     "enableScript",
-            //     "Toggle script",
-            //     "wmelt",
-            //     "Lane Tools",
-            //     LtSettings.enableScript,
-            //     toggleScript,
-            //     null
-            // ).add();
         }
         catch (e) {
             console.log("LT: Error creating shortcuts. This feature will be disabled.");
@@ -1614,9 +1556,9 @@ TODO:<br>
             $("#lt-LaneHeurChecksShortcut").text(getKeyboardShortcut("enableHeuristics") || "");
         }
     }
-    function getLegacySegObj(id) {
-        return W.model.segments.getObjectById(id);
-    }
+    // function getLegacySegObj(id) {
+    //     return W.model.segments.getObjectById(id);
+    // }
     function getSegObj(id) {
         if (!id)
             return null;
@@ -1627,9 +1569,9 @@ TODO:<br>
             return null;
         return sdk.DataModel.Nodes.getById({ nodeId: id });
     }
-    function getLegacyNodeObj(id) {
-        return W.model.nodes.getObjectById(id);
-    }
+    // function getLegacyNodeObj(id) {
+    //     return W.model.nodes.getObjectById(id);
+    // }
     function lanesTabSetup() {
         // hook into edit panel on the left
         if (getId("edit-panel")?.getElementsByTagName("wz-tabs").length === 0) {
@@ -1684,13 +1626,30 @@ TODO:<br>
             applyButtonListeners();
             // if (getId("lt-AddTIO")?.checked) addTIOUI(laneDir);
         }
-        function updateUI() {
+        function updateUI(waitToFinish = true) {
             // if (eventInfo !== null) {
             //     eventInfo.stopPropagation();
             // }
             //        if (getId('lt-ReverseLanesIcon').checked && !isRotated) {
             //            rotateArrows();
             //        }
+            if (waitToFinish) {
+                waitForElementLoaded(".fwd-lanes > div.lane-instruction.lane-instruction-to > div.instruction > div.lane-edit > .edit-lane-guidance").then((elem) => {
+                    $(elem).off("click");
+                    $(elem).on("click", () => {
+                        showAddLaneGuidance("fwd");
+                    });
+                    updateUI(false);
+                });
+                waitForElementLoaded(".rev-lanes > div.lane-instruction.lane-instruction-to > div.instruction > div.lane-edit > .edit-lane-guidance").then((elem) => {
+                    $(elem).off("click");
+                    $(elem).on("click", () => {
+                        showAddLaneGuidance("rev");
+                    });
+                    updateUI(false);
+                });
+                return;
+            }
             if (LtSettings.highlightCSIcons) {
                 colorCSDir();
             }
@@ -1777,18 +1736,6 @@ TODO:<br>
                     updateUI();
                 });
             }
-            waitForElementLoaded(".fwd-lanes > div.lane-instruction.lane-instruction-to > div.instruction > div.lane-edit > .edit-lane-guidance").then((elem) => {
-                $(elem).off();
-                $(elem).on("click", () => {
-                    showAddLaneGuidance("fwd");
-                });
-            });
-            waitForElementLoaded(".rev-lanes > div.lane-instruction.lane-instruction-to > div.instruction > div.lane-edit > .edit-lane-guidance").then((elem) => {
-                $(elem).off();
-                $(elem).on("click", () => {
-                    showAddLaneGuidance("rev");
-                });
-            });
             if (!fwdDone && !revDone && !expandEditTriggered) {
                 expandEdit();
             }
@@ -1919,60 +1866,6 @@ TODO:<br>
                     });
                 });
             }
-            // if (revLanes.find(".direction-lanes").children().length > 0x0 && !getId("lt-rev-add-lanes")) {
-            //     let revLanesItem = $(
-            //             '<div style="display:inline-flex;flex-direction:row;justify-content:space-around;margin-top:4px;" id="lt-rev-add-lanes" />'),
-            //         classNamesList = [ "lt-add-lanes", "rev" ], laneCountsToAppend = getLaneItems(10, classNamesList);
-            //     for (let idx = 0; idx < laneCountsToAppend.length; ++idx) {
-            //         revLanesItem.append(laneCountsToAppend[idx]);
-            //     }
-            //     let prependSelector = '.rev-lanes > div > div > div.lane-instruction.lane-instruction-to > div.instruction > div.edit-region > div.controls.direction-lanes-edit > div.form-group > div.controls-container';
-            //     waitForElementLoaded(prependSelector).then((elm) => {
-            //         let revPrependTo = $(prependSelector);
-            //         revPrependTo.prepend(revLanesItem);
-            //         // revLanesItem.appendTo('.rev-lanes > div > div > div.lane-instruction.lane-instruction-to > div.instruction > div.edit-region > div > div > div:nth-child(1)');
-            //         setupLaneCountControls(revLanes, classNamesList);
-            //         $('.lt-add-lanes').on("click",function () {
-            //             let numAdd = $(this).text();
-            //             numAdd = Number.parseInt(numAdd, 10);
-            //             if ($(this).hasClass('lt-add-lanes rev')) {
-            //                 // As of React >=15.6.  Triggering change or input events on the input form cannot be
-            //                 // done via jquery selectors.  Which means that they have to be triggered via
-            //                 // React native calls.
-            //                 let nativeInputValueSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, "value").set;
-            //                 let inputForm = document.querySelector("div.rev-lanes input[name=laneCount]");
-            //                 nativeInputValueSetter.call(inputForm, numAdd);
-            //                 let inputEvent = new Event('input', {bubbles: true});
-            //                 inputForm.dispatchEvent(inputEvent);
-            //                 let changeEvent = new Event('change', {bubbles: true});
-            //                 inputForm.dispatchEvent(changeEvent);
-            //             }
-            //         });
-            //
-            //     })
-            // }
-            //if (lanes.find(".direction-lanes").children().length > 0 && !getId(addWidthTag)) {
-            //    let addFwdLanes =
-            //            $('<div style="display:inline-flex;flex-direction:row;width:100%;" id="'+addWidthTag+'" />'),
-            //        classNamesList = ["lt-add-Width", laneDir], laneCountsToAppend = getLaneItems(8, classNamesList);
-            //    for (let idx = 0; idx < laneCountsToAppend.length; ++idx) {
-            //        addFwdLanes.append(laneCountsToAppend[idx]);
-            //    }
-            //    let lnSelector = $(dirLanesClass + " > div > .lane-instruction.lane-instruction-from > .instruction > .road-width-edit > div > div > div > .lane-width-card")
-            //    addFwdLanes.prependTo(lnSelector);
-            //    setupLaneCountControls(lnSelector, classNamesList);
-            //}
-            // if (revLanes.find(".direction-lanes").children().length > 0 && !getId("lt-rev-add-Width")) {
-            //     let appendRevLanes =
-            //             $('<div style="display:inline-flex;flex-direction:row;width:100%;" id="lt-rev-add-Width" />'),
-            //         classNamesList = [ "lt-add-Width", "rev" ], laneCountsToAppend = getLaneItems(8, classNamesList);
-            //     for (let idx = 0; idx < laneCountsToAppend.length; ++idx) {
-            //         appendRevLanes.append(laneCountsToAppend[idx]);
-            //     }
-            //     let lnSelector = $(".rev-lanes > div > div > .lane-instruction.lane-instruction-from > .instruction > .road-width-edit > div > div > div > .lane-width-card");
-            //     appendRevLanes.prependTo(lnSelector);
-            //     setupLaneCountControls(lnSelector, classNamesList);
-            // }
             $(".lt-add-Width").on("click", function () {
                 const numAddStr = $(this).text();
                 const numAdd = Number.parseInt(numAddStr, 10);
@@ -2102,19 +1995,17 @@ TODO:<br>
             }
         }
         function formatLanesTab(clickTab = false, tries = 0) {
-            if ($(".tabs-labels > div:nth-child(3)", $(".segment-edit-section > wz-tabs")[0].shadowRoot).length > 0) {
+            if ($(".tabs-labels > div:nth-child(3)", $(".segment-edit-section > wz-tabs")[0].shadowRoot?.getRootNode()).length > 0) {
                 fwdDone = false;
                 revDone = false;
-                $(".tabs-labels > div:nth-child(3)", $(".segment-edit-section > wz-tabs")[0].shadowRoot).on("click", () => {
+                $(".tabs-labels > div:nth-child(3)", $(".segment-edit-section > wz-tabs")[0].shadowRoot?.getRootNode()).on("click", () => {
                     fwdDone = false;
                     revDone = false;
                     updateUI();
                 });
                 if (clickTab) {
                     // If the auto open lanes option is enabled, initiate a click event on the Lanes tab element
-                    waitForElementLoaded(".lanes-tab").then((elm) => {
-                        $(".tabs-labels > div:nth-child(3)", $(".segment-edit-section > wz-tabs")[0].shadowRoot).trigger("click");
-                    });
+                    $(".tabs-labels > div:nth-child(3)", $(".segment-edit-section > wz-tabs")[0].shadowRoot?.getRootNode()).trigger("click");
                 }
             }
             else if (tries < 500) {
@@ -2165,7 +2056,7 @@ TODO:<br>
         return obj && "roadType" in obj;
     }
     function isSegmentSelected(selection) {
-        return (selection && selection.objectType === "segment") || false;
+        return (selection && selection !== null && selection.objectType === "segment") || false;
     }
     // returns true if object is within window  bounds and above zoom threshold
     function onScreen(obj, curZoomLevel) {
@@ -2243,42 +2134,71 @@ TODO:<br>
         //    return segment.geometry.components[segment.geometry.components.length - 2];
     }
     function delLanes(dir) {
-        const selObjs = W.selectionManager.getSelectedWMEFeatures();
-        const selSeg = selObjs[0]._wmeObject;
-        const turnGraph = W.model.getTurnGraph();
-        const mAction = new MultiAction();
-        let node;
-        let conSegs;
-        let updates = {};
+        // const selObjs = W.selectionManager.getSelectedWMEFeatures();
+        // const selSeg = selObjs[0]._wmeObject;
+        // const turnGraph = W.model.getTurnGraph();
+        // const mAction = new MultiAction();
+        const selection = sdk.Editing.getSelection();
+        const selSeg = isSegmentSelected(selection)
+            ? sdk.DataModel.Segments.getById({ segmentId: selection?.ids[0] })
+            : null;
+        if (selSeg === null)
+            return;
+        // let node;
+        // let conSegs;;
+        // let turns: Turn[] | null = null;
+        let laneDirection;
         //    mAction.setModel(W.model);
         if (dir === "fwd") {
-            updates.fwdLaneCount = 0;
-            node = getLegacyNodeObj(selSeg.attributes.toNodeID);
-            conSegs = node.getSegmentIds();
+            laneDirection = "A_TO_B";
+            // updates.fwdLaneCount = 0;
+            // node = getLegacyNodeObj(selSeg.attributes.toNodeID);
+            // conSegs = node.getSegmentIds();
+            // if(selSeg.toNodeId === null){
+            //     lt_log("Segment has no toNodeId, cannot delete forward lanes", VERBOSITY.INFO);
+            //     return;
+            // }
+            // turns = sdk.DataModel.Turns.getTurnsThroughNode({nodeId: selSeg.toNodeId});
             // const fwdLanes = $('.fwd-lanes');
             // fwdLanes.find('.form-control').val(0);
             // fwdLanes.find('.form-control').trigger("change");
         }
         if (dir === "rev") {
-            updates.revLaneCount = 0;
-            node = getLegacyNodeObj(selSeg.attributes.fromNodeID);
-            conSegs = node.getSegmentIds();
+            laneDirection = "B_TO_A";
+            // if(selSeg.fromNodeId === null){
+            //     lt_log("Segment has no toNodeId, cannot delete forward lanes", VERBOSITY.INFO);
+            //     return;
+            // }
+            // turns = sdk.DataModel.Turns.getTurnsThroughNode({nodeId: selSeg.fromNodeId});
+            // updates.revLaneCount = 0;
+            // node = getLegacyNodeObj(selSeg.attributes.fromNodeID);
+            // conSegs = node.getSegmentIds();
             // const revLanes = $('.rev-lanes');
             // revLanes.find('.form-control').val(0);
             // revLanes.find('.form-control').trigger("change");
         }
-        mAction.doSubAction(W.model, new UpdateObj(selSeg, updates));
-        for (let i = 0; i < conSegs.length; i++) {
-            let turnStatus = turnGraph.getTurnThroughNode(node, selSeg, getLegacySegObj(conSegs[i]));
-            let turnData = turnStatus.getTurnData();
-            if (turnData.hasLanes()) {
-                turnData = turnData.withLanes();
-                turnStatus = turnStatus.withTurnData(turnData);
-                mAction.doSubAction(W.model, new SetTurn(turnGraph, turnStatus));
-            }
+        if (!laneDirection) {
+            lt_log("Invalid lane direction for deleting lanes", VERBOSITY.INFO);
+            return;
         }
-        mAction._description = "Deleted lanes and turn associations";
-        W.model.actionManager.add(mAction);
+        // mAction.doSubAction(W.model, new UpdateObj(selSeg, updates));
+        sdk.DataModel.Turns.setSegmentTurnsLaneCount({
+            laneCount: 0,
+            laneDirection: laneDirection,
+            segmentId: selSeg.id,
+        });
+        // for (const turn of turns) {
+        //     turn.
+        //     let turnStatus = turnGraph.getTurnThroughNode(node, selSeg, getLegacySegObj(conSegs[i]));
+        //     let turnData = turnStatus.getTurnData();
+        //     if (turnData.hasLanes()) {
+        //         turnData = turnData.withLanes();
+        //         turnStatus = turnStatus.withTurnData(turnData);
+        //         mAction.doSubAction(W.model, new SetTurn(turnGraph, turnStatus));
+        //     }
+        // }
+        // mAction._description = "Deleted lanes and turn associations";
+        // W.model.actionManager.add(mAction);
     }
     function removeHighlights() {
         sdk.Map.removeAllFeaturesFromLayer({ layerName: LTHighlightLayer.name });
@@ -3155,8 +3075,10 @@ TODO:<br>
             const ai1 = getSegObj(nodeEntrySegIds[ii]);
             let thisTimeFail = 0;
             // Ensure the segment is one-way TOWARD the node (incoming direction)
-            const sourceSegment = ((ai1?.isBtoA && ai1.fromNodeId === curNodeEntry.id) || (ai1?.isAtoB && ai1.toNodeId === curNodeEntry.id));
-            if ((ai1?.isAtoB && ai1.toNodeId !== curNodeEntry.id) || (ai1?.isBtoA && ai1.fromNodeId !== curNodeEntry.id)) {
+            const sourceSegment = (ai1?.isBtoA && ai1.fromNodeId === curNodeEntry.id) ||
+                (ai1?.isAtoB && ai1.toNodeId === curNodeEntry.id);
+            if ((ai1?.isAtoB && ai1.toNodeId !== curNodeEntry.id) ||
+                (ai1?.isBtoA && ai1.fromNodeId !== curNodeEntry.id)) {
                 continue;
             }
             // Check turn from this seg to our segment
@@ -3321,8 +3243,8 @@ TODO:<br>
             if (!inPoint || !outPoint)
                 return null;
             let turnAngle = turf.angle(inPoint, connectorNode.geometry.coordinates, outPoint);
-            turnAngle -= (turnAngle > 180 ? 360 : 0);
-            turnAngle = (turnAngle > 0) ? 180 - turnAngle : -180 - turnAngle;
+            turnAngle -= turnAngle > 180 ? 360 : 0;
+            turnAngle = turnAngle > 0 ? 180 - turnAngle : -180 - turnAngle;
             return turnAngle;
         }
         function lt_is_turn_allowed(s_from, via_node, s_to) {
@@ -3587,7 +3509,9 @@ TODO:<br>
         const start = !featDis || !featDis.start ? 0 : featDis.start;
         const boxheight = !featDis || !featDis.boxheight ? 0 : featDis.boxheight;
         const boxincwidth = !featDis || !featDis.boxincwidth ? 0 : featDis.boxincwidth;
-        let nodePos = sdk.Map.getPixelFromLonLat({ lonLat: { lon: node.geometry.coordinates[0], lat: node.geometry.coordinates[1] } });
+        let nodePos = sdk.Map.getPixelFromLonLat({
+            lonLat: { lon: node.geometry.coordinates[0], lat: node.geometry.coordinates[1] },
+        });
         const leftDriveModifier = isLeftDrive ? -1 : 1;
         const leftOffset = isLeftDrive ? featDis.leftOffset : 0;
         switch (sign) {
@@ -3596,31 +3520,39 @@ TODO:<br>
                 nodePos.y += boxheight;
                 break;
             case 1:
-                nodePos.x -= leftDriveModifier * (start + (leftDriveModifier > 0 ? (boxincwidth * numIcons) : 2 * leftOffset));
+                nodePos.x -=
+                    leftDriveModifier * (start + (leftDriveModifier > 0 ? boxincwidth * numIcons : 2 * leftOffset));
                 nodePos.y -= start + boxheight;
                 break;
             case 2:
                 nodePos.x += start;
-                nodePos.y -= leftDriveModifier * (start + (leftDriveModifier > 0 ? boxincwidth * numIcons : (boxincwidth * numIcons)));
+                nodePos.y -=
+                    leftDriveModifier *
+                        (start + (leftDriveModifier > 0 ? boxincwidth * numIcons : boxincwidth * numIcons));
                 break;
             case 3:
                 nodePos.x -= start + boxheight;
-                nodePos.y += leftDriveModifier * (start + (leftDriveModifier > 0 ? boxincwidth : boxincwidth * numIcons));
+                nodePos.y +=
+                    leftDriveModifier * (start + (leftDriveModifier > 0 ? boxincwidth : boxincwidth * numIcons));
                 break;
             case 4:
-                nodePos.x += leftDriveModifier * (start + (leftDriveModifier > 0 ? boxincwidth : (boxincwidth * numIcons + leftOffset * 2)));
+                nodePos.x +=
+                    leftDriveModifier *
+                        (start + (leftDriveModifier > 0 ? boxincwidth : boxincwidth * numIcons + leftOffset * 2));
                 nodePos.y += start;
                 break;
             case 5:
                 nodePos.x -= leftDriveModifier * (start + (leftDriveModifier > 0 ? boxincwidth * numIcons : 0));
-                nodePos.y += (leftDriveModifier > 0 ? start : leftDriveModifier * (boxheight * 2 + start));
+                nodePos.y += leftDriveModifier > 0 ? start : leftDriveModifier * (boxheight * 2 + start);
                 break;
             case 6:
-                nodePos.x -= (leftDriveModifier > 0 ? start : (boxincwidth * numIcons + start + leftOffset));
+                nodePos.x -= leftDriveModifier > 0 ? start : boxincwidth * numIcons + start + leftOffset;
                 nodePos.y += leftDriveModifier * (start + boxheight);
                 break;
             case 7:
-                nodePos.x += leftDriveModifier * (start + (leftDriveModifier > 0 ? boxincwidth / 2 : boxincwidth * numIcons + leftOffset * 2));
+                nodePos.x +=
+                    leftDriveModifier *
+                        (start + (leftDriveModifier > 0 ? boxincwidth / 2 : boxincwidth * numIcons + leftOffset * 2));
                 nodePos.y -= leftDriveModifier * (start + boxheight);
                 break;
             case 8:
@@ -3628,7 +3560,9 @@ TODO:<br>
                 nodePos.y -= leftDriveModifier * (start + boxheight);
                 break;
             case 9:
-                nodePos.x -= leftDriveModifier * (start + (leftDriveModifier > 0 ? (boxincwidth * numIcons * 1.25) : 2 * leftOffset));
+                nodePos.x -=
+                    leftDriveModifier *
+                        (start + (leftDriveModifier > 0 ? boxincwidth * numIcons * 1.25 : 2 * leftOffset));
                 nodePos.y -= start + boxheight;
                 break;
             default:
@@ -3647,7 +3581,7 @@ TODO:<br>
             iconborderwidth: 27.0,
             graphicHeight: 42,
             graphicWidth: 25,
-            leftOffset: 12
+            leftOffset: 12,
         };
         // switch (sdk.Map.getZoomLevel()) {
         //     case 22:
@@ -3849,7 +3783,7 @@ TODO:<br>
         // var boxPoint4 = new OpenLayers.Geometry.Point(startPoint.x, startPoint.y);
         const startPointCoords = sdk.Map.getPixelFromLonLat({ lonLat: { lon: startPoint[0], lat: startPoint[1] } });
         let boxPoint1 = structuredClone(startPointCoords);
-        boxPoint1.y += (!featDis ? 0 : featDis.boxheight);
+        boxPoint1.y += !featDis ? 0 : featDis.boxheight;
         const boxPoint1LonLat = sdk.Map.getLonLatFromPixel(boxPoint1);
         let boxPoint2 = structuredClone(startPointCoords);
         boxPoint2.x += !featDis ? 0 : featDis.boxincwidth * numIcons;
