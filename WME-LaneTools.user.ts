@@ -12,7 +12,6 @@
 // @match        https://beta.waze.com/*/editor*
 // @exclude      https://www.waze.com/user/editor*
 // @require      https://greasyfork.org/scripts/24851-wazewrap/code/WazeWrap.js
-// @require      https://cdn.jsdelivr.net/npm/@turf/turf@7.2.0/turf.min.js
 // @grant        GM_xmlhttpRequest
 // @grant        unsafeWindow
 // @connect      greasyfork.org
@@ -21,12 +20,13 @@
 
 /* global W */
 /* global WazeWrap */
+/* global turf */
 
-// import type { KeyboardShortcut, Node, Pixel, Segment, Selection, Turn, UserSession, WmeSDK, SegmentLaneGuidanceDirection } from "wme-sdk-typings";
-// import type { Position } from "geojson";
-// import _ from "underscore";
-// import * as turf from "@turf/turf";
-// import WazeWrap from "https://greasyfork.org/scripts/24851-wazewrap/code/WazeWrap.js";
+import type { KeyboardShortcut, Node, Pixel, Segment, Selection, Turn, UserSession, WmeSDK, SegmentLaneGuidanceDirection } from "wme-sdk-typings";
+import type { Position } from "geojson";
+import _ from "underscore";
+import * as turf from "@turf/turf";
+import WazeWrap from "https://greasyfork.org/scripts/24851-wazewrap/code/WazeWrap.js";
 
 let sdk: WmeSDK;
 unsafeWindow.SDK_INITIALIZED.then(() => {
@@ -3198,11 +3198,11 @@ TODO:<br>
         const alreadySet = [].slice
             .call(turnSections)
             .reduce(
-                (acc, turn) =>
+                (acc: number, turn: HTMLElement) =>
                     acc +
                     [].slice
                         .call(turn.getElementsByTagName("input"))
-                        .reduce((acc, input) => (input.checked === true ? acc + 1 : acc), 0),
+                        .reduce((acc, input: HTMLInputElement) => (input.checked === true ? acc + 1 : acc), 0),
                 0
             );
         if (alreadySet === 0) {
