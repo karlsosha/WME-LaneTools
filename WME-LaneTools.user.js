@@ -2,7 +2,7 @@
 // ==UserScript==
 // @name         WME LaneTools
 // @namespace    https://github.com/SkiDooGuy/WME-LaneTools
-// @version      2025.11.16.001
+// @version      2026.04.23.001
 // @description  Adds highlights and tools to WME to supplement the lanes feature
 // @author       SkiDooGuy, Click Saver by HBiede, Heuristics by kndcajun, assistance by jm6087
 // @updateURL    https://github.com/SkiDooGuy/WME-LaneTools/raw/master/WME-LaneTools.user.js
@@ -13,6 +13,7 @@
 // @match        https://beta.waze.com/*/editor*
 // @exclude      https://www.waze.com/user/editor*
 // @require      https://greasyfork.org/scripts/24851-wazewrap/code/WazeWrap.js
+// @require      https://cdn.jsdelivr.net/npm/@turf/turf@7/turf.min.js
 // @grant        GM_xmlhttpRequest
 // @grant        unsafeWindow
 // @connect      greasyfork.org
@@ -101,8 +102,7 @@ function ltInit() {
     const FORUM_LINK = "https://www.waze.com/discuss/t/script-wme-lanetools/53136";
     const LT_UPDATE_NOTES = `NEW:<br>
 UPDATES:<br>
-    - Move Lane Deletion to SDK Native<br>
-    - Fix issues with Selection and Reselection when Lane Tabs is open.<br>
+    - Fix Issue with Junction Box Turns Erroring the check<br>
 KNOWN ISSUE:<br>
 TODO:<br>
 `;
@@ -1181,10 +1181,10 @@ TODO:<br>
     }
     async function loadSettings() {
         const localSettings = JSON.parse(localStorage.getItem("LT_Settings"));
-        const serverSettings = await WazeWrap.Remote.RetrieveSettings("LT_Settings");
-        if (!serverSettings) {
-            console.error("LaneTools: Error communicating with WW settings server");
-        }
+        // const serverSettings: SettingsInterface = await WazeWrap.Remote.RetrieveSettings("LT_Settings");
+        // if (!serverSettings) {
+        //     console.error("LaneTools: Error communicating with WW settings server");
+        // }
         const defaultSettings = {
             lastSaveAction: 0,
             ScriptEnabled: true,
@@ -1233,13 +1233,12 @@ TODO:<br>
             ltNamesVisible: false,
         };
         LtSettings = $.extend({}, defaultSettings, localSettings);
-        if (serverSettings && serverSettings.lastSaveAction > LtSettings.lastSaveAction) {
-            $.extend(LtSettings, serverSettings);
-            // console.log('LaneTools: server settings used');
-        }
-        else {
-            // console.log('LaneTools: local settings used');
-        }
+        // if (serverSettings && serverSettings.lastSaveAction > LtSettings.lastSaveAction) {
+        //     $.extend(LtSettings, serverSettings);
+        //     // console.log('LaneTools: server settings used');
+        // } else {
+        //     // console.log('LaneTools: local settings used');
+        // }
     }
     async function saveSettings() {
         const { ScriptEnabled, HighlightsEnable, LabelsEnable, NodesEnable, UIEnable, AutoLanesTab, AutoOpenWidth, AutoExpandLanes, ABColor, BAColor, LabelColor, ErrorColor, NodeColor, TIOColor, LIOColor, CS1Color, CS2Color, CopyEnable, SelAllEnable, serverSelect, LIOEnable, CSEnable, AutoFocusLanes, ReverseLanesIcon, ClickSaveEnable, ClickSaveStraight, ClickSaveTurns, enableScript, enableHighlights, enableUIEnhancements, enableHeuristics, HeurColor, HeurFailColor, LaneHeurPosHighlight, LaneHeurNegHighlight, LaneHeuristicsChecks, highlightCSIcons, highlightOverride, AddTIO, IconsEnable, IconsRotate, highlightsVisible, ltGraphicsVisible, ltNamesVisible, } = LtSettings;
@@ -1303,15 +1302,14 @@ TODO:<br>
         if (localStorage) {
             localStorage.setItem("LT_Settings", JSON.stringify(localSettings));
         }
-        const serverSave = await WazeWrap.Remote.SaveSettings("LT_Settings", localSettings);
-        if (serverSave === null) {
-            console.warn("LaneTools: User PIN not set in WazeWrap tab");
-        }
-        else {
-            if (serverSave === false) {
-                console.error("LaneTools: Unable to save settings to server");
-            }
-        }
+        // const serverSave = await WazeWrap.Remote.SaveSettings("LT_Settings", localSettings);
+        // if (serverSave === null) {
+        //     console.warn("LaneTools: User PIN not set in WazeWrap tab");
+        // } else {
+        //     if (serverSave === false) {
+        //         console.error("LaneTools: Unable to save settings to server");
+        //     }
+        // }
     }
     async function loadSpreadsheet() {
         let connected = false;
@@ -1350,9 +1348,9 @@ TODO:<br>
         }
         try {
             await $.getJSON(`https://sheets.googleapis.com/v4/spreadsheets/1_3sF09sMOid_us37j5CQqJZlBGGr1vI_3Rrmp5K-KCQ/values/Angles!A2:B?key=${apiKey}`)
-                .done((serverSettings) => {
-                if (serverSettings.values.length > 0) {
-                    _.each(serverSettings.values, (v) => {
+                .done((configurationSettings) => {
+                if (configurationSettings.values.length > 0) {
+                    _.each(configurationSettings.values, (v) => {
                         if (!configArray[v[1]]) {
                             configArray[v[1]] = JSON.parse(v[0]);
                         }
@@ -2706,6 +2704,8 @@ TODO:<br>
         // check turns in JBs
         // const jb = W.model.bigJunctions.getObjectArray();
         for (let t = 0; t < jpturns.length; t++) {
+            if (jpturns[t].fromSegmentId !== s.id)
+                continue;
             const tdat = jpturns[t].lanes;
             if (tdat) {
                 addTurns(tdat.fromLaneIndex, tdat.toLaneIndex);
@@ -2855,7 +2855,7 @@ TODO:<br>
         const className = elem.className;
         const numLanes = Number.parseInt($(this).val(), 10);
         waitForElementLoaded(".turn-lane-checkbox").then((elem) => {
-            setTurns(className, numLanes);
+            setTurns(className);
         });
         const laneCountNums = $(this).parents().find(".lt-add-lanes");
         if (laneCountNums.length > 0) {
@@ -3221,6 +3221,8 @@ TODO:<br>
             return a;
         }
         function lt_turn_angle_seg_to_seg(inSeg, connectorNode, outSeg) {
+            if (outSeg === null)
+                return null;
             let inPoint;
             let outPoint;
             if (inSeg.fromNodeId === connectorNode.id) {
