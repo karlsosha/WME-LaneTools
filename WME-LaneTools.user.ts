@@ -22,11 +22,11 @@
 /* global WazeWrap */
 /* global turf */
 
-import type { KeyboardShortcut, Node, Pixel, Segment, Selection, Turn, UserSession, WmeSDK, SegmentLaneGuidanceDirection } from "wme-sdk-typings";
-import type { Position } from "geojson";
-import _ from "underscore";
-import * as turf from "@turf/turf";
-import WazeWrap from "https://greasyfork.org/scripts/24851-wazewrap/code/WazeWrap.js";
+// import type { KeyboardShortcut, Node, Pixel, Segment, Selection, Turn, UserSession, WmeSDK, SegmentLaneGuidanceDirection } from "wme-sdk-typings";
+// import type { Position } from "geojson";
+// import _ from "underscore";
+// import * as turf from "@turf/turf";
+// import WazeWrap from "https://greasyfork.org/scripts/24851-wazewrap/code/WazeWrap.js";
 
 let sdk: WmeSDK;
 unsafeWindow.SDK_INITIALIZED.then(() => {
@@ -2279,11 +2279,6 @@ TODO:<br>
                 waitForElementLoaded(".lanes-tab").then((elm) => {
                     formatLanesTab(LtSettings.AutoLanesTab || elm.isActive);
                 });
-                //$('.lanes-tab').on("click",(event) => {
-                //    fwdDone = false;
-                //    revDone = false;
-                //    updateUI(event);
-                //});
             } else if (selection && selection.ids.length === 2) {
                 // We have exactly TWO features selected.  Check heuristics and highlight
                 scanHeuristicsCandidates(selection);
