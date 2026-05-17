@@ -1,8 +1,8 @@
 {
   "name": "wme-lane-tools",
   "devDependencies": {
-    "@biomejs/biome": "^2.3.5",
-    "@turf/turf": "^7.2.0",
+    "@biomejs/biome": "^2.4.15",
+    "@turf/turf": "^7.3.5",
     "@types/jquery": "^3.5.33",
     "@types/proj4": "^2.5.6",
     "@types/tampermonkey": "^5.0.5",
