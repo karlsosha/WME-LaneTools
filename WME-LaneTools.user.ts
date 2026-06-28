@@ -4,8 +4,8 @@
 // @version      2026.04.23.001
 // @description  Adds highlights and tools to WME to supplement the lanes feature
 // @author       SkiDooGuy, Click Saver by HBiede, Heuristics by kndcajun, assistance by jm6087
-// @updateURL    https://github.com/SkiDooGuy/WME-LaneTools/raw/master/WME-LaneTools.user.js
-// @downloadURL  https://github.com/SkiDooGuy/WME-LaneTools/raw/master/WME-LaneTools.user.js
+// @updateURL    https://update.greasyfork.org/scripts/537219/WME%20LaneTools.meta.js
+// @downloadURL  https://update.greasyfork.org/scripts/537219/WME%20LaneTools.user.js
 // @match        https://www.waze.com/editor*
 // @match        https://www.waze.com/*/editor*
 // @match        https://beta.waze.com/editor*
@@ -1063,7 +1063,7 @@ TODO:<br>
             eventName: "wme-selection-changed",
             eventHandler: () => {
                 const selected = sdk.Editing.getSelection();
-                if(selected === null) return;
+                if (selected === null) return;
                 scanArea();
                 lanesTabSetup();
                 displayLaneGraphics();
@@ -1846,7 +1846,7 @@ TODO:<br>
             //        if (getId('lt-ReverseLanesIcon').checked && !isRotated) {
             //            rotateArrows();
             //        }
-            if(waitToFinish) {
+            if (waitToFinish) {
                 waitForElementLoaded(
                     ".fwd-lanes > div.lane-instruction.lane-instruction-to > div.instruction > div.lane-edit > .edit-lane-guidance"
                 ).then((elem) => {
@@ -3154,7 +3154,7 @@ TODO:<br>
         // check turns in JBs
         // const jb = W.model.bigJunctions.getObjectArray();
         for (let t = 0; t < jpturns.length; t++) {
-            if(jpturns[t].fromSegmentId !== s.id) continue;
+            if (jpturns[t].fromSegmentId !== s.id) continue;
             const tdat = jpturns[t].lanes;
             if (tdat) {
                 addTurns(tdat.fromLaneIndex, tdat.toLaneIndex);
@@ -3184,14 +3184,14 @@ TODO:<br>
             lanesPane.getElementsByClassName("angle--135").length > 0
                 ? "angle--135"
                 : lanesPane.getElementsByClassName("angle--90").length > 0
-                  ? "angle--90"
-                  : "angle--45";
+                    ? "angle--90"
+                    : "angle--45";
         const right =
             lanesPane.getElementsByClassName("angle-135").length > 0
                 ? "angle-135"
                 : lanesPane.getElementsByClassName("angle-90").length > 0
-                  ? "angle-90"
-                  : "angle-45";
+                    ? "angle-90"
+                    : "angle-45";
 
         const turnSections = lanesPane.getElementsByClassName("turn-lane-edit-container");
         let setLeft = false;
@@ -3777,8 +3777,8 @@ TODO:<br>
             return a;
         }
 
-        function lt_turn_angle_seg_to_seg(inSeg: Segment, connectorNode: Node, outSeg: Segment|null): number | null {
-            if(outSeg === null) return null;
+        function lt_turn_angle_seg_to_seg(inSeg: Segment, connectorNode: Node, outSeg: Segment | null): number | null {
+            if (outSeg === null) return null;
             let inPoint: Position | undefined;
             let outPoint;
             if (inSeg.fromNodeId === connectorNode.id) {
@@ -4440,7 +4440,7 @@ TODO:<br>
             iconPoint1Pixel.x += !featDis
                 ? 0
                 : (!featDis.boxincwidth ? 0 : featDis.boxincwidth) * num +
-                  (!featDis.iconbordermargin ? 0 : featDis.iconbordermargin);
+                (!featDis.iconbordermargin ? 0 : featDis.iconbordermargin);
             iconPoint1Pixel.y += !featDis || !featDis.iconborderheight ? 0 : featDis.iconborderheight;
             const iconPoint1 = sdk.Map.getLonLatFromPixel(iconPoint1Pixel);
 
@@ -4452,7 +4452,7 @@ TODO:<br>
             iconPoint2Pixel.x += !featDis
                 ? 0
                 : (!featDis.boxincwidth ? 0 : featDis.boxincwidth) * num +
-                  (!featDis.iconborderwidth ? 0 : featDis.iconborderwidth);
+                (!featDis.iconborderwidth ? 0 : featDis.iconborderwidth);
             iconPoint2Pixel.y += !featDis || !featDis.iconborderheight ? 0 : featDis.iconborderheight;
             const iconPoint2 = sdk.Map.getLonLatFromPixel(iconPoint2Pixel);
 
@@ -4460,7 +4460,7 @@ TODO:<br>
             iconPoint3Pixel.x += !featDis
                 ? 0
                 : (!featDis.boxincwidth ? 0 : featDis.boxincwidth) * num +
-                  (!featDis.iconborderwidth ? 0 : featDis.iconborderwidth);
+                (!featDis.iconborderwidth ? 0 : featDis.iconborderwidth);
             iconPoint3Pixel.y += !featDis || !featDis.iconbordermargin ? 0 : featDis.iconbordermargin;
             const iconPoint3 = sdk.Map.getLonLatFromPixel(iconPoint3Pixel);
 
@@ -4472,7 +4472,7 @@ TODO:<br>
             iconPoint4Pixel.x += !featDis
                 ? 0
                 : (!featDis.boxincwidth ? 0 : featDis.boxincwidth) * num +
-                  (!featDis.iconbordermargin ? 0 : featDis.iconbordermargin);
+                (!featDis.iconbordermargin ? 0 : featDis.iconbordermargin);
             iconPoint4Pixel.y += !featDis || !featDis.iconbordermargin ? 0 : featDis.iconbordermargin;
             const iconPoint4 = sdk.Map.getLonLatFromPixel(iconPoint4Pixel);
             const iconPoints = [
@@ -4606,24 +4606,24 @@ TODO:<br>
             const fwdEle =
                 seg?.fromNodeLanesCount && seg.fromNodeLanesCount > 0
                     ? getIcons(
-                          $(".fwd-lanes")
-                              .find(".lane-arrow")
-                              .map(function () {
-                                  return this;
-                              })
-                              .get()
-                      )
+                        $(".fwd-lanes")
+                            .find(".lane-arrow")
+                            .map(function () {
+                                return this;
+                            })
+                            .get()
+                    )
                     : false;
             const revEle =
                 seg?.toNodeLanesCount && seg.toNodeLanesCount > 0
                     ? getIcons(
-                          $(".rev-lanes")
-                              .find(".lane-arrow")
-                              .map(function () {
-                                  return this;
-                              })
-                              .get()
-                      )
+                        $(".rev-lanes")
+                            .find(".lane-arrow")
+                            .map(function () {
+                                return this;
+                            })
+                            .get()
+                    )
                     : false;
 
             const fwdImgs = fwdEle !== false ? convertToBase64(fwdEle) : false;
