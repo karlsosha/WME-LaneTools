@@ -98,7 +98,7 @@ function ltInit() {
     }
     const LANETOOLS_VERSION = `${GM_info.script.version}`;
     const GF_LINK = "https://greasyfork.org/en/scripts/537219-wme-lanetools";
-    const DOWNLOAD_URL = "https://greasyfork.org/en/scripts/537219-wme-lanetools";
+    // const DOWNLOAD_URL = "https://greasyfork.org/en/scripts/537219-wme-lanetools"; // No longer needed.
     const FORUM_LINK = "https://www.waze.com/discuss/t/script-wme-lanetools/53136";
     const LT_UPDATE_NOTES = `NEW:<br>
 UPDATES:<br>
