@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         WME LaneTools
 // @namespace    https://github.com/SkiDooGuy/WME-LaneTools
-// @version      2026.06.28.001
+// @version      2026.07.07.001
 // @description  Adds highlights and tools to WME to supplement the lanes feature
 // @author       SkiDooGuy, Click Saver by HBiede, Heuristics by kndcajun, assistance by jm6087
 // @updateURL    https://update.greasyfork.org/scripts/537219/WME%20LaneTools.meta.js
@@ -857,9 +857,9 @@ TODO:<br>
             const updateMonitor = new WazeWrap.Alerts.ScriptUpdateMonitor(
                 GM_info.script.name,
                 GM_info.script.version,
-                DOWNLOAD_URL,
+                GM_info.script.downloadURL,
                 GM_xmlhttpRequest,
-                DOWNLOAD_URL
+                GM_info.script.updateURL
             );
             updateMonitor.start();
         } catch (ex) {
