@@ -2,7 +2,7 @@
 // ==UserScript==
 // @name         WME LaneTools
 // @namespace    https://github.com/SkiDooGuy/WME-LaneTools
-// @version      2026.07.07.001
+// @version      2026.07.27.001
 // @description  Adds highlights and tools to WME to supplement the lanes feature
 // @author       SkiDooGuy, Click Saver by HBiede, Heuristics by kndcajun, assistance by jm6087
 // @updateURL    https://update.greasyfork.org/scripts/537219/WME%20LaneTools.meta.js
@@ -102,8 +102,11 @@ function ltInit() {
     const FORUM_LINK = "https://www.waze.com/discuss/t/script-wme-lanetools/53136";
     const LT_UPDATE_NOTES = `NEW:<br>
 UPDATES:<br>
-    - Fix Issue with Junction Box Turns Erroring the check<br>
+    - Migrate Ownership of the Lane Tools Config Sheet<br>
+    - Update Sheet to Fix Missing configuration Parameters<br>
 KNOWN ISSUE:<br>
+    - Issues with updates to Lane Config Visual Display timing
+    - Issues with Display of the U Turn.
 TODO:<br>
 `;
     let LANETOOLS_DEBUG_LEVEL = 0; // 0=Info, 1=Debug, 2=Trace, 3=Trace Verbose
@@ -1313,7 +1316,7 @@ TODO:<br>
     }
     async function loadSpreadsheet() {
         let connected = false;
-        const apiKey = "AIzaSyDZjmkSx5xWc-86hsAIzedgDgRgy8vB7BQ";
+        const apiKey = "AIzaSyDJaCD-PqytSPVrXZMLqI2UNIsTuy_yLRY";
         const settingsFailFunc = (jqXHR, _textStatus, errorThrown) => {
             console.error("LaneTools: Error loading settings:", errorThrown);
         };
@@ -1328,7 +1331,7 @@ TODO:<br>
             console.error("LaneTools: Error loading trans:", errorThrown);
         };
         try {
-            await $.getJSON(`https://sheets.googleapis.com/v4/spreadsheets/1_3sF09sMOid_us37j5CQqJZlBGGr1vI_3Rrmp5K-KCQ/values/Translations!A2:C?key=${apiKey}`)
+            await $.getJSON(`https://sheets.googleapis.com/v4/spreadsheets/1UMYBM4zbQqjuk_stTA6HDXoclvkCSWNkcI1Yyver02g/values/Translations!A2:C?key=${apiKey}`)
                 .done(async (transArray) => {
                 if (transArray.values.length > 0) {
                     _.each(transArray.values, (t) => {
@@ -1347,7 +1350,7 @@ TODO:<br>
             translationsFailFunc(null, null, e);
         }
         try {
-            await $.getJSON(`https://sheets.googleapis.com/v4/spreadsheets/1_3sF09sMOid_us37j5CQqJZlBGGr1vI_3Rrmp5K-KCQ/values/Angles!A2:B?key=${apiKey}`)
+            await $.getJSON(`https://sheets.googleapis.com/v4/spreadsheets/1UMYBM4zbQqjuk_stTA6HDXoclvkCSWNkcI1Yyver02g/values/Angles!A2:B?key=${apiKey}`)
                 .done((configurationSettings) => {
                 if (configurationSettings.values.length > 0) {
                     _.each(configurationSettings.values, (v) => {
